@@ -30,6 +30,7 @@ Partial Class Form1
         Me.btnCalculate = New System.Windows.Forms.Button()
         Me.btnadd_database = New System.Windows.Forms.Button()
         Me.Button1 = New System.Windows.Forms.Button()
+        Me.Button2 = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'lblins1
@@ -115,11 +116,22 @@ Partial Class Form1
         Me.Button1.Text = "Repeat Program?"
         Me.Button1.UseVisualStyleBackColor = True
         '
+        'Button2
+        '
+        Me.Button2.Font = New System.Drawing.Font("Microsoft Sans Serif", 26.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Button2.Location = New System.Drawing.Point(533, 237)
+        Me.Button2.Name = "Button2"
+        Me.Button2.Size = New System.Drawing.Size(286, 80)
+        Me.Button2.TabIndex = 8
+        Me.Button2.Text = "Task 2"
+        Me.Button2.UseVisualStyleBackColor = True
+        '
         'Form1
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(1127, 534)
+        Me.Controls.Add(Me.Button2)
         Me.Controls.Add(Me.Button1)
         Me.Controls.Add(Me.btnadd_database)
         Me.Controls.Add(Me.btnCalculate)
@@ -144,4 +156,5 @@ Partial Class Form1
     Friend WithEvents btnCalculate As Button
     Friend WithEvents btnadd_database As Button
     Friend WithEvents Button1 As Button
+    Friend WithEvents Button2 As Button
 End Class
