@@ -33,6 +33,8 @@ Partial Class Form2
         Me.Label8 = New System.Windows.Forms.Label()
         Me.Label9 = New System.Windows.Forms.Label()
         Me.Label10 = New System.Windows.Forms.Label()
+        Me.Label11 = New System.Windows.Forms.Label()
+        Me.Label12 = New System.Windows.Forms.Label()
         Me.SuspendLayout()
         '
         'Label1
@@ -78,7 +80,7 @@ Partial Class Form2
         'Button1
         '
         Me.Button1.Font = New System.Drawing.Font("Microsoft Sans Serif", 20.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
-        Me.Button1.Location = New System.Drawing.Point(512, 97)
+        Me.Button1.Location = New System.Drawing.Point(566, 230)
         Me.Button1.Name = "Button1"
         Me.Button1.Size = New System.Drawing.Size(222, 115)
         Me.Button1.TabIndex = 4
@@ -145,11 +147,33 @@ Partial Class Form2
         Me.Label10.TabIndex = 10
         Me.Label10.Text = "Label10"
         '
+        'Label11
+        '
+        Me.Label11.AutoSize = True
+        Me.Label11.Location = New System.Drawing.Point(504, 26)
+        Me.Label11.Name = "Label11"
+        Me.Label11.Size = New System.Drawing.Size(45, 13)
+        Me.Label11.TabIndex = 11
+        Me.Label11.Text = "Label11"
+        '
+        'Label12
+        '
+        Me.Label12.AutoSize = True
+        Me.Label12.Font = New System.Drawing.Font("Microsoft Sans Serif", 20.25!, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, CType(0, Byte))
+        Me.Label12.ForeColor = System.Drawing.Color.Red
+        Me.Label12.Location = New System.Drawing.Point(255, 54)
+        Me.Label12.Name = "Label12"
+        Me.Label12.Size = New System.Drawing.Size(505, 31)
+        Me.Label12.TabIndex = 12
+        Me.Label12.Text = "This is an example solution for Task 2"
+        '
         'Form2
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(800, 450)
+        Me.Controls.Add(Me.Label12)
+        Me.Controls.Add(Me.Label11)
         Me.Controls.Add(Me.Label10)
         Me.Controls.Add(Me.Label9)
         Me.Controls.Add(Me.Label8)
@@ -179,4 +203,6 @@ Partial Class Form2
     Friend WithEvents Label8 As Label
     Friend WithEvents Label9 As Label
     Friend WithEvents Label10 As Label
+    Friend WithEvents Label11 As Label
+    Friend WithEvents Label12 As Label
 End Class
