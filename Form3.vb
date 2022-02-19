@@ -1,5 +1,6 @@
 ﻿Public Class Form3
     Dim bigarray(100, 200) As String 'declare array large enough for dataset
+    Dim icount As Integer
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
 
         'Prompt for search entries
@@ -27,15 +28,15 @@
             Next
         Loop
         'Test if data sucessfully saved
-        MsgBox(bigarray(0, 2)) ' understanding silicon life
-        MsgBox(bigarray(0, 1)) ' This is the title row (not data)
+        'MsgBox(bigarray(0, 2)) ' understanding silicon life
+        'MsgBox(bigarray(0, 1)) ' This is the title row (not data)
         MsgBox("Let's find our entry")
 
         Dim textbooktofind, purchasertofind As String
         textbooktofind = InputBox("What is the Name of the book?")
         purchasertofind = InputBox("What is the first name Of the purchaser?")
 
-        Dim icount As Integer
+
         Dim bfound As Boolean
 
         MsgBox(linesInFile)
@@ -51,30 +52,7 @@
                 lblSalePrice.Text = bigarray(5, icount)
                 lblRating.Text = bigarray(6, icount)
 
-                MsgBox("Enter a new rating for the book on the right!")
-                RadioButton1.Enabled = True
-                RadioButton2.Enabled = True
-                RadioButton3.Enabled = True
-                RadioButton4.Enabled = True
-                RadioButton5.Enabled = True
-                RadioButton6.Enabled = True
-
-                If RadioButton1.Checked = True Then ' NA Rating
-                    bigarray(6, icount) = "NA"
-                ElseIf RadioButton2.Checked = True Then
-                    bigarray(6, icount) = "1"
-                ElseIf RadioButton3.Checked = True Then
-                    bigarray(6, icount) = "2"
-                ElseIf RadioButton4.Checked = True Then
-                    bigarray(6, icount) = "3"
-                ElseIf RadioButton5.Checked = True Then
-                    bigarray(6, icount) = "4"
-                ElseIf RadioButton6.Checked = True Then
-                    bigarray(6, icount) = "5"
-                Else
-                    MsgBox("Enter rating selection!")
-                End If
-                lblRating.Text = bigarray(6, icount)
+                MsgBox("Click button on right to rate book")
                 'write this into new CSV file
 
 
@@ -87,7 +65,7 @@
 
         Next
 
-        End
+
 
 
     End Sub
@@ -133,6 +111,36 @@
     End Sub
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        MsgBox("Enter a new rating for the book on the right!")
+        RadioButton1.Enabled = True
+        RadioButton2.Enabled = True
+        RadioButton3.Enabled = True
+        RadioButton4.Enabled = True
+        RadioButton5.Enabled = True
+        RadioButton6.Enabled = True
+
+        If RadioButton1.Checked = True Then ' NA Rating
+            bigarray(6, icount) = "NA"
+        ElseIf RadioButton2.Checked = True Then
+            bigarray(6, icount) = "1"
+        ElseIf RadioButton3.Checked = True Then
+            bigarray(6, icount) = "2"
+        ElseIf RadioButton4.Checked = True Then
+            bigarray(6, icount) = "3"
+        ElseIf RadioButton5.Checked = True Then
+            bigarray(6, icount) = "4"
+        ElseIf RadioButton6.Checked = True Then
+            bigarray(6, icount) = "5"
+        Else
+            MsgBox("Enter rating selection!")
+        End If
+        lblRating.Text = bigarray(6, icount)
+
+    End Sub
+
+
+
+    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
         TwoDArrayToCSV(bigarray)
     End Sub
 End Class
