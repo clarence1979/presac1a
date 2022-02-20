@@ -164,10 +164,11 @@
             For columns = 0 To (x - 1)
                 file.Write(bigarray(columns, linesInFile) + ",")
             Next
-
+            'write an if else so that at the written line, a comma is not written
+            'there is a small bug here. Please correct it.
         Next
 
         file.Close()
-
+        MsgBox("Finished writing to file!")
     End Sub
 End Class
