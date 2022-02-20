@@ -291,7 +291,7 @@ Partial Class Form3
         Me.Button2.Name = "Button2"
         Me.Button2.Size = New System.Drawing.Size(180, 127)
         Me.Button2.TabIndex = 23
-        Me.Button2.Text = "Write new rating into external file"
+        Me.Button2.Text = "Rate the book!"
         Me.Button2.UseVisualStyleBackColor = True
         '
         'Button3
@@ -301,7 +301,7 @@ Partial Class Form3
         Me.Button3.Name = "Button3"
         Me.Button3.Size = New System.Drawing.Size(160, 112)
         Me.Button3.TabIndex = 24
-        Me.Button3.Text = "Write to CSV"
+        Me.Button3.Text = "Write to new CSV"
         Me.Button3.UseVisualStyleBackColor = True
         '
         'Form3

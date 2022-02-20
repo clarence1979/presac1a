@@ -1,17 +1,15 @@
 ﻿Public Class Form3
     Dim bigarray(100, 200) As String 'declare array large enough for dataset
     Dim icount As Integer
+    Dim linesInFile As Integer = 0
+    Dim columns As Integer
+    Dim sr As New System.IO.StreamReader("C:\presac1\shopdata.csv")
+    Dim x, y As Integer
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
 
         'Prompt for search entries
         MsgBox("Loading file")
-
-        'Open the database
-        Dim sr As New System.IO.StreamReader("C:\presac1\shopdata.csv")
-
         '(columns, rows)
-        Dim linesInFile As Integer = 0
-        Dim columns As Integer
 
         'Load the whole database into a 2 dimension array - bigarray
         Do Until sr.EndOfStream = True
@@ -27,6 +25,8 @@
                 bigarray(columns, linesInFile) = testArray(columns)
             Next
         Loop
+        x = columns
+        y = linesInFile
         'Test if data sucessfully saved
         'MsgBox(bigarray(0, 2)) ' understanding silicon life
         'MsgBox(bigarray(0, 1)) ' This is the title row (not data)
@@ -53,10 +53,9 @@
                 lblRating.Text = bigarray(6, icount)
 
                 MsgBox("Click button on right to rate book")
-                'write this into new CSV file
 
-
-
+                Button2.Enabled = True
+                'rate the book
 
             Else
                 MsgBox("Book not found!")
@@ -65,43 +64,12 @@
 
         Next
 
-
-
-
     End Sub
 
-    Sub TwoDArrayToCSV(ByVal DataArray(,) As String)
-        Dim str As String = ""
-        Dim ofile As String = ""
 
-        svDialog("csv|*.csv", "save as...", ofile)
-        Dim sw As System.IO.StreamWriter = New System.IO.StreamWriter(ofile)
-
-        For i As Int32 = DataArray.GetLowerBound(0) To DataArray.GetUpperBound(0)
-            For j As Int32 = DataArray.GetLowerBound(1) To DataArray.GetUpperBound(1)
-                str += DataArray(i, j) + ","
-            Next
-            sw.WriteLine(str)
-            str = ""
-        Next
-        sw.Flush()
-        sw.Close()
-    End Sub
-
-    Sub svDialog(ByVal infilter As String, ByVal dtitle As String, ByRef outfile As String)
-        Dim openFileDialog1 As New SaveFileDialog()
-        With openFileDialog1
-            .Filter = infilter
-            .FilterIndex = 1
-            .Title = dtitle
-            .DefaultExt = Strings.Right(infilter, 3)
-            .ShowDialog()
-            outfile = openFileDialog1.FileName
-            .RestoreDirectory = True
-        End With
-    End Sub
     Private Sub Form3_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-
+        Button2.Enabled = False
+        Button3.Enabled = False
         RadioButton1.Enabled = False
         RadioButton2.Enabled = False
         RadioButton3.Enabled = False
@@ -119,28 +87,87 @@
         RadioButton5.Enabled = True
         RadioButton6.Enabled = True
 
-        If RadioButton1.Checked = True Then ' NA Rating
-            bigarray(6, icount) = "NA"
-        ElseIf RadioButton2.Checked = True Then
-            bigarray(6, icount) = "1"
-        ElseIf RadioButton3.Checked = True Then
-            bigarray(6, icount) = "2"
-        ElseIf RadioButton4.Checked = True Then
-            bigarray(6, icount) = "3"
-        ElseIf RadioButton5.Checked = True Then
-            bigarray(6, icount) = "4"
-        ElseIf RadioButton6.Checked = True Then
-            bigarray(6, icount) = "5"
-        Else
-            MsgBox("Enter rating selection!")
-        End If
-        lblRating.Text = bigarray(6, icount)
-
     End Sub
 
+    Private Sub RadioButton1_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton1.CheckedChanged
+        If RadioButton1.Checked = True Then ' NA Rating
+            bigarray(6, icount) = "NA"
+        Else
+            bigarray(6, icount) = "-"
+        End If
+        lblRating.Text = bigarray(6, icount)
+        MsgBox(bigarray(6, icount))
+        Button3.Enabled = True
+    End Sub
 
+    Private Sub RadioButton2_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton2.CheckedChanged
+        If RadioButton2.Checked = True Then
+            bigarray(6, icount) = "1"
+        Else
+            bigarray(6, icount) = "-"
+        End If
+        lblRating.Text = bigarray(6, icount)
+        MsgBox(bigarray(6, icount))
+        Button3.Enabled = True
+    End Sub
+
+    Private Sub RadioButton3_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton3.CheckedChanged
+        If RadioButton3.Checked = True Then
+            bigarray(6, icount) = "2"
+        Else
+            bigarray(6, icount) = "-"
+        End If
+        lblRating.Text = bigarray(6, icount)
+        MsgBox(bigarray(6, icount))
+        Button3.Enabled = True
+    End Sub
+
+    Private Sub RadioButton4_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton4.CheckedChanged
+        If RadioButton4.Checked = True Then
+            bigarray(6, icount) = "3"
+        Else
+            bigarray(6, icount) = "-"
+        End If
+        lblRating.Text = bigarray(6, icount)
+        MsgBox(bigarray(6, icount))
+        Button3.Enabled = True
+    End Sub
+
+    Private Sub RadioButton5_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton5.CheckedChanged
+        If RadioButton5.Checked = True Then
+            bigarray(6, icount) = "4"
+        Else
+            bigarray(6, icount) = "-"
+        End If
+        lblRating.Text = bigarray(6, icount)
+        MsgBox(bigarray(6, icount))
+        Button3.Enabled = True
+    End Sub
+
+    Private Sub RadioButton6_CheckedChanged(sender As Object, e As EventArgs) Handles RadioButton6.CheckedChanged
+        If RadioButton6.Checked = True Then
+            bigarray(6, icount) = "5"
+        Else
+            bigarray(6, icount) = "-"
+        End If
+        lblRating.Text = bigarray(6, icount)
+        MsgBox(bigarray(6, icount))
+        Button3.Enabled = True
+    End Sub
 
     Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
-        TwoDArrayToCSV(bigarray)
+        'this code will save the entire array in a new CSV file
+        Dim file As System.IO.StreamWriter
+        file = My.Computer.FileSystem.OpenTextFileWriter("C:\presac1\newfile.csv", True)
+
+        For linesInFile = 0 To (y - 1)
+            For columns = 0 To (x - 1)
+                file.Write(bigarray(columns, linesInFile) + ",")
+            Next
+
+        Next
+
+        file.Close()
+
     End Sub
 End Class
