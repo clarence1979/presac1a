@@ -39,9 +39,15 @@
 
         Dim bfound As Boolean
 
+
+
         MsgBox(linesInFile)
-        For icount = 2 To linesInFile
+        For icount = 0 To linesInFile
+
+            MsgBox(icount)
             If bigarray(0, icount) = textbooktofind And bigarray(4, icount) = purchasertofind Then
+                MsgBox(icount)
+
                 bfound = True
                 MsgBox("Book found!")
                 lblTitle.Text = bigarray(0, icount)
@@ -59,7 +65,8 @@
 
             Else
                 MsgBox("Book not found!")
-                Exit For
+                'icount = icount + 1
+                'Exit For
             End If
 
         Next
