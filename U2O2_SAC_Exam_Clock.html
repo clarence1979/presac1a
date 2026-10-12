@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAC Exam Clock</title>
+<style>
+:root{
+  --bg:#0e1116; --panel:#161b22; --line:#2a313c; --ink:#f2f4f7; --muted:#9aa4b2; --dim:#5d6672;
+  --accent:#f6c445; --accent-ink:#1a1405; --warn:#ff8a4c; --ok:#58d39a;
+  --pa:#3b6fd8; --pb:#9a5bd6; --pc:#2fa58a; --pd:#d0773a; --pr:#6b7686; --pk:#6b7686;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Inter,Roboto,system-ui,-apple-system,sans-serif;
+  display:flex;flex-direction:column;min-height:100vh;padding:clamp(12px,2vw,28px) clamp(16px,2.6vw,40px);gap:clamp(10px,1.6vw,22px)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.title{font-size:clamp(14px,1.3vw,20px);color:var(--muted);font-weight:600;letter-spacing:.01em}
+.title b{color:var(--ink)}
+.controls{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;font-size:clamp(15px,1.25vw,20px);border-radius:10px;border:2px solid var(--line);
+  background:var(--panel);color:var(--ink);padding:.55em 1.25em;cursor:pointer;min-width:6.5em}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.35;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.small{min-width:0;font-size:clamp(12px,1vw,15px);padding:.5em .9em;font-weight:600;color:var(--muted)}
+main{flex:1;display:grid;grid-template-columns:1.45fr 1fr;gap:clamp(12px,1.8vw,26px);min-height:0}
+.card > *{flex-shrink:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:clamp(16px,2.2vw,34px);display:flex;flex-direction:column;justify-content:center;min-width:0;position:relative;overflow:hidden}
+.k{font-size:clamp(12px,1vw,16px);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+#now .part{font-size:clamp(14px,1.3vw,21px);color:var(--muted);font-weight:600;margin-top:.4em}
+#nowLabel{font-size:clamp(44px,min(8.4vw,14vh),150px);font-weight:800;line-height:1;margin:.12em 0 .08em;letter-spacing:-.02em}
+#nowSub{font-size:clamp(18px,2vw,34px);font-weight:600;color:var(--ink)}
+#nowSub .marks{color:var(--accent)}
+.left{margin-top:clamp(14px,2vw,30px);display:flex;align-items:baseline;gap:.6em;flex-wrap:wrap}
+#segLeft{font-size:clamp(32px,min(4.6vw,8vh),80px);font-weight:800}
+.left .k{align-self:center}
+.bar{height:clamp(10px,1vw,16px);background:#0b0e12;border-radius:99px;margin-top:clamp(10px,1.2vw,18px);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .2s linear}
+#moveOn{margin-top:.7em;font-size:clamp(15px,1.4vw,24px);color:var(--muted)}
+#moveOn b{color:var(--ink)}
+#clockCard{align-items:center;text-align:center}
+#elapsed{font-size:clamp(60px,min(10.5vw,18vh),190px);font-weight:800;line-height:1;letter-spacing:-.02em;margin:.08em 0}
+#of{font-size:clamp(16px,1.5vw,26px);color:var(--muted);font-weight:600}
+#remaining{margin-top:clamp(12px,1.6vw,24px);font-size:clamp(16px,1.6vw,26px);color:var(--muted)}
+#remaining b{color:var(--ink)}
+#state{position:absolute;top:clamp(12px,1.4vw,20px);right:clamp(12px,1.4vw,20px);font-size:clamp(11px,.9vw,14px);font-weight:800;letter-spacing:.12em;
+  padding:.35em .8em;border-radius:99px;border:1.5px solid var(--dim);color:var(--muted)}
+#state.run{border-color:var(--ok);color:var(--ok)}
+#state.pause{border-color:var(--warn);color:var(--warn)}
+#next{font-size:clamp(15px,1.4vw,24px);color:var(--muted);margin-top:clamp(14px,1.8vw,26px)}
+#next b{color:var(--ink)}
+/* warning and flash */
+body.warn #segLeft{color:var(--warn)}
+body.warn .bar i{background:var(--warn)}
+#now.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 6px var(--accent) inset}100%{box-shadow:0 0 0 0 transparent inset}}
+body.ended #nowLabel{color:var(--warn)}
+/* timeline */
+.timeline{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:clamp(12px,1.4vw,20px) clamp(14px,1.8vw,26px)}
+.parts,.segs,.ticks{position:relative;display:flex}
+.parts{height:1.6em;font-size:clamp(11px,.95vw,15px);color:var(--muted);font-weight:700}
+.parts div{position:absolute;top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:4px;border-left:2px solid var(--line)}
+.segs{height:clamp(40px,4.4vw,66px);border-radius:10px;overflow:hidden;gap:2px}
+.seg{position:relative;height:100%;background:#222a35;display:flex;align-items:center;justify-content:center;font-weight:800;
+  font-size:clamp(10px,1vw,16px);color:var(--muted);overflow:hidden;min-width:0}
+.seg::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--pc-col,var(--pr))}
+.seg.done{background:#1a2029;color:var(--dim)}
+.seg.done::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(255,255,255,.03) 6px 12px)}
+.seg.cur{background:var(--accent);color:var(--accent-ink)}
+.seg span{position:relative;z-index:1}
+#playhead{position:absolute;top:-6px;bottom:-6px;width:3px;background:var(--ink);border-radius:2px;left:0;box-shadow:0 0 0 2px var(--bg);transition:left .2s linear;z-index:2}
+.ticks{height:1.5em;font-size:clamp(10px,.85vw,13px);color:var(--dim)}
+.ticks div{position:absolute;top:4px;transform:translateX(-50%)}
+.ticks div:first-child{transform:none}
+.ticks div:last-child{transform:translateX(-100%)}
+footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:clamp(11px,.9vw,14px);color:var(--dim)}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 .4em;color:var(--muted);font-family:inherit}
+@media (max-width:820px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="title"><b>Exam clock</b> · Unit 2 Outcome 2 SAC · Lyrebird Physiotherapy &amp; Sports Clinic · 70 marks</div>
+  <div class="controls">
+    <button id="start" class="primary">Start</button>
+    <button id="pause">Pause</button>
+    <button id="reset">Reset</button>
+    <button id="sound" class="small" title="Chime when the clock moves to the next question">Sound: on</button>
+    <button id="full" class="small" title="Full screen (F)">Full screen</button>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="now">
+    <div class="k">You should be working on</div>
+    <div class="part" id="nowPart">&nbsp;</div>
+    <div id="nowLabel">Ready</div>
+    <div id="nowSub">Press Start when reading time begins</div>
+    <div class="left"><span class="k" id="leftLabel">Time left</span><span id="segLeft" class="num">--:--</span></div>
+    <div class="bar"><i id="segBar"></i></div>
+    <div id="moveOn">&nbsp;</div>
+  </section>
+  <section class="card" id="clockCard">
+    <div id="state">READY</div>
+    <div class="k">Running time</div>
+    <div id="elapsed" class="num">00:00</div>
+    <div id="of" class="num">of 90:00</div>
+    <div id="remaining" class="num">Time remaining <b id="remain">90:00</b></div>
+    <div id="next">&nbsp;</div>
+  </section>
+</main>
+
+<section class="timeline" aria-label="Exam timeline">
+  <div class="parts" id="parts"></div>
+  <div class="segs" id="segs"><div id="playhead"></div></div>
+  <div class="ticks" id="ticks"></div>
+</section>
+
+<footer>
+  <span>Each question has a suggested time printed on the paper. When the clock moves on, so should you; come back in the final check time.</span>
+  <span><kbd>Space</kbd> start/pause · <kbd>R</kbd> reset · <kbd>F</kbd> full screen</span>
+</footer>
+
+<script>
+(function(){
+const SEGS = [{"kind": "reading", "label": "Reading time", "short": "Read", "title": "", "marks": 0, "part": "", "start": 0, "end": 10}, {"kind": "question", "label": "Question 1", "short": "Q1", "title": "Network types", "marks": 4, "part": "A", "start": 10, "end": 14}, {"kind": "question", "label": "Question 2", "short": "Q2", "title": "Network components", "marks": 4, "part": "A", "start": 14, "end": 18}, {"kind": "question", "label": "Question 3", "short": "Q3", "title": "Communications technology", "marks": 4, "part": "A", "start": 18, "end": 22}, {"kind": "question", "label": "Question 4", "short": "Q4", "title": "Intranet, internet and VPN", "marks": 4, "part": "A", "start": 22, "end": 26}, {"kind": "question", "label": "Question 5", "short": "Q5", "title": "Malware", "marks": 4, "part": "B", "start": 26, "end": 30}, {"kind": "question", "label": "Question 6", "short": "Q6", "title": "Security threats", "marks": 4, "part": "B", "start": 30, "end": 34}, {"kind": "question", "label": "Question 7", "short": "Q7", "title": "Networks in a global environment", "marks": 3, "part": "B", "start": 34, "end": 37}, {"kind": "question", "label": "Question 8", "short": "Q8", "title": "Intrusion detection and prevention", "marks": 3, "part": "C", "start": 37, "end": 40}, {"kind": "question", "label": "Question 9", "short": "Q9", "title": "Emerging trends", "marks": 2, "part": "C", "start": 40, "end": 42}, {"kind": "question", "label": "Question 10", "short": "Q10", "title": "Security practices", "marks": 6, "part": "C", "start": 42, "end": 50}, {"kind": "question", "label": "Question 11", "short": "Q11", "title": "Cryptography", "marks": 5, "part": "C", "start": 50, "end": 55}, {"kind": "question", "label": "Question 12", "short": "Q12", "title": "AI in network security", "marks": 3, "part": "C", "start": 55, "end": 58}, {"kind": "question", "label": "Question 13", "short": "Q13", "title": "Ethical hacking", "marks": 3, "part": "C", "start": 58, "end": 61}, {"kind": "question", "label": "Question 14", "short": "Q14", "title": "Network diagram", "marks": 6, "part": "C", "start": 61, "end": 70}, {"kind": "question", "label": "Question 15", "short": "Q15", "title": "Legislation", "marks": 7, "part": "D", "start": 70, "end": 78}, {"kind": "question", "label": "Question 16", "short": "Q16", "title": "Essential Eight", "marks": 4, "part": "D", "start": 78, "end": 82}, {"kind": "question", "label": "Question 17", "short": "Q17", "title": "ISM Guidelines for Networking", "marks": 4, "part": "D", "start": 82, "end": 86}, {"kind": "check", "label": "Check your answers", "short": "Check", "title": "", "marks": 0, "part": "", "start": 86, "end": 90}];
+const PARTS = {"A": "The clinic's network", "B": "The incident", "C": "Protecting the network", "D": "Legislation and industry frameworks"};
+const PSHORT = {"A": "Network", "B": "Incident", "C": "Protection", "D": "Legislation"};
+const TOTAL = 90 * 60000;
+const PCOL = {A:"var(--pa)",B:"var(--pb)",C:"var(--pc)",D:"var(--pd)"};
+const KEY = "u2o2-sac-clock-v1";
+const $ = id => document.getElementById(id);
+
+// ----- state (survives an accidental refresh) -----
+let acc = 0, startedAt = null, sound = true, lastIdx = -2, wakeLock = null;
+try {
+  const s = JSON.parse(localStorage.getItem(KEY) || "null");
+  if (s) { acc = s.acc || 0; startedAt = s.startedAt || null; sound = s.sound !== false; }
+} catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify({acc, startedAt, sound})); } catch (e) {} }
+const running = () => startedAt !== null;
+const elapsed = () => Math.min(TOTAL, acc + (running() ? Date.now() - startedAt : 0));
+
+// ----- build timeline -----
+const segsEl = $("segs"), partsEl = $("parts"), ticksEl = $("ticks");
+SEGS.forEach((s, i) => {
+  const d = document.createElement("div");
+  d.className = "seg"; d.id = "seg" + i;
+  d.style.flex = (s.end - s.start) + " 1 0";
+  d.style.setProperty("--pc-col", PCOL[s.part] || "var(--pr)");
+  d.title = s.label + (s.title ? " · " + s.title : "") + (s.marks ? " · " + s.marks + " marks" : "") + " · " + mmss(s.start * 60000) + "–" + mmss(s.end * 60000);
+  d.innerHTML = "<span>" + s.short + "</span>";
+  segsEl.appendChild(d);
+});
+const totalMin = TOTAL / 60000;
+Object.keys(PARTS).forEach(p => {
+  const qs = SEGS.filter(s => s.part === p);
+  if (!qs.length) return;
+  const d = document.createElement("div");
+  d.style.left = (qs[0].start / totalMin * 100) + "%";
+  d.style.width = ((qs[qs.length - 1].end - qs[0].start) / totalMin * 100) + "%";
+  d.style.borderLeftColor = PCOL[p];
+  d.textContent = "Part " + p + " · " + PSHORT[p];
+  partsEl.appendChild(d);
+});
+[0, SEGS[0].end, 30, 45, 60, 75, totalMin].filter((v, i, a) => a.indexOf(v) === i).forEach(m => {
+  const d = document.createElement("div");
+  d.style.left = (m / totalMin * 100) + "%";
+  d.textContent = mmss(m * 60000);
+  ticksEl.appendChild(d);
+});
+
+function mmss(ms){
+  const t = Math.max(0, Math.round(ms / 1000));
+  return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
+}
+function idxAt(ms){
+  const m = ms / 60000;
+  for (let i = 0; i < SEGS.length; i++) if (m < SEGS[i].end) return i;
+  return SEGS.length; // finished
+}
+
+// ----- chime -----
+let actx = null;
+function chime(final){
+  if (!sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const notes = final ? [784, 659, 523] : [659, 880];
+    notes.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * 0.22;
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.65);
+    });
+  } catch (e) {}
+}
+
+// ----- render -----
+function render(){
+  const ms = elapsed(), i = idxAt(ms);
+  const ended = ms >= TOTAL;
+  if (ended && running()) { acc = TOTAL; startedAt = null; save(); releaseWake(); }
+  $("elapsed").textContent = mmss(ms);
+  $("remain").textContent = mmss(TOTAL - ms);
+  $("playhead").style.left = "calc(" + (ms / TOTAL * 100) + "% - 1.5px)";
+  SEGS.forEach((s, j) => { const el = $("seg" + j); el.classList.toggle("done", j < i); el.classList.toggle("cur", j === i && ms > 0); });
+
+  const st = $("state");
+  if (ended) { st.textContent = "FINISHED"; st.className = ""; }
+  else if (running()) { st.textContent = "RUNNING"; st.className = "run"; }
+  else if (ms > 0) { st.textContent = "PAUSED"; st.className = "pause"; }
+  else { st.textContent = "READY"; st.className = ""; }
+
+  document.body.classList.toggle("ended", ended);
+  let warn = false;
+  if (ended) {
+    $("nowPart").innerHTML = "&nbsp;";
+    $("nowLabel").textContent = "Time is up";
+    $("nowSub").textContent = "Pens down. Stop writing now.";
+    $("leftLabel").textContent = "Time left"; $("segLeft").textContent = "00:00"; $("segBar").style.width = "100%";
+    $("moveOn").innerHTML = "&nbsp;"; $("next").innerHTML = "&nbsp;";
+  } else if (ms === 0 && !running()) {
+    $("nowPart").innerHTML = "&nbsp;";
+    $("nowLabel").textContent = "Ready";
+    $("nowSub").textContent = "Press Start when reading time begins";
+    $("leftLabel").textContent = "Reading time"; $("segLeft").textContent = mmss(SEGS[0].end * 60000); $("segBar").style.width = "0%";
+    $("moveOn").innerHTML = "&nbsp;";
+    $("next").innerHTML = "First: <b>Reading time</b> (" + SEGS[0].end + " min)";
+  } else {
+    const s = SEGS[i], segMs = (s.end - s.start) * 60000, inSeg = ms - s.start * 60000, left = segMs - inSeg;
+    $("nowPart").textContent = s.part ? "Part " + s.part + " · " + PARTS[s.part] : (s.kind === "reading" ? "Before you write" : "Final minutes");
+    $("nowLabel").textContent = s.label;
+    if (s.kind === "reading") $("nowSub").textContent = "Read the case study and questions. No writing or highlighting.";
+    else if (s.kind === "check") $("nowSub").textContent = "Finish anything you skipped, then check your answers.";
+    else $("nowSub").innerHTML = s.title + " · <span class='marks'>" + s.marks + " mark" + (s.marks === 1 ? "" : "s") + "</span> · suggested " + (s.end - s.start) + " min";
+    $("leftLabel").textContent = s.kind === "reading" ? "Reading time left" : (s.kind === "check" ? "Check time left" : "Time left on this question");
+    $("segLeft").textContent = mmss(left);
+    $("segBar").style.width = (inSeg / segMs * 100) + "%";
+    warn = left <= 60000 && s.kind === "question";
+    const n = SEGS[i + 1];
+    $("moveOn").innerHTML = s.kind === "reading" ? "Writing starts at <b class='num'>" + mmss(s.end * 60000) + "</b> on the clock" : (n ? "Move on at <b class='num'>" + mmss(s.end * 60000) + "</b> on the clock" : "Pens down at <b class='num'>" + mmss(s.end * 60000) + "</b>");
+    $("next").innerHTML = n ? "Next: <b>" + n.label + "</b>" + (n.title ? " · " + n.title : "") + " at <b class='num'>" + mmss(n.start * 60000) + "</b>" : "Last stage: finish and check";
+  }
+  document.body.classList.toggle("warn", warn);
+  if (lastIdx !== -2 && i !== lastIdx && running() || (ended && lastIdx !== -2 && lastIdx < SEGS.length)) {
+    chime(ended);
+    const now = $("now"); now.classList.remove("flash"); void now.offsetWidth; now.classList.add("flash");
+  }
+  lastIdx = (ms === 0 && !running()) ? -2 : i;
+  $("start").disabled = running() || ended;
+  $("start").textContent = (ms > 0 && !ended && !running()) ? "Resume" : "Start";
+  $("pause").disabled = !running();
+  $("reset").disabled = ms === 0 && !running();
+  $("sound").textContent = "Sound: " + (sound ? "on" : "off");
+}
+
+// ----- controls -----
+async function holdWake(){ try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {} }
+function releaseWake(){ try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
+function start(){ if (running() || elapsed() >= TOTAL) return; if (lastIdx === -2) lastIdx = idxAt(acc); startedAt = Date.now(); save(); holdWake(); chimePrime(); render(); }
+function pause(){ if (!running()) return; acc = elapsed(); startedAt = null; save(); releaseWake(); render(); }
+function reset(){ if ((elapsed() > 0) && !confirm("Reset the exam clock to 00:00?")) return; acc = 0; startedAt = null; lastIdx = -2; save(); releaseWake(); render(); }
+function chimePrime(){ try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch (e) {} }
+$("start").onclick = start;
+$("pause").onclick = pause;
+$("reset").onclick = reset;
+$("sound").onclick = () => { sound = !sound; save(); render(); };
+$("full").onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (e) {} };
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) { e.preventDefault(); }
+  if (e.key === " ") { e.preventDefault(); running() ? pause() : start(); }
+  else if (e.key === "r" || e.key === "R") reset();
+  else if (e.key === "f" || e.key === "F") $("full").click();
+});
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && running()) holdWake(); });
+if (running()) { lastIdx = idxAt(elapsed()); holdWake(); }
+render();
+setInterval(render, 200);
+})();
+</script>
+</body>
+</html>
