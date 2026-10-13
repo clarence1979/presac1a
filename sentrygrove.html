@@ -1,0 +1,2322 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operation Sentry: Build an intruder alarm that fires back</title>
+<meta name="description" content="Year 9 Digital Technologies lab: build an intruder alarm with a Raspberry Pi 5, GrovePi+ sensors and a USB office cannon, in simple Python.">
+<style>
+:root{
+  --ink:#16212b; --ink-2:#2c3a47; --muted:#5f6f7c; --paper:#f1f4f7; --panel:#ffffff;
+  --line:#d6dee6; --line-2:#e8edf1; --tint:#e9f0f7;
+  --orange:#ef8a1f; --blue:#2a62c8; --red:#df343b; --green:#1f9a67; --yellow:#f3c12e;
+  --orange-soft:#fff1e0; --blue-soft:#e6eefb; --red-soft:#fde9ea; --green-soft:#e3f5ec;
+  --vs-bg:#1e1e1e; --vs-bar:#252526; --vs-tab:#1e1e1e; --vs-text:#d4d4d4; --vs-gutter:#858585; --vs-line:#2a2d2e;
+  --radius:14px; --radius-s:8px;
+  --font:"Trebuchet MS","Segoe UI","DejaVu Sans",Verdana,sans-serif;
+  --mono:"Cascadia Code","Fira Code","JetBrains Mono","DejaVu Sans Mono",Consolas,monospace;
+  --rail:220px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.55}
+a{color:var(--blue)}
+h1,h2,h3,h4{line-height:1.15;margin:0 0 .5em}
+h1{font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em}
+h2{font-size:clamp(1.5rem,3vw,2.1rem);letter-spacing:-.01em}
+h3{font-size:1.25rem}
+h4{font-size:1.05rem;margin-bottom:.35em}
+p{margin:0 0 1em;max-width:70ch}
+ul,ol{max-width:70ch}
+li{margin-bottom:.35em}
+code,kbd{font-family:var(--mono);font-size:.9em;background:var(--tint);padding:.1em .4em;border-radius:5px}
+kbd{border:1px solid var(--line);border-bottom-width:2px;background:#fff}
+strong{color:var(--ink)}
+button{font-family:inherit;font-size:.95rem;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---- layout ---- */
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);gap:0;max-width:1240px;margin:0 auto}
+.rail{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 14px 28px 22px;border-right:1px solid var(--line)}
+.rail .brand{font-weight:700;font-size:.95rem;color:var(--muted);margin-bottom:18px;line-height:1.3}
+.rail a{display:flex;gap:10px;align-items:center;text-decoration:none;color:var(--ink-2);padding:7px 10px;border-radius:9px;font-size:.95rem}
+.rail a:hover{background:var(--tint)}
+.rail a.active{background:var(--ink);color:#fff}
+.rail .num{width:26px;height:26px;border-radius:7px;background:var(--line-2);display:grid;place-items:center;font-weight:700;font-size:.8rem;color:var(--ink);flex:none}
+.rail a.active .num{background:#fff}
+.rail .done .num{background:var(--green);color:#fff}
+.rail .progress{margin-top:18px;font-size:.85rem;color:var(--muted)}
+.rail .bar{height:8px;border-radius:4px;background:var(--line-2);overflow:hidden;margin-top:6px}
+.rail .bar i{display:block;height:100%;width:0;background:var(--green);transition:width .4s}
+main{padding:0 36px 80px;min-width:0}
+.topbar{display:none}
+@media (max-width:980px){
+  .shell{grid-template-columns:1fr}
+  .rail{display:none}
+  main{padding:0 16px 60px}
+  .topbar{display:flex;position:sticky;top:0;z-index:20;background:rgba(241,244,247,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);overflow-x:auto;gap:6px;padding:8px 12px;margin:0 -16px 10px}
+  .topbar a{flex:none;text-decoration:none;color:var(--ink-2);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:.85rem}
+  .topbar a.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+}
+
+section.mission{padding-top:48px;scroll-margin-top:12px}
+.mission-head{display:flex;align-items:flex-end;gap:18px;border-bottom:3px solid var(--ink);padding-bottom:12px;margin-bottom:22px}
+.mission-head .big{font-size:3.2rem;font-weight:800;line-height:1;color:var(--ink);letter-spacing:-.03em}
+.mission-head .big small{display:block;font-size:.8rem;font-weight:700;letter-spacing:0;color:var(--muted)}
+.mission-head h2{margin:0}
+.mission-head .time{margin-left:auto;font-size:.9rem;color:var(--muted);white-space:nowrap}
+.goal{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--blue);border-radius:var(--radius-s);padding:14px 18px;margin:0 0 22px}
+.goal p{margin:0}
+.goal b{display:block;margin-bottom:4px}
+
+/* ---- hero ---- */
+.hero{padding:40px 0 10px}
+.hero .kicker{color:var(--muted);font-weight:700;margin-bottom:8px}
+.hero p.lead{font-size:1.2rem;max-width:62ch;color:var(--ink-2)}
+.hero-stage{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start;margin:26px 0 10px}
+.console .lcd{font-size:12px}
+@media (max-width:860px){.hero-stage{grid-template-columns:1fr}}
+.scene{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 10px 30px;position:relative}
+.scene svg{width:100%;height:auto;display:block}
+.scene .cap{position:absolute;left:14px;bottom:10px;font-size:.8rem;color:var(--muted)}
+.console{background:var(--ink);color:#e8eef4;border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:12px;font-size:.9rem}
+.console .label{color:#9fb2c3;font-size:.78rem;margin-bottom:4px}
+.leds{display:flex;gap:14px;align-items:center}
+.led{width:16px;height:16px;border-radius:50%;background:#3b4a58;display:inline-block;box-shadow:inset 0 0 0 2px rgba(0,0,0,.3);vertical-align:middle;margin-right:6px;transition:background .15s,box-shadow .15s}
+.led.on-g{background:#39e07a;box-shadow:0 0 12px #39e07a}
+.led.on-r{background:#ff4e55;box-shadow:0 0 14px #ff4e55}
+.console .status{font-family:var(--mono);font-size:.85rem;min-height:1.4em;color:#ffd166}
+.console .log{font-family:var(--mono);font-size:.74rem;line-height:1.5;color:#b7c6d3;background:rgba(255,255,255,.05);border-radius:8px;padding:8px 10px;min-height:5.2em;white-space:pre-wrap}
+
+/* ---- LCD mock ---- */
+.lcd{display:inline-grid;grid-template-columns:repeat(16,1.05em);grid-auto-rows:1.5em;gap:2px;padding:9px;border-radius:7px;background:#2b4ea8;font-family:var(--mono);font-size:14px;font-weight:700;color:#ffffff;border:5px solid #2d3a46;transition:background .35s;line-height:1.5em;box-shadow:inset 0 0 0 2px rgba(0,0,0,.2)}
+.lcd span{display:block;text-align:center;background:rgba(0,0,0,.14);border-radius:2px;overflow:hidden;white-space:pre}
+.lcd.c-orange{background:#f08c2a}.lcd.c-blue{background:#2b4ea8}.lcd.c-red{background:#d8262f}.lcd.c-green{background:#17a060}.lcd.c-off{background:#4a5560}
+
+/* ---- panels & callouts ---- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin:0 0 20px}
+.panel.tight{padding:12px 16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.note{border-left:6px solid var(--yellow);background:#fff9e3;padding:12px 16px;border-radius:var(--radius-s);margin:0 0 18px}
+.note.red{border-color:var(--red);background:var(--red-soft)}
+.note.blue{border-color:var(--blue);background:var(--blue-soft)}
+.note.green{border-color:var(--green);background:var(--green-soft)}
+.note p:last-child{margin:0}
+.steps{counter-reset:step;list-style:none;padding:0;margin:0 0 18px;max-width:none}
+.steps li{counter-increment:step;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:12px;row-gap:4px;margin-bottom:14px;align-items:start}
+.steps li::before{content:counter(step);grid-column:1;grid-row:1;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;font-weight:700;display:grid;place-items:center;font-size:.9rem}
+.steps li>*{grid-column:2}
+.steps li .term{margin:4px 0 6px}
+.steps li p{margin:0 0 .4em}
+.steps li .sub{color:var(--muted);font-size:.92rem}
+figure{margin:0 0 20px}
+figure svg{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+figcaption{font-size:.9rem;color:var(--muted);margin-top:8px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px;align-items:center}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;border-radius:9px;font-weight:700}
+.btn:hover{background:var(--tint)}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary:hover{background:#000}
+.btn.danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.code{font-family:var(--mono);font-weight:600;font-size:.88rem}
+.btn:disabled{opacity:.45;cursor:default}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;font-weight:700;background:var(--tint);color:var(--ink-2)}
+.pill.orange{background:var(--orange-soft);color:#9a5205}.pill.blue{background:var(--blue-soft);color:#1b3f85}.pill.red{background:var(--red-soft);color:#991b1b}.pill.green{background:var(--green-soft);color:#0f5f3f}
+table{border-collapse:collapse;width:100%;margin:0 0 18px;font-size:.95rem;background:#fff;border-radius:var(--radius-s);overflow:hidden}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line-2);vertical-align:top}
+th{background:var(--tint);font-size:.85rem;color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+details{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-s);padding:0;margin:0 0 14px}
+details summary{cursor:pointer;padding:12px 16px;font-weight:700;list-style:none;display:flex;align-items:center;gap:10px}
+details summary::before{content:"";width:0;height:0;border-left:8px solid var(--ink);border-top:6px solid transparent;border-bottom:6px solid transparent;transition:transform .2s}
+details[open] summary::before{transform:rotate(90deg)}
+details .inner{padding:0 16px 14px;border-top:1px solid var(--line-2)}
+details .inner>*:first-child{margin-top:12px}
+.checklist{list-style:none;padding:0;margin:0 0 18px}
+.checklist li{margin:0 0 8px}
+.checklist label{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:var(--radius-s);padding:10px 14px;cursor:pointer}
+.checklist input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--green);flex:none}
+.checklist input:checked+span{text-decoration:line-through;color:var(--muted)}
+.tinker{border:2px dashed var(--blue);border-radius:var(--radius);padding:14px 18px;margin:0 0 20px;background:var(--blue-soft)}
+.tinker h4{margin-top:0}
+.tinker ul{margin-bottom:0}
+
+/* ---- terminal block ---- */
+.term{background:#0f1720;color:#dfe8f0;border-radius:var(--radius-s);font-family:var(--mono);font-size:.88rem;margin:0 0 16px;overflow:hidden;border:1px solid #1f2b36}
+.term .bar{display:flex;align-items:center;gap:8px;background:#162130;padding:6px 10px;font-family:var(--font);font-size:.78rem;color:#9fb2c3}
+.term .bar .dot{width:10px;height:10px;border-radius:50%;background:#3a4b5c}
+.term .bar .t{flex:1}
+.term pre{margin:0;padding:12px 14px;overflow-x:auto;white-space:pre}
+.term .p{color:#7fd1a6;user-select:none}
+.term .out{color:#9fb2c3}
+.term .hl{background:rgba(243,193,46,.25);color:#ffe28a;border-radius:3px;padding:0 2px}
+.copybtn{border:1px solid #3a4b5c;background:#1f2b36;color:#dfe8f0;border-radius:6px;padding:3px 10px;font-size:.78rem;font-family:var(--font)}
+.copybtn:hover{background:#2a3a48}
+.copybtn.ok{background:#1f9a67;border-color:#1f9a67;color:#fff}
+
+/* ---- VS Code style code box ---- */
+.codebox{background:var(--vs-bg);border-radius:10px;overflow:hidden;margin:0 0 18px;border:1px solid #2b2b2b;box-shadow:0 8px 24px rgba(16,24,32,.18)}
+.codebox .bar{display:flex;align-items:center;background:var(--vs-bar);padding:0 8px 0 0;gap:6px}
+.codebox .tab{background:var(--vs-tab);color:#ffffff;padding:9px 16px;font-family:var(--font);font-size:.85rem;display:flex;align-items:center;gap:8px;border-right:1px solid #2b2b2b;border-top:2px solid #0a84ff}
+.codebox .tab::before{content:"";width:12px;height:12px;border-radius:3px;background:linear-gradient(135deg,#3572a5 50%,#ffd43b 50%)}
+.codebox .bar .sp{flex:1}
+.codebox .bar .lines{font-family:var(--font);font-size:.75rem;color:#8a8a8a;margin-right:6px}
+.codebox .vsbtn{border:1px solid #3c3c3c;background:#2d2d2d;color:#e6e6e6;border-radius:5px;padding:4px 11px;font-size:.8rem;font-family:var(--font);display:inline-flex;gap:6px;align-items:center}
+.codebox .vsbtn:hover{background:#3a3a3a}
+.codebox .vsbtn.ok{background:#1f9a67;border-color:#1f9a67;color:#fff}
+.codebox .body{overflow:auto;max-height:620px;font-family:var(--mono);font-size:13.5px;line-height:1.55;color:var(--vs-text)}
+.codebox .body.open{max-height:none}
+.codebox table{margin:0;background:transparent;border-radius:0;width:100%;font-size:inherit}
+.codebox td{padding:0;border:0;white-space:pre}
+.codebox td.g{color:var(--vs-gutter);text-align:right;padding:0 14px 0 14px;user-select:none;width:1%;position:sticky;left:0;background:var(--vs-bg);border-right:3px solid transparent}
+.codebox tr.new td.g{border-right-color:#4ec9b0}
+.codebox td.c{padding:0 18px 0 8px}
+.codebox tr:hover td{background:#262626}
+.codebox tr:hover td.g{background:#262626}
+.codebox .foot{display:flex;justify-content:space-between;align-items:center;background:var(--vs-bar);color:#9a9a9a;font-size:.75rem;padding:5px 12px;font-family:var(--font)}
+.codebox .foot button{background:none;border:0;color:#9ccbff;padding:0;font-size:.78rem}
+.tk-c{color:#6a9955}.tk-s{color:#ce9178}.tk-n{color:#b5cea8}.tk-k{color:#c586c0}.tk-d{color:#569cd6}.tk-f{color:#dcdcaa}.tk-v{color:#9cdcfe}.tk-m{color:#4ec9b0}.tk-o{color:#d4d4d4}.tk-b{color:#dcdcaa}
+.legend{font-size:.85rem;color:var(--muted);margin:-8px 0 16px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;background:#4ec9b0;vertical-align:-2px;margin-right:6px}
+
+/* ---- quiz ---- */
+.quiz .q{background:#fff;border:1px solid var(--line);border-radius:var(--radius-s);padding:14px 16px;margin-bottom:12px}
+.quiz .q p{font-weight:700;margin-bottom:8px}
+.quiz .opts{display:grid;gap:6px}
+.quiz .opts button{text-align:left;border:1px solid var(--line);background:#fafbfc;border-radius:8px;padding:9px 12px;font-size:.95rem}
+.quiz .opts button:hover{background:var(--tint)}
+.quiz .opts button.right{background:var(--green-soft);border-color:var(--green)}
+.quiz .opts button.wrong{background:var(--red-soft);border-color:var(--red)}
+.quiz .fb{font-size:.92rem;margin-top:8px;color:var(--ink-2);min-height:1.3em}
+.quiz .score{font-weight:700;font-size:1.1rem;margin:10px 0}
+
+/* ---- invent cards ---- */
+.blocks{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+@media (max-width:760px){.blocks{grid-template-columns:1fr}}
+.block{border-radius:var(--radius);padding:14px 16px;border:1px solid var(--line);background:#fff}
+.block h4{display:flex;align-items:center;gap:8px}
+.block h4 i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.block ul{padding-left:18px;margin:0}
+.block li{font-size:.93rem}
+.block.in{border-top:5px solid var(--blue)}.block.dec{border-top:5px solid var(--orange)}.block.out{border-top:5px solid var(--red)}
+.ideas{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.idea{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.idea h4{margin-bottom:6px}
+.idea .uses{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 6px}
+.idea .uses span{font-size:.75rem;padding:2px 8px;border-radius:999px;background:var(--tint)}
+.idea .uses span.i{background:var(--blue-soft)}.idea .uses span.d{background:var(--orange-soft)}.idea .uses span.o{background:var(--red-soft)}
+.idea p{font-size:.93rem;margin:0}
+.idea .lvl{float:right;font-size:.75rem;color:var(--muted)}
+
+/* ---- siren timeline ---- */
+.timeline{display:grid;grid-template-columns:90px 1fr;gap:6px 10px;align-items:center;font-size:.9rem;margin:10px 0}
+.timeline .row{position:relative;height:26px;background:var(--line-2);border-radius:6px;overflow:hidden}
+.timeline .seg{position:absolute;top:0;height:100%;display:grid;place-items:center;font-size:.75rem;font-weight:700;color:#fff}
+.timeline .play{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--ink);left:0}
+
+/* ---- misc ---- */
+.parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.part{background:#fff;border:1px solid var(--line);border-radius:var(--radius-s);padding:10px;text-align:center;font-size:.85rem}
+.part svg{width:100%;height:64px;display:block;margin:0 auto 6px}
+.part b{display:block}
+.part small{color:var(--muted)}
+footer{margin-top:60px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:16px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:50;font-size:.9rem}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media print{.rail,.topbar,.codebox .bar button,.copybtn{display:none!important}.codebox .body{max-height:none}}
+</style>
+</head>
+<body>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="shell">
+<nav class="rail" aria-label="Missions">
+  <div class="brand">Operation Sentry<br><span style="font-weight:400">Year 9 Digital Technologies</span></div>
+  <a href="#briefing" data-nav="briefing"><span class="num">●</span>Briefing</a>
+  <a href="#setup" data-nav="setup"><span class="num">0</span>Set up the kit</a>
+  <a href="#m1" data-nav="m1"><span class="num">1</span>Lights</a>
+  <a href="#m2" data-nav="m2"><span class="num">2</span>Eyes</a>
+  <a href="#m3" data-nav="m3"><span class="num">3</span>Voice</a>
+  <a href="#m4" data-nav="m4"><span class="num">4</span>The brain</a>
+  <a href="#m5" data-nav="m5"><span class="num">5</span>Return fire</a>
+  <a href="#invent" data-nav="invent"><span class="num">★</span>Invent</a>
+  <a href="#quiz" data-nav="quiz"><span class="num">?</span>Quiz</a>
+  <a href="#teacher" data-nav="teacher"><span class="num">T</span>Teacher notes</a>
+  <div class="progress">Checkpoints done: <span id="progText">0 / 0</span><div class="bar"><i id="progBar"></i></div></div>
+</nav>
+
+<main>
+<div class="topbar" aria-label="Missions">
+  <a href="#briefing">Briefing</a><a href="#setup">Set up</a><a href="#m1">1 Lights</a><a href="#m2">2 Eyes</a><a href="#m3">3 Voice</a><a href="#m4">4 Brain</a><a href="#m5">5 Return fire</a><a href="#invent">Invent</a><a href="#quiz">Quiz</a><a href="#teacher">Teacher</a>
+</div>
+
+<!-- ============================ BRIEFING ============================ -->
+<section class="hero" id="briefing">
+  <div class="kicker">Raspberry Pi 5 · GrovePi+ · Python</div>
+  <h1>Operation Sentry</h1>
+  <p class="lead">Build an alarm that watches a doorway, learns what "normal" looks like, sounds a siren when someone sneaks in, and then fires a foam rocket at them. You will write every line in plain Python, one mission at a time.</p>
+
+  <div class="hero-stage">
+    <div class="scene">
+      <svg id="heroScene" viewBox="0 0 920 400" role="img" aria-label="Animated top-down view of a room: the Pi on a desk watches the doorway with an ultrasonic beam, an intruder walks in, the alarm turns red and the cannon fires a rocket.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5 0 10z" fill="#5f6f7c"/></marker>
+        </defs>
+        <!-- room -->
+        <rect x="20" y="30" width="860" height="350" rx="6" fill="#f7f9fb" stroke="#8fa0ae" stroke-width="4"/>
+        <rect x="874" y="158" width="14" height="96" fill="#f7f9fb"/>
+        <line x1="880" y1="254" x2="908" y2="214" stroke="#8fa0ae" stroke-width="4" stroke-linecap="round"/>
+        <text x="866" y="285" font-size="13" fill="#5f6f7c" text-anchor="end">doorway</text>
+        <text x="866" y="302" font-size="12" fill="#8fa0ae" text-anchor="end">186 cm from the sensor</text>
+        <!-- beam -->
+        <polygon id="heroBeam" points="212,209 870,166 870,252" fill="rgba(42,98,200,.10)" stroke="rgba(42,98,200,.45)" stroke-dasharray="6 6"/>
+        <text x="520" y="155" font-size="13" fill="#2a62c8" text-anchor="middle">ultrasonic "tripwire" beam</text>
+        <ellipse id="heroPing" cx="212" cy="209" rx="6" ry="22" fill="none" stroke="#2a62c8" stroke-width="3" opacity="0"/>
+        <ellipse id="heroEcho" cx="212" cy="209" rx="6" ry="22" fill="none" stroke="#ef8a1f" stroke-width="3" opacity="0"/>
+        <!-- desk -->
+        <rect x="46" y="150" width="176" height="122" rx="6" fill="#dccfb8" stroke="#b7a383" stroke-width="2"/>
+        <!-- Pi + GrovePi+ -->
+        <rect x="60" y="162" width="104" height="66" rx="4" fill="#2f7a3a"/>
+        <rect x="66" y="168" width="92" height="54" rx="4" fill="#2a7fd4" stroke="#1b5ea3" stroke-width="2"/>
+        <g fill="#fff" opacity=".9">
+          <rect x="146" y="174" width="8" height="6"/><rect x="146" y="184" width="8" height="6"/><rect x="146" y="194" width="8" height="6"/><rect x="146" y="204" width="8" height="6"/>
+          <rect x="70" y="174" width="8" height="6"/><rect x="70" y="184" width="8" height="6"/><rect x="70" y="194" width="8" height="6"/>
+        </g>
+        <text x="112" y="200" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">GrovePi+</text>
+        <!-- ranger -->
+        <rect x="184" y="196" width="26" height="26" rx="3" fill="#fff" stroke="#6b7a87" stroke-width="2"/>
+        <rect x="206" y="200" width="8" height="7" fill="#9aa9b6"/><rect x="206" y="211" width="8" height="7" fill="#9aa9b6"/>
+        <!-- LCD on desk -->
+        <rect id="heroLcdMini" x="64" y="236" width="66" height="26" rx="3" fill="#2b4ea8" stroke="#2d3a46" stroke-width="3"/>
+        <text id="heroLcdMiniText" x="97" y="253" font-size="10" fill="#fff" text-anchor="middle" font-family="monospace">ARMED</text>
+        <!-- LEDs + buzzer -->
+        <circle id="heroLedG" cx="150" cy="249" r="7" fill="#3b4a58"/>
+        <circle id="heroLedR" cx="170" cy="249" r="7" fill="#3b4a58"/>
+        <circle cx="200" cy="249" r="9" fill="#334" stroke="#111" stroke-width="2"/><circle cx="200" cy="249" r="3" fill="#000"/>
+        <g id="heroSiren" opacity="0" fill="none" stroke="#df343b" stroke-width="3" stroke-linecap="round">
+          <path d="M214 240 a16 16 0 0 1 0 18"/><path d="M222 234 a24 24 0 0 1 0 30"/><path d="M230 228 a32 32 0 0 1 0 42"/>
+        </g>
+        <!-- labels -->
+        <text x="60" y="140" font-size="13" fill="#5f6f7c">Pi 5 + GrovePi+ with sensors, LEDs, buzzer and LCD</text>
+        <!-- readout bubble -->
+        <g id="heroReadout">
+          <rect x="226" y="176" width="78" height="26" rx="13" fill="#16212b"/>
+          <text id="heroReadoutText" x="265" y="194" font-size="14" fill="#fff" text-anchor="middle" font-family="monospace" font-weight="700">186 cm</text>
+        </g>
+        <!-- cannon -->
+        <rect x="84" y="296" width="72" height="54" rx="6" fill="#c9bda7" stroke="#a89470" stroke-width="2"/>
+        <text x="120" y="370" font-size="12" fill="#5f6f7c" text-anchor="middle">USB cannon</text>
+        <g id="heroCannon" transform="translate(120 322) rotate(0)">
+          <circle r="18" fill="#4a5560"/>
+          <rect x="-12" y="-10" width="30" height="20" rx="4" fill="#2c3a47"/>
+          <rect x="14" y="-4" width="34" height="8" rx="2" fill="#3b4a58"/>
+          <rect x="14" y="-9" width="34" height="4" rx="2" fill="#5a6b7a"/><rect x="14" y="5" width="34" height="4" rx="2" fill="#5a6b7a"/>
+          <circle id="heroCannonLed" cx="-4" cy="0" r="3" fill="#3b4a58"/>
+        </g>
+        <g id="heroDart" opacity="0">
+          <rect x="-10" y="-3" width="18" height="6" rx="3" fill="#df343b"/><polygon points="8,-4 16,0 8,4" fill="#ef8a1f"/>
+        </g>
+        <!-- intruder -->
+        <g id="heroIntruder" transform="translate(905 205)">
+          <ellipse id="heroIntruderBody" cx="0" cy="0" rx="17" ry="9" fill="#2c3a47"/>
+          <circle cx="0" cy="0" r="9" fill="#df343b" stroke="#fff" stroke-width="2"/>
+          <text id="heroBang" x="0" y="-22" font-size="22" font-weight="800" fill="#df343b" text-anchor="middle" opacity="0">!</text>
+        </g>
+        <!-- stage banner -->
+        <rect x="20" y="30" width="860" height="0"/>
+        <g id="heroStage">
+          <rect x="300" y="42" width="320" height="34" rx="17" fill="#2b4ea8"/>
+          <text id="heroStageText" x="460" y="65" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">Stage 3 · ARMED</text>
+        </g>
+      </svg>
+      <div class="cap">Hover to pause · the loop takes about 15 seconds</div>
+    </div>
+    <div class="console" aria-label="What the Pi shows">
+      <div><div class="label">The LCD screen</div><div class="lcd c-blue" id="heroLcd"></div></div>
+      <div><div class="label">LEDs</div><div class="leds"><span><i class="led" id="heroLedGi"></i>green</span><span><i class="led" id="heroLedRi"></i>red</span></div></div>
+      <div><div class="label">Terminal</div><div class="status" id="heroStatus"></div></div>
+      <div><div class="label">intrusion_log.txt</div><div class="log" id="heroLog"></div></div>
+    </div>
+  </div>
+
+  <div class="two" style="margin-top:22px">
+    <div class="panel">
+      <h3>What you will build</h3>
+      <ol>
+        <li>A board that listens to your Python program (Mission 1).</li>
+        <li>A sensor "tripwire" across a doorway (Mission 2).</li>
+        <li>A siren and a screen that tells you what's going on (Mission 3).</li>
+        <li>The full alarm: arm it, learn the room, catch the intruder, disarm with a PIN (Mission 4).</li>
+        <li>A USB cannon that fires when the alarm goes off (Mission 5).</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>The rules of the game</h3>
+      <ul>
+        <li>Plain Python only: variables, <code>if</code>, <code>while</code>, functions. No classes, no lists, no f-strings.</li>
+        <li>Every program on this page runs on its own. Copy it, save it, run it.</li>
+        <li>Green bars in the code gutter show the lines that are new in that mission. Read those first.</li>
+        <li>Foam rockets only. Never aim the cannon at anyone's face.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SETUP ============================ -->
+<section class="mission" id="setup">
+  <div class="mission-head"><div class="big">0<small>mission</small></div><h2>Set up the kit</h2><div class="time">about 15 minutes</div></div>
+  <div class="goal"><b>Goal</b><p>Plug every part into the right port, then prove the Pi can see the board before you write any code.</p></div>
+
+  <h3>The parts</h3>
+  <div class="parts" id="partsGrid"></div>
+
+  <h3>Where everything plugs in</h3>
+  <p>Hover or tap a part to see its cable and port. The port name is printed on the GrovePi+ next to each white socket. Match the names, not the positions in this drawing.</p>
+  <figure>
+    <svg id="boardMap" viewBox="0 0 820 560" role="img" aria-label="Wiring map: each Grove part connected by a cable to its port on the GrovePi+ board."></svg>
+    <figcaption>Grove cables only fit one way round. Push until they click. The LCD can go in any of the three I2C ports.</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>Part</th><th>Port</th><th>What it does in the alarm</th></tr></thead>
+    <tbody>
+      <tr><td>Green LED</td><td><code>D2</code></td><td>"Armed" light</td></tr>
+      <tr><td>Red LED</td><td><code>D3</code></td><td>"Alarm!" light</td></tr>
+      <tr><td>Ultrasonic ranger</td><td><code>D5</code></td><td>The invisible tripwire: measures distance in cm</td></tr>
+      <tr><td>Speaker</td><td><code>D6</code></td><td>Beeps and the low note of the siren (only D3, D5 and D6 can play a tone)</td></tr>
+      <tr><td>Buzzer</td><td><code>D7</code></td><td>The high note of the siren</td></tr>
+      <tr><td>Temperature &amp; humidity (blue DHT11)</td><td><code>D8</code></td><td>Fire alarm, and room conditions on the screen</td></tr>
+      <tr><td>Light sensor</td><td><code>A0</code></td><td>Catches a torch, or a light switched on or off</td></tr>
+      <tr><td>LCD RGB Backlight</td><td>any <code>I2C</code></td><td>Shows the stage, readings and messages. Its colour tells you the stage at a glance.</td></tr>
+      <tr><td>USB office cannon</td><td>USB port on the Pi</td><td>Mission 5: fires a foam rocket when the alarm goes off</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Check the Pi can see the board</h3>
+  <p>Open a terminal and run this. It scans the I2C wires and lists every device that answers.</p>
+  <div class="note blue"><p><strong>Pasting into the Kali terminal:</strong> use <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (plain <kbd>Ctrl</kbd>+<kbd>V</kbd> does not paste in a terminal).</p></div>
+  <div class="term"><div class="bar"><span class="dot"></span><span class="t">terminal</span><button class="copybtn" data-copy="i2cdetect -y -a 1">Copy</button></div><pre><span class="p">$ </span>i2cdetect -y -a 1
+<span class="out">     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00: -- -- -- -- <span class="hl">04</span> -- -- -- -- -- -- -- -- -- -- --
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- <span class="hl">3e</span> --
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+60: -- -- <span class="hl">62</span> -- -- -- -- -- -- -- -- -- -- -- -- --
+70: -- -- -- -- -- -- -- --</span></pre></div>
+  <p>You should see three numbers: <code>04</code> is the GrovePi+ board, <code>3e</code> is the LCD's text and <code>62</code> is the LCD's coloured backlight. Those are their <strong>addresses</strong>, and your programs use them to pick which device to talk to.</p>
+
+  <details><summary>Nothing shows up? Try this.</summary><div class="inner">
+    <ol>
+      <li>Check the GrovePi+ is pushed all the way down onto the Pi's pins and the Pi's green light is on.</li>
+      <li>Ask your teacher whether I2C has been switched on for this Pi (it is a one-time setting in <code>/boot/firmware/config.txt</code>: <code>dtparam=i2c_arm=on</code>, then reboot).</li>
+      <li>Only <code>04</code> missing? Unplug and replug the LCD. Only <code>3e</code> and <code>62</code> missing? The LCD cable is loose or in a D port by mistake.</li>
+    </ol>
+  </div></details>
+
+  <h3>Where to save your programs</h3>
+  <p>Make a folder called <code>sentry</code> in your home folder. Every program on this page gets copied, pasted into your editor and saved there with the file name shown on its tab. You run it from the terminal like this (replace the file name each time):</p>
+  <div class="term"><div class="bar"><span class="dot"></span><span class="t">terminal</span><button class="copybtn" data-copy="mkdir -p ~/sentry && cd ~/sentry">Copy</button></div><pre><span class="p">$ </span>mkdir -p ~/sentry &amp;&amp; cd ~/sentry</pre></div>
+  <div class="term"><div class="bar"><span class="dot"></span><span class="t">terminal</span><button class="copybtn" data-copy="sudo python3 mission1_lights.py">Copy</button></div><pre><span class="p">$ </span>sudo python3 mission1_lights.py</pre></div>
+  <p><code>sudo</code> is needed because talking straight to the I2C wires and USB is a job only the administrator is allowed to do. <kbd>Ctrl</kbd>+<kbd>C</kbd> stops any of these programs.</p>
+
+  <h4>Checkpoint</h4>
+  <ul class="checklist" data-mission="setup">
+    <li><label><input type="checkbox"><span>Every part is plugged into the port in the table.</span></label></li>
+    <li><label><input type="checkbox"><span><code>i2cdetect</code> shows 04, 3e and 62.</span></label></li>
+    <li><label><input type="checkbox"><span>I have a <code>sentry</code> folder and I know how to run a program with <code>sudo python3</code>.</span></label></li>
+  </ul>
+</section>
+
+<!-- ============================ MISSION 1 ============================ -->
+<section class="mission" id="m1">
+  <div class="mission-head"><div class="big">1<small>mission</small></div><h2>Lights</h2><div class="time">about 20 minutes</div></div>
+  <div class="goal"><b>Goal</b><p>Make the green and red LEDs take turns blinking, and understand the 5-byte message that makes it happen.</p></div>
+
+  <h3>How the Pi talks to the board</h3>
+  <p>Your Python program does not switch the LED on by itself. It sends a short message over two wires (called I2C) to a small chip on the GrovePi+, and that chip does the work. Every message is exactly <strong>five bytes</strong> (a byte is a number from 0 to 255). Press a button to watch a message travel.</p>
+  <figure>
+    <svg id="msgScene" viewBox="0 0 760 240" role="img" aria-label="Animation of a five-byte message travelling from the Raspberry Pi to the GrovePi+ chip, which then lights an LED."></svg>
+    <div class="controls">
+      <button class="btn code" data-msg="5,2,1" data-name="make_output(2)">make_output(2)</button>
+      <button class="btn code" data-msg="2,2,1" data-name="turn_on(2)">turn_on(2)</button>
+      <button class="btn code" data-msg="2,2,0" data-name="turn_off(2)">turn_off(2)</button>
+      <button class="btn code" data-msg="2,3,1" data-name="turn_on(3)">turn_on(3)</button>
+      <button class="btn code" data-msg="2,3,0" data-name="turn_off(3)">turn_off(3)</button>
+    </div>
+    <figcaption>The first byte is always 1 and the last is always 0. The middle three are the ones you choose: <strong>command</strong>, <strong>port</strong>, <strong>value</strong>.</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>Command number</th><th>Means</th><th>Port</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td><code>5</code></td><td>Set up a port</td><td>D2, D3, ...</td><td><code>1</code> = output (we will drive it), <code>0</code> = input</td></tr>
+      <tr><td><code>2</code></td><td>Switch a port on or off</td><td>D2, D3, ...</td><td><code>1</code> = on, <code>0</code> = off</td></tr>
+      <tr><td><code>7</code></td><td>Measure distance (Mission 2)</td><td>D5</td><td>ignored</td></tr>
+      <tr><td><code>3</code></td><td>Read a light level (Mission 2)</td><td>A0</td><td>ignored</td></tr>
+      <tr><td><code>4</code></td><td>Play a tone (Mission 3)</td><td>D6</td><td><code>128</code> = tone on, <code>0</code> = off</td></tr>
+      <tr><td><code>40</code></td><td>Read temperature and humidity (Mission 4)</td><td>D8</td><td><code>0</code> = blue DHT11 sensor</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The program</h3>
+  <p>Read the comments (the green text). Each function wraps one message so the main program at the bottom reads like English: <code>turn_on(green_led_port)</code>.</p>
+  <div class="codebox" data-file="mission1_lights.py" data-prev=""><div class="bar"><span class="tab">mission1_lights.py</span><span class="sp"></span><span class="lines"></span><button class="vsbtn copy" title="Copy the whole program">Copy</button><button class="vsbtn dl" title="Download as a .py file">Download .py</button></div><pre class="raw" hidden># Mission 1 - LIGHTS
+# GrovePi+ on a Raspberry Pi 5 (Kali Linux)
+#
+# Plug in:    Green LED -&gt; D2        Red LED -&gt; D3
+# Run with:   sudo python3 mission1_lights.py       (Ctrl+C to stop)
+#
+# What you learn: how the Pi talks to the GrovePi+ board.
+# Every message to the board is 5 bytes:   1, command, port, value, 0
+
+import os
+import fcntl
+import struct
+import time
+import signal
+
+# ---------- Settings you can change ----------
+green_led_port = 2
+red_led_port = 3
+blink_speed = 0.5         # seconds each LED stays on
+
+
+# ---------- Connecting to the GrovePi+ ----------
+# The GrovePi+ listens on the I2C wires at address 4.
+def open_device(address):
+    device = os.open(&quot;/dev/i2c-1&quot;, os.O_RDWR)
+    fcntl.ioctl(device, 0x0703, address)     # 0x0703 means &quot;talk to this address&quot;
+    return device
+
+
+# ---------- GrovePi+ helpers ----------
+# Every GrovePi+ message is 5 bytes: 1, the command number, the port, a value, 0
+def grovepi_send(command, port, value):
+    message = struct.pack(&quot;BBBBB&quot;, 1, command, port, value, 0)
+    os.write(grovepi, message)
+    time.sleep(0.02)                 # give the board a moment to read it
+
+
+def make_output(port):
+    grovepi_send(5, port, 1)         # command 5 = set a port to be an output
+
+
+def turn_on(port):
+    grovepi_send(2, port, 1)         # command 2 = digital write, 1 = on
+
+
+def turn_off(port):
+    grovepi_send(2, port, 0)         # 0 = off
+
+
+# ---------- Set up ----------
+signal.signal(signal.SIGINT, signal.SIG_DFL)     # make Ctrl+C stop the program quietly
+
+grovepi = open_device(0x04)
+make_output(green_led_port)
+make_output(red_led_port)
+
+print(&quot;Blinking! Press Ctrl+C to stop.&quot;)
+
+# ---------- Main program ----------
+while True:
+    turn_on(green_led_port)          # green on, red off...
+    turn_off(red_led_port)
+    time.sleep(blink_speed)
+    turn_off(green_led_port)         # ...then swap
+    turn_on(red_led_port)
+    time.sleep(blink_speed)</pre><div class="body"></div><div class="foot"><span>Python · plain text · paste into your editor and save as <b>mission1_lights.py</b></span><button class="expand">Expand to full height</button></div></div>
+
+  <ol class="steps">
+    <li><p>Press <strong>Copy</strong>, paste into your editor, save as <code>mission1_lights.py</code> in your <code>sentry</code> folder.</p></li>
+    <li><p>Run <code>sudo python3 mission1_lights.py</code>.</p><p class="sub">The LEDs should swap every half a second. <kbd>Ctrl</kbd>+<kbd>C</kbd> stops it (one LED may stay on, that's fine).</p></li>
+    <li><p>Find the line <code>blink_speed = 0.5</code> and change it. Run again.</p></li>
+  </ol>
+
+  <div class="tinker"><h4>Tinker</h4><ul>
+    <li>Make the green LED blink three times for every one blink of the red LED.</li>
+    <li>Add a third pattern: both on, both off, both on. Which function do you need to call, and how many times?</li>
+    <li>Swap the two port numbers at the top. What happens, and why does nothing else need to change?</li>
+  </ul></div>
+
+  <h4>Checkpoint</h4>
+  <ul class="checklist" data-mission="m1">
+    <li><label><input type="checkbox"><span>The LEDs blink.</span></label></li>
+    <li><label><input type="checkbox"><span>I can say what each of the 5 bytes in <code>grovepi_send(2, 2, 1)</code> means.</span></label></li>
+    <li><label><input type="checkbox"><span>I changed the blink speed and it worked.</span></label></li>
+  </ul>
+</section>
+
+<!-- ============================ MISSION 2 ============================ -->
+<section class="mission" id="m2">
+  <div class="mission-head"><div class="big">2<small>mission</small></div><h2>Eyes</h2><div class="time">about 25 minutes</div></div>
+  <div class="goal"><b>Goal</b><p>Read the ultrasonic ranger and the light sensor, print the numbers, and turn the red LED on when something comes closer than 50 cm.</p></div>
+
+  <h3>How the ranger measures distance</h3>
+  <p>The ranger shouts a click too high for you to hear, then listens for the echo. Sound travels at about 343 metres per second, so the longer the echo takes, the further away the object is. The GrovePi+ does the maths and hands back the distance in centimetres. Drag the slider to move the object.</p>
+  <figure>
+    <svg id="pingScene" viewBox="0 0 760 250" role="img" aria-label="Animation of an ultrasonic pulse leaving the ranger, bouncing off an object and returning, with the distance calculation."></svg>
+    <div class="controls">
+      <label for="pingRange">Object distance: <strong id="pingVal">186</strong> cm</label>
+      <input type="range" id="pingRange" min="10" max="400" value="186" style="flex:1;min-width:180px">
+    </div>
+    <figcaption>Two readings matter: <code>0</code> means nothing bounced back within range, and anything above about 400 cm is too far to trust.</figcaption>
+  </figure>
+
+  <h3>Reading the answer</h3>
+  <p>Sending a message is Mission 1. The new part is <strong>reading the reply</strong>. The board answers with three bytes. A byte only goes up to 255, so a distance like 300 cm would not fit in one byte. The board splits the number into a "high" byte and a "low" byte, and your program joins them back together:</p>
+  <div class="panel tight" id="bytePanel" style="font-family:var(--mono);font-size:1rem"></div>
+  <p>Try the slider above 255 cm and watch the high byte change from 0 to 1.</p>
+
+  <h3>The program</h3>
+  <p>Everything with a green bar is new. <code>grovepi_answer()</code> reads the three bytes; <code>read_distance()</code> and <code>read_light()</code> each send a question and then wait for the answer.</p>
+  <div class="codebox" data-file="mission2_eyes.py" data-prev="mission1_lights.py"><div class="bar"><span class="tab">mission2_eyes.py</span><span class="sp"></span><span class="lines"></span><button class="vsbtn copy" title="Copy the whole program">Copy</button><button class="vsbtn dl" title="Download as a .py file">Download .py</button></div><pre class="raw" hidden># Mission 2 - EYES
+# GrovePi+ on a Raspberry Pi 5 (Kali Linux)
+#
+# Plug in:    Green LED -&gt; D2       Red LED -&gt; D3
+#             Ultrasonic ranger -&gt; D5        Light sensor -&gt; A0
+# Run with:   sudo python3 mission2_eyes.py        (Ctrl+C to stop)
+#
+# What you learn: asking the board a question and reading its answer.
+# The ranger measures distance in cm. The light sensor gives 0 (dark) to 1023 (bright).
+# If something comes closer than the tripwire distance, the red LED comes on.
+
+import os
+import fcntl
+import struct
+import time
+import signal
+
+# ---------- Settings you can change ----------
+green_led_port = 2
+red_led_port = 3
+ranger_port = 5
+light_port = 0            # A0
+tripwire = 50             # cm - closer than this = red LED
+
+
+# ---------- Connecting to the GrovePi+ ----------
+def open_device(address):
+    device = os.open(&quot;/dev/i2c-1&quot;, os.O_RDWR)
+    fcntl.ioctl(device, 0x0703, address)     # 0x0703 means &quot;talk to this address&quot;
+    return device
+
+
+# ---------- GrovePi+ helpers ----------
+# Every GrovePi+ message is 5 bytes: 1, the command number, the port, a value, 0
+def grovepi_send(command, port, value):
+    message = struct.pack(&quot;BBBBB&quot;, 1, command, port, value, 0)
+    os.write(grovepi, message)
+    time.sleep(0.02)
+
+
+# The GrovePi+ answers with 3 bytes: a label, then a number split into two bytes
+def grovepi_answer():
+    reply = os.read(grovepi, 3)
+    label, high, low = struct.unpack(&quot;BBB&quot;, reply)
+    return high * 256 + low          # join the two bytes back into one number
+
+
+def make_output(port):
+    grovepi_send(5, port, 1)         # command 5 = set a port to be an output
+
+
+def turn_on(port):
+    grovepi_send(2, port, 1)         # command 2 = digital write, 1 = on
+
+
+def turn_off(port):
+    grovepi_send(2, port, 0)         # 0 = off
+
+
+def read_distance():
+    grovepi_send(7, ranger_port, 0)  # command 7 = ultrasonic read
+    time.sleep(0.1)                  # wait for the echo to come back
+    return grovepi_answer()
+
+
+def read_light():
+    grovepi_send(3, light_port, 0)   # command 3 = analog read (0 = dark, 1023 = bright)
+    time.sleep(0.05)
+    return grovepi_answer()
+
+
+# ---------- Set up ----------
+signal.signal(signal.SIGINT, signal.SIG_DFL)     # make Ctrl+C stop the program quietly
+
+grovepi = open_device(0x04)
+make_output(green_led_port)
+make_output(red_led_port)
+
+print(&quot;Watching... Press Ctrl+C to stop.&quot;)
+
+# ---------- Main program ----------
+while True:
+    distance = read_distance()
+    light = read_light()
+    print(&quot;Distance:&quot;, distance, &quot;cm    Light:&quot;, light)
+
+    if distance &gt; 0 and distance &lt; tripwire:     # 0 means nothing in range
+        turn_on(red_led_port)                    # something is close!
+        turn_off(green_led_port)
+    else:
+        turn_off(red_led_port)
+        turn_on(green_led_port)
+
+    time.sleep(0.3)</pre><div class="body"></div><div class="foot"><span>Python · plain text · paste into your editor and save as <b>mission2_eyes.py</b></span><button class="expand">Expand to full height</button></div></div>
+
+  <ol class="steps">
+    <li><p>Copy, paste, save as <code>mission2_eyes.py</code>, then run it.</p><p class="sub">Point the ranger at a wall. The terminal prints a new line every 0.3 seconds. Wave your hand in front of the ranger.</p></li>
+    <li><p>Cover the light sensor with your thumb, then shine your phone torch on it. Watch the light number.</p></li>
+    <li><p>Walk towards the ranger. The red LED should come on when you are closer than <code>tripwire</code> (50 cm). Change <code>tripwire</code> to 100 and try again.</p></li>
+  </ol>
+
+  <div class="tinker"><h4>Tinker</h4><ul>
+    <li>Print only when something is closer than the tripwire, instead of every 0.3 seconds.</li>
+    <li>Turn the red LED on when the room goes <em>dark</em> instead (hint: compare <code>light</code> with a number, like 200).</li>
+    <li>Make it a parking sensor: the closer the object, the shorter the <code>time.sleep</code> between red blinks.</li>
+  </ul></div>
+
+  <h4>Checkpoint</h4>
+  <ul class="checklist" data-mission="m2">
+    <li><label><input type="checkbox"><span>Distances print and change when I move my hand.</span></label></li>
+    <li><label><input type="checkbox"><span>I can explain why the reply needs a high byte and a low byte.</span></label></li>
+    <li><label><input type="checkbox"><span>The red LED comes on when something is close.</span></label></li>
+  </ul>
+</section>
+
+<!-- ============================ MISSION 3 ============================ -->
+<section class="mission" id="m3">
+  <div class="mission-head"><div class="big">3<small>mission</small></div><h2>Voice</h2><div class="time">about 25 minutes</div></div>
+  <div class="goal"><b>Goal</b><p>Count down on the LCD with a beep each second, play a "nee-naw" siren, then show a green "All clear".</p></div>
+
+  <h3>Two noises, one siren</h3>
+  <p>The speaker on the GrovePi+ can only play one pitch, and the buzzer only has one pitch too. On their own each is just a flat tone. But if they <strong>take turns</strong> every 0.3 seconds, you get a siren. That is what the <code>siren()</code> function does, using a <code>for</code> loop to repeat the pair.</p>
+  <div class="panel">
+    <div class="timeline" id="sirenTimeline"></div>
+    <div class="controls"><button class="btn primary" id="sirenPlay">Hear the siren</button><span style="font-size:.85rem;color:var(--muted)">(3 seconds, quiet)</span></div>
+  </div>
+
+  <h3>Talking to the screen</h3>
+  <p>The LCD is two devices in one: address <code>0x3E</code> is the text, and <code>0x62</code> is the coloured backlight. Each line holds exactly 16 characters, so messages must be short. <code>lcd_show(line1, line2)</code> writes both lines, and <code>lcd_colour(red, green, blue)</code> mixes a colour from three numbers between 0 and 255. Press <strong>Run demo</strong> to see what the program below does on the screen.</p>
+  <div class="panel">
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+      <div class="lcd c-off" id="m3Lcd"></div>
+      <div style="flex:1;min-width:200px">
+        <div class="controls"><button class="btn primary" id="m3Run">Run demo</button><label style="font-size:.9rem"><input type="checkbox" id="m3Sound"> with sound</label></div>
+        <div id="m3Line" style="font-family:var(--mono);font-size:.85rem;color:var(--muted);min-height:2.6em"></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>The program</h3>
+  <p>New this mission: the speaker helpers, <code>siren()</code>, and all the LCD helpers. Look at <code>lcd_write_line()</code>: the LCD wants letters as numbers, and <code>ord("A")</code> gives you the number for A (it's 65).</p>
+  <div class="codebox" data-file="mission3_voice.py" data-prev="mission2_eyes.py"><div class="bar"><span class="tab">mission3_voice.py</span><span class="sp"></span><span class="lines"></span><button class="vsbtn copy" title="Copy the whole program">Copy</button><button class="vsbtn dl" title="Download as a .py file">Download .py</button></div><pre class="raw" hidden># Mission 3 - VOICE
+# GrovePi+ on a Raspberry Pi 5 (Kali Linux)
+#
+# Plug in:    Speaker -&gt; D6       Buzzer -&gt; D7       LCD RGB Backlight -&gt; any I2C port
+# Run with:   sudo python3 mission3_voice.py
+#
+# What you learn: making sounds and writing on the screen.
+# The program counts down on the screen with a beep each second,
+# then plays a &quot;nee-naw&quot; siren, then shows a green &quot;All clear&quot;.
+
+import os
+import fcntl
+import struct
+import time
+import signal
+
+# ---------- Settings you can change ----------
+speaker_port = 6          # must be D3, D5 or D6 - only these ports can play a tone
+buzzer_port = 7
+countdown_from = 5        # seconds
+sound_on = True           # set to False to test quietly in class
+
+
+# ---------- Connecting to the devices ----------
+# Every device on the I2C wires has its own address (a number).
+def open_device(address):
+    device = os.open(&quot;/dev/i2c-1&quot;, os.O_RDWR)
+    fcntl.ioctl(device, 0x0703, address)     # 0x0703 means &quot;talk to this address&quot;
+    return device
+
+
+# ---------- GrovePi+ helpers ----------
+def grovepi_send(command, port, value):
+    message = struct.pack(&quot;BBBBB&quot;, 1, command, port, value, 0)
+    os.write(grovepi, message)
+    time.sleep(0.02)
+
+
+def make_output(port):
+    grovepi_send(5, port, 1)         # command 5 = set a port to be an output
+
+
+def turn_on(port):
+    grovepi_send(2, port, 1)         # command 2 = digital write, 1 = on
+
+
+def turn_off(port):
+    grovepi_send(2, port, 0)         # 0 = off
+
+
+# ---------- Speaker helpers ----------
+def speaker_on():
+    grovepi_send(4, speaker_port, 128)   # command 4 = analog write: makes a tone
+
+
+def speaker_off():
+    grovepi_send(4, speaker_port, 0)
+
+
+def beep(seconds):
+    if sound_on:
+        speaker_on()
+        time.sleep(seconds)
+        speaker_off()
+
+
+def siren(times):
+    # &quot;nee-naw&quot;: the speaker (low note) and the buzzer (high note) take turns
+    # &quot;for count in range(times)&quot; repeats the block exactly &#x27;times&#x27; times
+    if sound_on:
+        for count in range(times):
+            turn_off(buzzer_port)
+            speaker_on()
+            time.sleep(0.3)
+            speaker_off()
+            turn_on(buzzer_port)
+            time.sleep(0.3)
+        turn_off(buzzer_port)
+
+
+# ---------- LCD helpers ----------
+# The LCD has two addresses: one for the text, one for the coloured backlight.
+def lcd_command(code):
+    os.write(lcd_text, struct.pack(&quot;BB&quot;, 0x80, code))
+    time.sleep(0.005)
+
+
+def lcd_setup():
+    lcd_command(0x01)       # clear the screen
+    time.sleep(0.05)
+    lcd_command(0x0C)       # screen on, no cursor
+    lcd_command(0x28)       # use both lines
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 0, 0))      # wake up the backlight chip
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 1, 0))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 8, 0xAA))
+
+
+def lcd_colour(red, green, blue):
+    # each colour is a number from 0 (off) to 255 (full)
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 4, red))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 3, green))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 2, blue))
+
+
+def lcd_write_line(code, text):
+    lcd_command(code)                    # 0x80 = start of line 1, 0xC0 = start of line 2
+    text = text.ljust(16)                # pad with spaces to clear old letters
+    for letter in text:
+        # ord() turns a letter into its number code, which is what the LCD needs
+        os.write(lcd_text, struct.pack(&quot;BB&quot;, 0x40, ord(letter)))
+
+
+def lcd_show(line1, line2):
+    # Each line holds 16 characters - keep messages short!
+    lcd_write_line(0x80, line1)
+    lcd_write_line(0xC0, line2)
+
+
+# ---------- Set up ----------
+signal.signal(signal.SIGINT, signal.SIG_DFL)     # make Ctrl+C stop the program quietly
+
+grovepi = open_device(0x04)
+lcd_text = open_device(0x3E)
+lcd_backlight = open_device(0x62)
+
+make_output(buzzer_port)
+make_output(speaker_port)
+turn_off(buzzer_port)
+speaker_off()
+lcd_setup()
+
+# ---------- Main program ----------
+lcd_colour(255, 120, 0)                          # orange
+seconds_left = countdown_from
+while seconds_left &gt; 0:
+    lcd_show(&quot;Get ready...&quot;, &quot;Siren in &quot; + str(seconds_left) + &quot; sec&quot;)
+    print(&quot;Siren in&quot;, seconds_left)
+    beep(0.1)
+    time.sleep(0.9)
+    seconds_left = seconds_left - 1
+
+lcd_colour(255, 0, 0)                            # red
+lcd_show(&quot;!!! NEE-NAW !!!&quot;, &quot;Siren test&quot;)
+print(&quot;Siren!&quot;)
+siren(5)
+
+lcd_colour(0, 255, 0)                            # green
+lcd_show(&quot;All clear&quot;, &quot;Mission 3 done&quot;)
+print(&quot;Done.&quot;)</pre><div class="body"></div><div class="foot"><span>Python · plain text · paste into your editor and save as <b>mission3_voice.py</b></span><button class="expand">Expand to full height</button></div></div>
+
+  <ol class="steps">
+    <li><p>Copy, paste, save as <code>mission3_voice.py</code>, run it. Turn the blue knob on the speaker if it is too quiet or too loud.</p></li>
+    <li><p>Change <code>countdown_from</code> to 3 and the message to your name. Run again.</p></li>
+    <li><p>Set <code>sound_on = False</code>. Which lines stop doing anything? Find them.</p></li>
+  </ol>
+
+  <div class="tinker"><h4>Tinker</h4><ul>
+    <li>Make the siren faster by changing one number. Make it play 10 times by changing another.</li>
+    <li>Change the countdown colour from orange to purple. (Hint: red and blue, no green.)</li>
+    <li>Write a function <code>flash(colour_name)</code> that flashes the backlight twice. You decide what it takes as an input.</li>
+  </ul></div>
+
+  <h4>Checkpoint</h4>
+  <ul class="checklist" data-mission="m3">
+    <li><label><input type="checkbox"><span>The LCD counts down, the siren plays, the screen goes green.</span></label></li>
+    <li><label><input type="checkbox"><span>I can explain why the siren needs two parts taking turns.</span></label></li>
+    <li><label><input type="checkbox"><span>I changed a message and a colour.</span></label></li>
+  </ul>
+</section>
+
+<!-- ============================ MISSION 4 ============================ -->
+<section class="mission" id="m4">
+  <div class="mission-head"><div class="big">4<small>mission</small></div><h2>The brain</h2><div class="time">about 50 minutes</div></div>
+  <div class="goal"><b>Goal</b><p>Put the pieces together into a real alarm: arm it, learn the room, watch, raise the alarm, and disarm with a secret PIN. Every alarm is written to a log file.</p></div>
+
+  <h3>The five stages</h3>
+  <p>The main program is one big <code>while True:</code> loop that goes around the five stages forever. The LCD colour tells you which stage you are in. Step through them.</p>
+  <div class="panel" id="stagePanel">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="stageTabs"></div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start" class="stage-grid">
+      <div>
+        <div class="lcd c-orange" id="stageLcd"></div>
+        <div class="leds" style="margin-top:10px;font-size:.9rem"><span><i class="led" id="stageLedG"></i>green</span><span><i class="led" id="stageLedR"></i>red</span><span id="stageSound" style="color:var(--muted)"></span></div>
+      </div>
+      <div>
+        <h4 id="stageTitle"></h4>
+        <p id="stageText" style="margin-bottom:8px"></p>
+        <div id="stageExtra"></div>
+        <div style="font-family:var(--mono);font-size:.82rem;background:var(--vs-bg);color:var(--vs-text);border-radius:8px;padding:10px 12px;white-space:pre;overflow-x:auto" id="stageCode"></div>
+      </div>
+    </div>
+    <div class="controls" style="margin-top:12px"><button class="btn" id="stagePrev">Previous</button><button class="btn primary" id="stageNext">Next stage</button><button class="btn" id="stageAuto">Auto-play</button></div>
+  </div>
+  <style>@media (max-width:640px){.stage-grid{grid-template-columns:1fr!important}}</style>
+
+  <h3>Why two strikes?</h3>
+  <p>Sensors are a little jumpy. One odd reading could be a fly, a draught or a glitch. The alarm only fires after <strong>two unusual readings in a row</strong>. Any normal reading in between resets the count to zero. That is the whole job of the <code>strikes</code> variable.</p>
+
+  <h3>The program</h3>
+  <p>This is the complete alarm. The helpers at the top are the ones you already know, plus one new sensor. The new ideas are marked. Three things you may not have seen before, each explained in a comment: <code>for count in range(times)</code>, the <code>%</code> remainder operator ("every 25th loop"), and a function that returns two values.</p>
+  <div class="codebox" data-file="intruder_alarm.py" data-prev="mission3_voice.py"><div class="bar"><span class="tab">intruder_alarm.py</span><span class="sp"></span><span class="lines"></span><button class="vsbtn copy" title="Copy the whole program">Copy</button><button class="vsbtn dl" title="Download as a .py file">Download .py</button></div><pre class="raw" hidden># Mission 4 - THE BRAIN: Intruder Alarm
+# GrovePi+ on a Raspberry Pi 5 (Kali Linux)
+#
+# Plug the parts into the GrovePi+ like this:
+#   Green LED           -&gt;  D2
+#   Red LED             -&gt;  D3
+#   Ultrasonic ranger   -&gt;  D5
+#   Speaker             -&gt;  D6
+#   Buzzer              -&gt;  D7
+#   Temp &amp; humidity     -&gt;  D8   (the blue DHT11 sensor)
+#   Light sensor        -&gt;  A0
+#   LCD RGB Backlight   -&gt;  any I2C port
+#
+# Run with:     sudo python3 intruder_alarm.py
+# Press Ctrl+C to stop.
+#
+# How it works:
+#   1. ARMING   A countdown that beeps every second while you leave the room.
+#   2. LEARNING The alarm measures what &quot;normal&quot; looks like: the distance to the
+#               wall or door, and how bright the room is.
+#   3. ARMED    It keeps checking. Someone walking through the ultrasonic beam makes
+#               the distance shorter. A torch, or a light being switched on or off,
+#               changes the light level. It also watches the temperature, in case
+#               of a fire. The screen shows the room&#x27;s temperature and humidity.
+#   4. ALARM    Red LED, a &quot;nee-naw&quot; siren (speaker and buzzer take turns), a red
+#               screen - and the time, reason and room conditions go in a log file.
+#   5. DISARM   Type the secret PIN to stop it. Every wrong PIN is logged and sets
+#               the siren off again.
+
+import os
+import fcntl
+import struct
+import time
+import signal
+import getpass
+
+# ---------- Settings you can change ----------
+green_led_port = 2
+red_led_port = 3
+ranger_port = 5
+speaker_port = 6          # must be D3, D5 or D6 - only these ports can play a tone
+buzzer_port = 7
+dht_port = 8
+light_port = 0            # A0
+
+secret_pin = &quot;1234&quot;       # the PIN that stops the alarm
+arming_delay = 10         # seconds you get to leave the room
+distance_change = 20      # someone this many cm closer than normal = intruder
+light_change = 150        # light level changing by this much = intruder
+heat_limit = 40           # temperature (C) that counts as a possible fire
+sound_on = True           # set to False to test quietly in class
+log_file_name = &quot;intrusion_log.txt&quot;
+
+
+# ---------- Connecting to the devices ----------
+# Every device on the I2C connection has its own address (a number).
+def open_device(address):
+    device = os.open(&quot;/dev/i2c-1&quot;, os.O_RDWR)
+    fcntl.ioctl(device, 0x0703, address)     # 0x0703 means &quot;talk to this address&quot;
+    return device
+
+
+# ---------- GrovePi+ helpers ----------
+# Every GrovePi+ message is 5 bytes: 1, the command number, the port, a value, 0
+def grovepi_send(command, port, value):
+    message = struct.pack(&quot;BBBBB&quot;, 1, command, port, value, 0)
+    os.write(grovepi, message)
+    time.sleep(0.02)
+
+
+# The GrovePi+ answers with 3 bytes: a label, then a number split into two bytes
+def grovepi_answer():
+    reply = os.read(grovepi, 3)
+    label, high, low = struct.unpack(&quot;BBB&quot;, reply)
+    return high * 256 + low
+
+
+def make_output(port):
+    grovepi_send(5, port, 1)        # command 5 = set a port to be an output
+
+
+def turn_on(port):
+    grovepi_send(2, port, 1)        # command 2 = digital write, 1 = on
+
+
+def turn_off(port):
+    grovepi_send(2, port, 0)        # 0 = off
+
+
+def read_distance():
+    grovepi_send(7, ranger_port, 0)  # command 7 = ultrasonic read
+    time.sleep(0.1)                  # wait for the echo
+    return grovepi_answer()
+
+
+def read_light():
+    grovepi_send(3, light_port, 0)   # command 3 = analog read (0 = dark, 1023 = bright)
+    time.sleep(0.05)
+    return grovepi_answer()
+
+
+def read_temperature_and_humidity():
+    grovepi_send(40, dht_port, 0)    # command 40 = temp &amp; humidity, 0 = blue DHT11
+    time.sleep(0.6)                  # this sensor is slow
+    reply = os.read(grovepi, 9)
+    # The reply is 9 bytes: a label, then two decimal numbers of 4 bytes each.
+    # &quot;&lt;Bff&quot; means: B = one byte, f = a 4-byte decimal number, &lt; = byte order
+    label, temperature, humidity = struct.unpack(&quot;&lt;Bff&quot;, reply)
+    return temperature, humidity
+
+
+# ---------- Speaker helpers ----------
+def speaker_on():
+    grovepi_send(4, speaker_port, 128)   # command 4 = analog write: makes a beep tone
+
+
+def speaker_off():
+    grovepi_send(4, speaker_port, 0)
+
+
+def beep(seconds):
+    if sound_on:
+        speaker_on()
+        time.sleep(seconds)
+        speaker_off()
+
+
+def siren(times):
+    # &quot;nee-naw&quot;: the speaker (low note) and the buzzer (high note) take turns
+    if sound_on:
+        for count in range(times):
+            turn_off(buzzer_port)
+            speaker_on()
+            time.sleep(0.3)
+            speaker_off()
+            turn_on(buzzer_port)
+            time.sleep(0.3)
+
+
+# ---------- LCD helpers ----------
+# The LCD has two addresses: one for the text, one for the coloured backlight.
+def lcd_command(code):
+    os.write(lcd_text, struct.pack(&quot;BB&quot;, 0x80, code))
+    time.sleep(0.005)
+
+
+def lcd_setup():
+    lcd_command(0x01)       # clear the screen
+    time.sleep(0.05)
+    lcd_command(0x0C)       # screen on, no cursor
+    lcd_command(0x28)       # use both lines
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 0, 0))      # wake up the backlight chip
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 1, 0))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 8, 0xAA))
+
+
+def lcd_colour(red, green, blue):
+    # each colour is a number from 0 (off) to 255 (full)
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 4, red))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 3, green))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 2, blue))
+
+
+def lcd_write_line(code, text):
+    lcd_command(code)                    # 0x80 = start of line 1, 0xC0 = start of line 2
+    text = text.ljust(16)                # pad with spaces to clear old letters
+    for letter in text:
+        # ord() turns a letter into its number code, which is what the LCD needs
+        os.write(lcd_text, struct.pack(&quot;BB&quot;, 0x40, ord(letter)))
+
+
+def lcd_show(line1, line2):
+    # Each line holds 16 characters - keep messages short!
+    lcd_write_line(0x80, line1)
+    lcd_write_line(0xC0, line2)
+
+
+# ---------- Log file ----------
+def write_log(message):
+    log_file = open(log_file_name, &quot;a&quot;)      # &quot;a&quot; = add to the end of the file
+    log_file.write(time.strftime(&quot;%Y-%m-%d %H:%M:%S&quot;) + &quot;  &quot; + message + &quot;\n&quot;)
+    log_file.close()
+
+
+# ---------- Set up ----------
+signal.signal(signal.SIGINT, signal.SIG_DFL)     # make Ctrl+C stop the program quietly
+
+grovepi = open_device(0x04)
+lcd_text = open_device(0x3E)
+lcd_backlight = open_device(0x62)
+
+make_output(green_led_port)
+make_output(red_led_port)
+make_output(buzzer_port)
+make_output(speaker_port)
+turn_off(green_led_port)                        # start with everything off
+turn_off(red_led_port)
+turn_off(buzzer_port)
+speaker_off()
+lcd_setup()
+
+temperature = 0
+humidity = 0
+
+print(&quot;Intruder alarm started. Press Ctrl+C to stop.&quot;)
+
+# ---------- Main program ----------
+while True:
+
+    # 1. ARMING - countdown so you can leave the room
+    lcd_colour(255, 120, 0)                          # orange
+    seconds_left = arming_delay
+    while seconds_left &gt; 0:
+        lcd_show(&quot;Arming...&quot;, &quot;Leave in &quot; + str(seconds_left) + &quot; sec&quot;)
+        turn_on(green_led_port)                      # blink the green LED...
+        beep(0.1)                                    # ...and beep
+        time.sleep(0.4)
+        turn_off(green_led_port)
+        time.sleep(0.5)
+        seconds_left = seconds_left - 1
+
+    # 2. LEARNING - what does the room look like when nobody is there?
+    normal_distance = read_distance()
+    if normal_distance == 0:                         # 0 means nothing in range
+        normal_distance = 400
+    normal_light = read_light()
+    write_log(&quot;ARMED  (normal distance &quot; + str(normal_distance) + &quot; cm, light &quot; + str(normal_light) + &quot;)&quot;)
+    print(&quot;Armed. Normal distance:&quot;, normal_distance, &quot;cm   Normal light:&quot;, normal_light)
+    beep(0.5)                                        # one long beep = armed
+
+    # 3. ARMED - keep checking until something changes
+    lcd_colour(0, 0, 255)                            # blue
+    turn_on(green_led_port)
+    strikes = 0                                      # how many odd readings in a row
+    reason = &quot;&quot;
+    loops = 0
+    while strikes &lt; 2:                               # 2 in a row stops false alarms
+
+        # The temp &amp; humidity sensor is slow, so only check it every 25 loops
+        if loops % 25 == 0:
+            new_temperature, new_humidity = read_temperature_and_humidity()
+            # Only keep sensible readings (a failed reading is ignored)
+            if new_temperature &gt; 0 and new_temperature &lt; 60:
+                temperature = round(new_temperature)
+                humidity = round(new_humidity)
+        loops = loops + 1
+
+        distance = read_distance()
+        light = read_light()
+        lcd_show(&quot;ARMED &quot; + str(temperature) + &quot;C &quot; + str(humidity) + &quot;%&quot;,
+                 str(distance) + &quot;cm light &quot; + str(light))
+
+        if distance &gt; 0 and distance &lt; normal_distance - distance_change:
+            strikes = strikes + 1
+            reason = &quot;Movement &quot; + str(distance) + &quot;cm&quot;
+        elif abs(light - normal_light) &gt; light_change:
+            strikes = strikes + 1
+            reason = &quot;Light changed&quot;
+        elif temperature &gt; heat_limit:
+            strikes = strikes + 1
+            reason = &quot;FIRE? &quot; + str(temperature) + &quot;C&quot;
+        else:
+            strikes = 0
+
+        time.sleep(0.2)
+
+    # 4. ALARM!
+    turn_off(green_led_port)
+    turn_on(red_led_port)
+    lcd_colour(255, 0, 0)                            # red
+    lcd_show(&quot;!!! ALARM !!!&quot;, reason)
+    write_log(&quot;ALARM - &quot; + reason + &quot;  (room &quot; + str(temperature) + &quot;C, &quot; + str(humidity) + &quot;% humidity)&quot;)
+    print()
+    print(&quot;!!! ALARM !!!&quot;, reason)
+    siren(5)                                         # nee-naw 5 times...
+    if sound_on:
+        turn_on(buzzer_port)                         # ...then the buzzer stays on
+
+    # 5. DISARM - keep asking until the right PIN is typed
+    #    getpass hides what you type, so nobody can read the PIN over your shoulder
+    wrong_tries = 0
+    typed_pin = getpass.getpass(&quot;Enter PIN to stop the alarm: &quot;)
+    while typed_pin != secret_pin:
+        wrong_tries = wrong_tries + 1
+        write_log(&quot;WRONG PIN entered (attempt &quot; + str(wrong_tries) + &quot;)&quot;)
+        print(&quot;Wrong PIN!&quot;)
+        lcd_show(&quot;WRONG PIN!&quot;, &quot;Attempts: &quot; + str(wrong_tries))
+        siren(3)
+        if sound_on:
+            turn_on(buzzer_port)
+        typed_pin = getpass.getpass(&quot;Enter PIN to stop the alarm: &quot;)
+
+    turn_off(buzzer_port)
+    turn_off(red_led_port)
+    lcd_colour(0, 255, 0)                            # green
+    lcd_show(&quot;Disarmed&quot;, &quot;Wrong PINs: &quot; + str(wrong_tries))
+    write_log(&quot;DISARMED after &quot; + str(wrong_tries) + &quot; wrong PIN(s)&quot;)
+    print(&quot;Alarm stopped.&quot;)
+    beep(0.1)                                        # two short &quot;all clear&quot; beeps
+    time.sleep(0.1)
+    beep(0.1)
+    input(&quot;Press Enter to arm the alarm again...&quot;)</pre><div class="body"></div><div class="foot"><span>Python · plain text · paste into your editor and save as <b>intruder_alarm.py</b></span><button class="expand">Expand to full height</button></div></div>
+
+  <ol class="steps">
+    <li><p>Copy, paste, save as <code>intruder_alarm.py</code>, run it. Stand still behind the ranger during the 10-second countdown.</p></li>
+    <li><p>When the screen goes blue, walk through the beam. The screen goes red and the siren plays.</p></li>
+    <li><p>Type a wrong PIN first (it is hidden while you type), then the right one: <code>1234</code>.</p></li>
+    <li><p>Open the log: <code>cat intrusion_log.txt</code>. Every arm, alarm and wrong PIN is there with the time.</p></li>
+    <li><p>Fire alarm test: set <code>heat_limit</code> to a couple of degrees above the room temperature shown on the screen, re-arm, and warm the blue sensor in your hand.</p></li>
+  </ol>
+
+  <div class="note"><p><strong>Testing in a full classroom:</strong> set <code>sound_on = False</code> while you test, or twenty sirens go off at once. Set <code>arming_delay</code> to 3 so you are not waiting around.</p></div>
+
+  <div class="tinker"><h4>Tinker</h4><ul>
+    <li>Change the PIN. Then make the alarm give up after 3 wrong PINs and lock for 30 seconds.</li>
+    <li>Count how many times the alarm has gone off since the program started and show it on the "Disarmed" screen.</li>
+    <li>Make the countdown beep faster in the last 3 seconds.</li>
+    <li><strong>Think like a hacker:</strong> the PIN is written in the program. Who can read it? The log records every wrong PIN. What would a brute-force attack look like in that file?</li>
+  </ul></div>
+
+  <h4>Checkpoint</h4>
+  <ul class="checklist" data-mission="m4">
+    <li><label><input type="checkbox"><span>The alarm arms, catches me walking through, and stops with the PIN.</span></label></li>
+    <li><label><input type="checkbox"><span>I found my alarm in <code>intrusion_log.txt</code>.</span></label></li>
+    <li><label><input type="checkbox"><span>I can explain what <code>strikes</code> is for.</span></label></li>
+    <li><label><input type="checkbox"><span>I changed the PIN and one sensitivity setting.</span></label></li>
+  </ul>
+</section>
+
+<!-- ============================ MISSION 5 ============================ -->
+<section class="mission" id="m5">
+  <div class="mission-head"><div class="big">5<small>mission</small></div><h2>Return fire</h2><div class="time">about 50 minutes</div></div>
+  <div class="goal"><b>Goal</b><p>Control the USB office cannon from Python, aim it at the doorway, then plug it into your alarm so it fires when an intruder is caught.</p></div>
+
+  <div class="note red"><p><strong>Safety first.</strong> Foam rockets only, never anything else in the tubes. Never aim at a face. Agree on the "target zone" with your teacher before you arm it. The cannon is a toy, treat it like one.</p></div>
+
+  <h3>A different kind of device</h3>
+  <p>The cannon does not plug into the GrovePi+. It is a USB device, like a mouse, so it needs a different library (<code>usb.core</code>) and a different message. Every message is <strong>8 bytes</strong>. The first byte is 2 for "move" (or 3 for "the light"), the second byte is the command, and the rest are zeros. There is no "move 10 degrees" command: you tell it to start turning, wait, then tell it to stop. Try it.</p>
+  <figure>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start" class="cannon-grid">
+      <svg id="cannonScene" viewBox="0 0 440 320" role="img" aria-label="Interactive top-down view of the office cannon turret. Buttons turn it, tilt it and fire a rocket."></svg>
+      <div>
+        <div class="controls" style="margin:0 0 8px">
+          <button class="btn code" data-can="left">l = left</button><button class="btn code" data-can="right">r = right</button>
+          <button class="btn code" data-can="up">u = up</button><button class="btn code" data-can="down">d = down</button>
+          <button class="btn danger code" data-can="fire">f = FIRE</button><button class="btn code" data-can="park">p = park</button>
+          <button class="btn code" data-can="led">light</button>
+        </div>
+        <div style="font-family:var(--mono);font-size:.78rem;line-height:1.5;background:var(--vs-bg);color:var(--vs-text);border-radius:8px;padding:10px 12px;min-height:12.5em;white-space:pre" id="cannonMsg">press a button</div>
+        <div style="font-size:.85rem;color:var(--muted);margin-top:8px">Rockets: <strong id="cannonRockets">4</strong> · <button class="btn" id="cannonReload" style="padding:3px 10px;font-size:.8rem">Reload</button></div>
+      </div>
+    </div>
+    <figcaption>Each button is 0.3 seconds of movement, exactly like <code>nudge</code> in the test program. Park swings the cannon fully down and left, so every run starts from the same spot.</figcaption>
+  </figure>
+  <style>@media (max-width:700px){.cannon-grid{grid-template-columns:1fr!important}}</style>
+
+  <table>
+    <thead><tr><th>Command number</th><th>Name in the program</th><th>What the cannon does</th></tr></thead>
+    <tbody>
+      <tr><td><code>1</code></td><td><code>cannon_down</code></td><td>tilts the barrels down</td></tr>
+      <tr><td><code>2</code></td><td><code>cannon_up</code></td><td>tilts the barrels up</td></tr>
+      <tr><td><code>4</code></td><td><code>cannon_left</code></td><td>turns left</td></tr>
+      <tr><td><code>8</code></td><td><code>cannon_right</code></td><td>turns right</td></tr>
+      <tr><td><code>16</code></td><td><code>cannon_fire</code></td><td>fires one rocket (takes about 4 seconds, then reloads the next tube)</td></tr>
+      <tr><td><code>32</code></td><td><code>cannon_stop</code></td><td>stops moving</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Part A: install the library and find the cannon</h3>
+  <ol class="steps">
+    <li><p>Plug the cannon's USB cable into the Pi. Install the USB library (one time):</p>
+      <div class="term"><div class="bar"><span class="dot"></span><span class="t">terminal</span><button class="copybtn" data-copy="sudo apt install -y python3-usb">Copy</button></div><pre><span class="p">$ </span>sudo apt install -y python3-usb</pre></div></li>
+    <li><p>Check the Pi can see it:</p>
+      <div class="term"><div class="bar"><span class="dot"></span><span class="t">terminal</span><button class="copybtn" data-copy="lsusb">Copy</button></div><pre><span class="p">$ </span>lsusb
+<span class="out">Bus 001 Device 003: ID <span class="hl">2123:1010</span> Dream Cheeky Thunder</span></pre></div>
+      <p class="sub">Those two numbers are the cannon's ID: maker <code>2123</code>, product <code>1010</code>. The program uses them to find the cannon among all the USB devices.</p></li>
+    <li><p>Copy the test program, save as <code>cannon_test.py</code>, run it with <code>sudo</code>. It parks the cannon (10 seconds), then waits for your keys.</p></li>
+  </ol>
+  <div class="codebox" data-file="cannon_test.py" data-prev=""><div class="bar"><span class="tab">cannon_test.py</span><span class="sp"></span><span class="lines"></span><button class="vsbtn copy" title="Copy the whole program">Copy</button><button class="vsbtn dl" title="Download as a .py file">Download .py</button></div><pre class="raw" hidden># Mission 5A - CANNON TEST
+# USB Office Cannon on a Raspberry Pi 5 (Kali Linux)
+#
+# Plug in:    the cannon&#x27;s USB cable -&gt; any USB port on the Pi
+# Install:    sudo apt install -y python3-usb
+# Run with:   sudo python3 cannon_test.py
+#
+# What you learn: the cannon is a USB device. We send it 8-byte messages:
+#   2, command, 0, 0, 0, 0, 0, 0
+# where the command number tells it which way to move (or to fire).
+#
+# Type a letter and press Enter:
+#   l = left   r = right   u = up   d = down   f = FIRE   p = park   q = quit
+
+import sys
+import struct
+import time
+import usb.core
+
+# ---------- Settings you can change ----------
+nudge = 0.3               # seconds the cannon moves for each key press
+
+# ---------- Cannon command numbers ----------
+cannon_down = 1
+cannon_up = 2
+cannon_left = 4
+cannon_right = 8
+cannon_fire = 16
+cannon_stop = 32
+
+
+# ---------- Cannon helpers ----------
+def cannon_send(command):
+    # 8 bytes: 2 means &quot;a movement command&quot;, then the command, then six zeros
+    message = struct.pack(&quot;BBBBBBBB&quot;, 2, command, 0, 0, 0, 0, 0, 0)
+    cannon.ctrl_transfer(0x21, 0x09, 0, 0, message)
+
+
+def cannon_move(command, seconds):
+    cannon_send(command)             # start moving...
+    time.sleep(seconds)              # ...for this long...
+    cannon_send(cannon_stop)         # ...then stop
+
+
+def cannon_light(on):
+    # 3 means &quot;the LED&quot;: on = 1 lights it up, on = 0 switches it off
+    message = struct.pack(&quot;BBBBBBBB&quot;, 3, on, 0, 0, 0, 0, 0, 0)
+    cannon.ctrl_transfer(0x21, 0x09, 0, 0, message)
+
+
+def cannon_shoot(rockets):
+    for count in range(rockets):
+        cannon_send(cannon_fire)
+        time.sleep(4.5)              # it takes about 4 seconds to fire and reload
+
+
+def cannon_park():
+    # swing all the way down and left, so every run starts from the same place
+    cannon_move(cannon_down, 2)
+    cannon_move(cannon_left, 8)
+
+
+# ---------- Set up ----------
+# Every USB device has two ID numbers. These are the Dream Cheeky &quot;Thunder&quot; cannon.
+cannon = usb.core.find(idVendor=0x2123, idProduct=0x1010)
+if cannon is None:
+    print(&quot;Cannon not found. Is it plugged in? Try: lsusb&quot;)
+    sys.exit()
+
+# Linux grabs the cannon as if it were a keyboard. Ask it to let go.
+if cannon.is_kernel_driver_active(0):
+    cannon.detach_kernel_driver(0)
+cannon.set_configuration()
+
+print(&quot;Cannon found! Parking it (this takes 10 seconds)...&quot;)
+cannon_park()
+cannon_light(1)
+
+# ---------- Main program ----------
+key = &quot;&quot;
+while key != &quot;q&quot;:
+    key = input(&quot;l/r/u/d/f/p/q then Enter: &quot;)
+    if key == &quot;l&quot;:
+        cannon_move(cannon_left, nudge)
+    elif key == &quot;r&quot;:
+        cannon_move(cannon_right, nudge)
+    elif key == &quot;u&quot;:
+        cannon_move(cannon_up, nudge)
+    elif key == &quot;d&quot;:
+        cannon_move(cannon_down, nudge)
+    elif key == &quot;f&quot;:
+        print(&quot;FIRE!&quot;)
+        cannon_shoot(1)
+    elif key == &quot;p&quot;:
+        cannon_park()
+
+cannon_light(0)
+print(&quot;Bye.&quot;)</pre><div class="body"></div><div class="foot"><span>Python · plain text · paste into your editor and save as <b>cannon_test.py</b></span><button class="expand">Expand to full height</button></div></div>
+  <p>Use <kbd>l</kbd> <kbd>r</kbd> <kbd>u</kbd> <kbd>d</kbd> to point the cannon at the target zone. <strong>Count your presses.</strong> If it took 10 presses of <kbd>r</kbd> and 3 of <kbd>u</kbd> from parked, that is 3.0 seconds right and 0.9 seconds up. You will type those numbers into the alarm as <code>aim_right</code> and <code>aim_up</code>.</p>
+
+  <h3>Part B: the alarm that fires back</h3>
+  <p>This is Mission 4's program with the cannon helpers added. The green bars show exactly what changed: a new library, four settings, the cannon functions, finding the cannon at start-up, parking and aiming, and the FIRE lines in stage 4. The cannon only holds 4 rockets, so the program counts them and asks you to reload.</p>
+  <div class="codebox" data-file="intruder_alarm_cannon.py" data-prev="intruder_alarm.py"><div class="bar"><span class="tab">intruder_alarm_cannon.py</span><span class="sp"></span><span class="lines"></span><button class="vsbtn copy" title="Copy the whole program">Copy</button><button class="vsbtn dl" title="Download as a .py file">Download .py</button></div><pre class="raw" hidden># Mission 5B - RETURN FIRE: Intruder Alarm with USB Cannon
+# GrovePi+ and USB Office Cannon on a Raspberry Pi 5 (Kali Linux)
+#
+# Plug the cannon&#x27;s USB cable into any USB port on the Pi.
+# Plug the parts into the GrovePi+ like this:
+#   Green LED           -&gt;  D2
+#   Red LED             -&gt;  D3
+#   Ultrasonic ranger   -&gt;  D5
+#   Speaker             -&gt;  D6
+#   Buzzer              -&gt;  D7
+#   Temp &amp; humidity     -&gt;  D8   (the blue DHT11 sensor)
+#   Light sensor        -&gt;  A0
+#   LCD RGB Backlight   -&gt;  any I2C port
+#
+# Run with:     sudo python3 intruder_alarm_cannon.py
+# Press Ctrl+C to stop.
+#
+# How it works:
+#   1. ARMING   A countdown that beeps every second while you leave the room.
+#   2. LEARNING The alarm measures what &quot;normal&quot; looks like: the distance to the
+#               wall or door, and how bright the room is.
+#   3. ARMED    It keeps checking. Someone walking through the ultrasonic beam makes
+#               the distance shorter. A torch, or a light being switched on or off,
+#               changes the light level. It also watches the temperature, in case
+#               of a fire. The screen shows the room&#x27;s temperature and humidity.
+#   4. ALARM    Red LED, a &quot;nee-naw&quot; siren (speaker and buzzer take turns), a red
+#               screen - and the time, reason and room conditions go in a log file.
+#               Then the CANNON FIRES at the intruder!
+#   5. DISARM   Type the secret PIN to stop it. Every wrong PIN is logged and sets
+#               the siren off again.
+
+import os
+import sys
+import fcntl
+import struct
+import time
+import signal
+import getpass
+import usb.core
+
+# ---------- Settings you can change ----------
+green_led_port = 2
+red_led_port = 3
+ranger_port = 5
+speaker_port = 6          # must be D3, D5 or D6 - only these ports can play a tone
+buzzer_port = 7
+dht_port = 8
+light_port = 0            # A0
+
+secret_pin = &quot;1234&quot;       # the PIN that stops the alarm
+arming_delay = 10         # seconds you get to leave the room
+distance_change = 20      # someone this many cm closer than normal = intruder
+light_change = 150        # light level changing by this much = intruder
+heat_limit = 40           # temperature (C) that counts as a possible fire
+sound_on = True           # set to False to test quietly in class
+log_file_name = &quot;intrusion_log.txt&quot;
+
+aim_right = 3.0           # seconds to turn right from the parked position to aim at the door
+aim_up = 0.8              # seconds to tilt up from the parked position
+rockets_loaded = 4        # how many rockets you put in the cannon
+rockets_per_alarm = 1     # how many to fire each time the alarm goes off
+
+# ---------- Cannon command numbers ----------
+cannon_down = 1
+cannon_up = 2
+cannon_left = 4
+cannon_right = 8
+cannon_fire = 16
+cannon_stop = 32
+
+
+# ---------- Connecting to the devices ----------
+# Every device on the I2C connection has its own address (a number).
+def open_device(address):
+    device = os.open(&quot;/dev/i2c-1&quot;, os.O_RDWR)
+    fcntl.ioctl(device, 0x0703, address)     # 0x0703 means &quot;talk to this address&quot;
+    return device
+
+
+# ---------- GrovePi+ helpers ----------
+# Every GrovePi+ message is 5 bytes: 1, the command number, the port, a value, 0
+def grovepi_send(command, port, value):
+    message = struct.pack(&quot;BBBBB&quot;, 1, command, port, value, 0)
+    os.write(grovepi, message)
+    time.sleep(0.02)
+
+
+# The GrovePi+ answers with 3 bytes: a label, then a number split into two bytes
+def grovepi_answer():
+    reply = os.read(grovepi, 3)
+    label, high, low = struct.unpack(&quot;BBB&quot;, reply)
+    return high * 256 + low
+
+
+def make_output(port):
+    grovepi_send(5, port, 1)        # command 5 = set a port to be an output
+
+
+def turn_on(port):
+    grovepi_send(2, port, 1)        # command 2 = digital write, 1 = on
+
+
+def turn_off(port):
+    grovepi_send(2, port, 0)        # 0 = off
+
+
+def read_distance():
+    grovepi_send(7, ranger_port, 0)  # command 7 = ultrasonic read
+    time.sleep(0.1)                  # wait for the echo
+    return grovepi_answer()
+
+
+def read_light():
+    grovepi_send(3, light_port, 0)   # command 3 = analog read (0 = dark, 1023 = bright)
+    time.sleep(0.05)
+    return grovepi_answer()
+
+
+def read_temperature_and_humidity():
+    grovepi_send(40, dht_port, 0)    # command 40 = temp &amp; humidity, 0 = blue DHT11
+    time.sleep(0.6)                  # this sensor is slow
+    reply = os.read(grovepi, 9)
+    # The reply is 9 bytes: a label, then two decimal numbers of 4 bytes each.
+    # &quot;&lt;Bff&quot; means: B = one byte, f = a 4-byte decimal number, &lt; = byte order
+    label, temperature, humidity = struct.unpack(&quot;&lt;Bff&quot;, reply)
+    return temperature, humidity
+
+
+# ---------- Speaker helpers ----------
+def speaker_on():
+    grovepi_send(4, speaker_port, 128)   # command 4 = analog write: makes a beep tone
+
+
+def speaker_off():
+    grovepi_send(4, speaker_port, 0)
+
+
+def beep(seconds):
+    if sound_on:
+        speaker_on()
+        time.sleep(seconds)
+        speaker_off()
+
+
+def siren(times):
+    # &quot;nee-naw&quot;: the speaker (low note) and the buzzer (high note) take turns
+    if sound_on:
+        for count in range(times):
+            turn_off(buzzer_port)
+            speaker_on()
+            time.sleep(0.3)
+            speaker_off()
+            turn_on(buzzer_port)
+            time.sleep(0.3)
+
+
+# ---------- Cannon helpers ----------
+# The cannon is a USB device. Every message is 8 bytes: 2, command, 0, 0, 0, 0, 0, 0
+def cannon_send(command):
+    message = struct.pack(&quot;BBBBBBBB&quot;, 2, command, 0, 0, 0, 0, 0, 0)
+    cannon.ctrl_transfer(0x21, 0x09, 0, 0, message)
+
+
+def cannon_move(command, seconds):
+    cannon_send(command)             # start moving...
+    time.sleep(seconds)              # ...for this long...
+    cannon_send(cannon_stop)         # ...then stop
+
+
+def cannon_light(on):
+    # 3 means &quot;the LED&quot;: on = 1 lights it up, on = 0 switches it off
+    message = struct.pack(&quot;BBBBBBBB&quot;, 3, on, 0, 0, 0, 0, 0, 0)
+    cannon.ctrl_transfer(0x21, 0x09, 0, 0, message)
+
+
+def cannon_shoot(rockets):
+    for count in range(rockets):
+        cannon_send(cannon_fire)
+        time.sleep(4.5)              # it takes about 4 seconds to fire and reload
+
+
+def cannon_park():
+    # swing all the way down and left, so every run starts from the same place
+    cannon_move(cannon_down, 2)
+    cannon_move(cannon_left, 8)
+
+
+def cannon_aim():
+    # from the parked position, turn and tilt to point at the doorway
+    cannon_move(cannon_right, aim_right)
+    cannon_move(cannon_up, aim_up)
+
+
+# ---------- LCD helpers ----------
+# The LCD has two addresses: one for the text, one for the coloured backlight.
+def lcd_command(code):
+    os.write(lcd_text, struct.pack(&quot;BB&quot;, 0x80, code))
+    time.sleep(0.005)
+
+
+def lcd_setup():
+    lcd_command(0x01)       # clear the screen
+    time.sleep(0.05)
+    lcd_command(0x0C)       # screen on, no cursor
+    lcd_command(0x28)       # use both lines
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 0, 0))      # wake up the backlight chip
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 1, 0))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 8, 0xAA))
+
+
+def lcd_colour(red, green, blue):
+    # each colour is a number from 0 (off) to 255 (full)
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 4, red))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 3, green))
+    os.write(lcd_backlight, struct.pack(&quot;BB&quot;, 2, blue))
+
+
+def lcd_write_line(code, text):
+    lcd_command(code)                    # 0x80 = start of line 1, 0xC0 = start of line 2
+    text = text.ljust(16)                # pad with spaces to clear old letters
+    for letter in text:
+        # ord() turns a letter into its number code, which is what the LCD needs
+        os.write(lcd_text, struct.pack(&quot;BB&quot;, 0x40, ord(letter)))
+
+
+def lcd_show(line1, line2):
+    # Each line holds 16 characters - keep messages short!
+    lcd_write_line(0x80, line1)
+    lcd_write_line(0xC0, line2)
+
+
+# ---------- Log file ----------
+def write_log(message):
+    log_file = open(log_file_name, &quot;a&quot;)      # &quot;a&quot; = add to the end of the file
+    log_file.write(time.strftime(&quot;%Y-%m-%d %H:%M:%S&quot;) + &quot;  &quot; + message + &quot;\n&quot;)
+    log_file.close()
+
+
+# ---------- Set up ----------
+signal.signal(signal.SIGINT, signal.SIG_DFL)     # make Ctrl+C stop the program quietly
+
+grovepi = open_device(0x04)
+lcd_text = open_device(0x3E)
+lcd_backlight = open_device(0x62)
+
+# Every USB device has two ID numbers. These are the Dream Cheeky &quot;Thunder&quot; cannon.
+cannon = usb.core.find(idVendor=0x2123, idProduct=0x1010)
+if cannon is None:
+    print(&quot;Cannon not found. Is it plugged in? Try: lsusb&quot;)
+    sys.exit()
+if cannon.is_kernel_driver_active(0):
+    cannon.detach_kernel_driver(0)      # Linux grabs the cannon as if it were a keyboard - let go
+cannon.set_configuration()
+
+make_output(green_led_port)
+make_output(red_led_port)
+make_output(buzzer_port)
+make_output(speaker_port)
+turn_off(green_led_port)                        # start with everything off
+turn_off(red_led_port)
+turn_off(buzzer_port)
+speaker_off()
+lcd_setup()
+
+temperature = 0
+humidity = 0
+rockets_left = rockets_loaded
+
+print(&quot;Intruder alarm started. Press Ctrl+C to stop.&quot;)
+print(&quot;Parking and aiming the cannon (about 15 seconds)...&quot;)
+cannon_park()
+cannon_aim()
+
+# ---------- Main program ----------
+while True:
+
+    # 1. ARMING - countdown so you can leave the room
+    lcd_colour(255, 120, 0)                          # orange
+    seconds_left = arming_delay
+    while seconds_left &gt; 0:
+        lcd_show(&quot;Arming...&quot;, &quot;Leave in &quot; + str(seconds_left) + &quot; sec&quot;)
+        turn_on(green_led_port)                      # blink the green LED...
+        beep(0.1)                                    # ...and beep
+        time.sleep(0.4)
+        turn_off(green_led_port)
+        time.sleep(0.5)
+        seconds_left = seconds_left - 1
+
+    # 2. LEARNING - what does the room look like when nobody is there?
+    normal_distance = read_distance()
+    if normal_distance == 0:                         # 0 means nothing in range
+        normal_distance = 400
+    normal_light = read_light()
+    write_log(&quot;ARMED  (normal distance &quot; + str(normal_distance) + &quot; cm, light &quot; + str(normal_light) + &quot;)&quot;)
+    print(&quot;Armed. Normal distance:&quot;, normal_distance, &quot;cm   Normal light:&quot;, normal_light)
+    beep(0.5)                                        # one long beep = armed
+
+    # 3. ARMED - keep checking until something changes
+    lcd_colour(0, 0, 255)                            # blue
+    turn_on(green_led_port)
+    strikes = 0                                      # how many odd readings in a row
+    reason = &quot;&quot;
+    loops = 0
+    while strikes &lt; 2:                               # 2 in a row stops false alarms
+
+        # The temp &amp; humidity sensor is slow, so only check it every 25 loops
+        if loops % 25 == 0:
+            new_temperature, new_humidity = read_temperature_and_humidity()
+            # Only keep sensible readings (a failed reading is ignored)
+            if new_temperature &gt; 0 and new_temperature &lt; 60:
+                temperature = round(new_temperature)
+                humidity = round(new_humidity)
+        loops = loops + 1
+
+        distance = read_distance()
+        light = read_light()
+        lcd_show(&quot;ARMED &quot; + str(temperature) + &quot;C &quot; + str(humidity) + &quot;%&quot;,
+                 str(distance) + &quot;cm light &quot; + str(light))
+
+        if distance &gt; 0 and distance &lt; normal_distance - distance_change:
+            strikes = strikes + 1
+            reason = &quot;Movement &quot; + str(distance) + &quot;cm&quot;
+        elif abs(light - normal_light) &gt; light_change:
+            strikes = strikes + 1
+            reason = &quot;Light changed&quot;
+        elif temperature &gt; heat_limit:
+            strikes = strikes + 1
+            reason = &quot;FIRE? &quot; + str(temperature) + &quot;C&quot;
+        else:
+            strikes = 0
+
+        time.sleep(0.2)
+
+    # 4. ALARM!
+    turn_off(green_led_port)
+    turn_on(red_led_port)
+    lcd_colour(255, 0, 0)                            # red
+    lcd_show(&quot;!!! ALARM !!!&quot;, reason)
+    write_log(&quot;ALARM - &quot; + reason + &quot;  (room &quot; + str(temperature) + &quot;C, &quot; + str(humidity) + &quot;% humidity)&quot;)
+    print()
+    print(&quot;!!! ALARM !!!&quot;, reason)
+    siren(2)                                         # nee-naw twice...
+    cannon_light(1)                                  # ...light up the cannon...
+    if rockets_left &gt;= rockets_per_alarm:
+        print(&quot;FIRE!&quot;)
+        cannon_shoot(rockets_per_alarm)              # ...and FIRE!
+        rockets_left = rockets_left - rockets_per_alarm
+        write_log(&quot;FIRED &quot; + str(rockets_per_alarm) + &quot; rocket(s), &quot; + str(rockets_left) + &quot; left&quot;)
+    else:
+        print(&quot;Out of rockets!&quot;)
+    siren(3)                                         # nee-naw 3 more times...
+    if sound_on:
+        turn_on(buzzer_port)                         # ...then the buzzer stays on
+
+    # 5. DISARM - keep asking until the right PIN is typed
+    #    getpass hides what you type, so nobody can read the PIN over your shoulder
+    wrong_tries = 0
+    typed_pin = getpass.getpass(&quot;Enter PIN to stop the alarm: &quot;)
+    while typed_pin != secret_pin:
+        wrong_tries = wrong_tries + 1
+        write_log(&quot;WRONG PIN entered (attempt &quot; + str(wrong_tries) + &quot;)&quot;)
+        print(&quot;Wrong PIN!&quot;)
+        lcd_show(&quot;WRONG PIN!&quot;, &quot;Attempts: &quot; + str(wrong_tries))
+        siren(3)
+        if sound_on:
+            turn_on(buzzer_port)
+        typed_pin = getpass.getpass(&quot;Enter PIN to stop the alarm: &quot;)
+
+    turn_off(buzzer_port)
+    turn_off(red_led_port)
+    cannon_light(0)
+    lcd_colour(0, 255, 0)                            # green
+    lcd_show(&quot;Disarmed&quot;, &quot;Rockets left: &quot; + str(rockets_left))
+    write_log(&quot;DISARMED after &quot; + str(wrong_tries) + &quot; wrong PIN(s)&quot;)
+    print(&quot;Alarm stopped. Rockets left:&quot;, rockets_left)
+    beep(0.1)                                        # two short &quot;all clear&quot; beeps
+    time.sleep(0.1)
+    beep(0.1)
+    if rockets_left &lt; rockets_per_alarm:
+        input(&quot;Reload the cannon, then press Enter to arm again...&quot;)
+        rockets_left = rockets_loaded
+    else:
+        input(&quot;Press Enter to arm the alarm again...&quot;)</pre><div class="body"></div><div class="foot"><span>Python · plain text · paste into your editor and save as <b>intruder_alarm_cannon.py</b></span><button class="expand">Expand to full height</button></div></div>
+
+  <ol class="steps">
+    <li><p>Copy, paste, save as <code>intruder_alarm_cannon.py</code>. Set <code>aim_right</code> and <code>aim_up</code> to the numbers you worked out in Part A.</p></li>
+    <li><p>Load 4 rockets. Run with <code>sudo</code>. The cannon parks, aims, then the countdown starts.</p></li>
+    <li><p>Send someone through the beam (into the target zone). Siren, FIRE, siren, PIN.</p></li>
+    <li><p>Check the log: the FIRED line tells you how many rockets are left.</p></li>
+  </ol>
+
+  <div class="tinker"><h4>Tinker</h4><ul>
+    <li>Fire two rockets per alarm. Which setting?</li>
+    <li>Sweep while firing: turn right for 0.2 s between rockets, so the shots spread across the doorway.</li>
+    <li>Warning shot: flash the cannon's light three times and play the siren <em>before</em> firing, to give the intruder a chance to leave.</li>
+    <li><strong>Big challenge:</strong> add a second ranger on D4, one watching the left of the room and one the right. Aim the cannon at whichever side saw the intruder.</li>
+  </ul></div>
+
+  <h4>Checkpoint</h4>
+  <ul class="checklist" data-mission="m5">
+    <li><label><input type="checkbox"><span><code>lsusb</code> shows the cannon and the test program moves it.</span></label></li>
+    <li><label><input type="checkbox"><span>I worked out my <code>aim_right</code> and <code>aim_up</code> numbers.</span></label></li>
+    <li><label><input type="checkbox"><span>The alarm fired a rocket at an intruder in the target zone.</span></label></li>
+  </ul>
+</section>
+
+<!-- ============================ INVENT ============================ -->
+<section class="mission" id="invent">
+  <div class="mission-head"><div class="big">★<small>bonus</small></div><h2>Invent something</h2><div class="time">as long as you like</div></div>
+  <div class="goal"><b>Goal</b><p>Every program you wrote is made of the same three kinds of building block. Mix them into something new.</p></div>
+
+  <div class="blocks">
+    <div class="block in"><h4><i style="background:var(--blue)"></i>Inputs (things you can read)</h4><ul>
+      <li><code>read_distance()</code> from the ranger</li><li><code>read_light()</code> from the light sensor</li><li><code>read_temperature_and_humidity()</code></li><li><code>getpass.getpass()</code> or <code>input()</code> from the keyboard</li><li><code>time.strftime()</code>, the clock</li></ul></div>
+    <div class="block dec"><h4><i style="background:var(--orange)"></i>Decisions (things you can test)</h4><ul>
+      <li>closer than / further than a number</li><li>brighter / darker than normal</li><li>hotter than a limit</li><li>the same as a secret word</li><li>count in a row (strikes), count in total, every Nth loop with <code>%</code></li></ul></div>
+    <div class="block out"><h4><i style="background:var(--red)"></i>Outputs (things you can do)</h4><ul>
+      <li><code>turn_on()</code> / <code>turn_off()</code> an LED or buzzer</li><li><code>beep()</code>, <code>siren()</code></li><li><code>lcd_show()</code>, <code>lcd_colour()</code></li><li><code>write_log()</code> to a file</li><li><code>cannon_move()</code>, <code>cannon_shoot()</code>, <code>cannon_light()</code></li></ul></div>
+  </div>
+
+  <h3>Ideas to start from</h3>
+  <div class="ideas">
+    <div class="idea"><span class="lvl">easy</span><h4>Fridge raider</h4><div class="uses"><span class="i">light sensor</span><span class="d">brighter than</span><span class="o">log file</span><span class="o">buzzer</span></div><p>The light sensor sits inside the fridge. Every time the door opens the light changes. Log the time of every raid.</p></div>
+    <div class="idea"><span class="lvl">easy</span><h4>Reverse parking sensor</h4><div class="uses"><span class="i">ranger</span><span class="d">closer than</span><span class="o">beep</span><span class="o">LCD</span></div><p>Beeps get faster as the object gets closer. Solid tone under 10 cm. Show the distance on the screen.</p></div>
+    <div class="idea"><span class="lvl">easy</span><h4>Classroom thermometer</h4><div class="uses"><span class="i">temperature</span><span class="d">hotter than</span><span class="o">LCD colour</span></div><p>Blue when cold, green when comfortable, red when hot. Log a reading every minute (hint: <code>%</code>).</p></div>
+    <div class="idea"><span class="lvl">medium</span><h4>Door counter</h4><div class="uses"><span class="i">ranger</span><span class="d">strikes</span><span class="d">count in total</span><span class="o">LCD</span></div><p>Count how many people walk through the doorway in a lesson. One person should count once, not five times. That is harder than it sounds.</p></div>
+    <div class="idea"><span class="lvl">medium</span><h4>Two-player quick-draw</h4><div class="uses"><span class="i">keyboard</span><span class="i">clock</span><span class="d">the same as</span><span class="o">LED</span><span class="o">cannon</span></div><p>Random wait, then the green LED lights. First player to type their letter wins. The loser gets a rocket.</p></div>
+    <div class="idea"><span class="lvl">hard</span><h4>Desk guard with a password</h4><div class="uses"><span class="i">ranger</span><span class="i">light</span><span class="i">keyboard</span><span class="d">strikes</span><span class="o">everything</span></div><p>Your alarm, but the arming countdown only starts after the right password, and the log records who armed it.</p></div>
+    <div class="idea"><span class="lvl">hard</span><h4>Sentry that tracks</h4><div class="uses"><span class="i">two rangers</span><span class="d">closer than</span><span class="o">cannon_move</span></div><p>Left ranger sees something: turn left. Right ranger: turn right. Both: fire. Welcome to robotics.</p></div>
+  </div>
+
+  <div class="panel" style="margin-top:20px">
+    <h3>Plan it before you code it</h3>
+    <ol>
+      <li>Write one sentence: "When <em>input</em> is <em>decision</em>, do <em>output</em>."</li>
+      <li>Copy the program that is closest to your idea (usually Mission 2 or 4).</li>
+      <li>Delete what you don't need. Smaller programs are easier to fix.</li>
+      <li>Change one thing, run it, check it. Then the next thing.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================ QUIZ ============================ -->
+<section class="mission quiz" id="quiz">
+  <div class="mission-head"><div class="big">?<small>check</small></div><h2>Quiz</h2><div class="time">10 questions</div></div>
+  <div id="quizBox"></div>
+  <div class="score" id="quizScore"></div>
+  <button class="btn" id="quizReset">Start again</button>
+</section>
+
+<!-- ============================ TEACHER ============================ -->
+<section class="mission" id="teacher">
+  <div class="mission-head"><div class="big">T<small>teacher</small></div><h2>Teacher notes</h2><div class="time">read before lesson 1</div></div>
+
+  <details open><summary>One-time Pi setup (do once per Pi, or push with pifleet)</summary><div class="inner">
+    <p>Kali on the Pi 5 does not enable I2C by default and has no <code>raspi-config</code> toggle for it. Edit the config file, install the tools, add the student account to the hardware groups, then reboot.</p>
+    <div class="term"><div class="bar"><span class="dot"></span><span class="t">terminal · one time per Pi</span><button class="copybtn" data-copy="sudo sh -c 'grep -q \"^dtparam=i2c_arm=on\" /boot/firmware/config.txt || echo dtparam=i2c_arm=on >> /boot/firmware/config.txt'
+sudo apt update
+sudo apt install -y i2c-tools python3-usb
+sudo usermod -aG i2c,gpio,dialout,plugdev kali
+sudo reboot">Copy</button></div><pre><span class="p">$ </span>sudo sh -c 'grep -q "^dtparam=i2c_arm=on" /boot/firmware/config.txt || echo dtparam=i2c_arm=on &gt;&gt; /boot/firmware/config.txt'
+<span class="p">$ </span>sudo apt update
+<span class="p">$ </span>sudo apt install -y i2c-tools python3-usb
+<span class="p">$ </span>sudo usermod -aG i2c,gpio,dialout,plugdev kali
+<span class="p">$ </span>sudo reboot</pre></div>
+    <p>Replace <code>kali</code> with the student login if it differs. If <code>python3-usb</code> is not in the repo on a given image, <code>sudo python3 -m pip install --break-system-packages pyusb</code> does the same job. The programs run with <code>sudo</code> regardless, which avoids udev rules for the cannon.</p>
+    <p><strong>USB power for the cannon.</strong> The cannon draws more than the 600 mA the Pi 5 allows its USB ports by default, and the firing motor is the hungriest part. With the official 27 W (5 V 5 A) supply the Pi raises the limit to 1.6 A automatically. With any other supply, add <code>usb_max_current_enable=1</code> to <code>/boot/firmware/config.txt</code> and reboot, and expect low-voltage warnings if the supply is marginal.</p>
+  </div></details>
+
+  <details><summary>Hardware notes and known limits</summary><div class="inner">
+    <ul>
+      <li><strong>Board:</strong> this is written for the Dexter Industries GrovePi+ (I2C address 0x04), not the Seeed Base HAT. The 5-byte protocol and command numbers come from Dexter's firmware source. The ultrasonic reading has been verified on your board; the LCD, speaker and DHT code follow Dexter's own examples but were checked in simulation, so run Mission 3 yourself before the lesson.</li>
+      <li><strong>Speaker:</strong> only D3, D5 and D6 can play a tone (PWM pins). The GrovePi+ gives a fixed pitch, hence the two-part siren. The blue potentiometer on the speaker module is the volume.</li>
+      <li><strong>DHT11:</strong> about 0.6 s per reading and the occasional failed read (NaN). The alarm polls it every 25 loops and ignores readings outside 0 to 60 °C. Humidity from a DHT11 is ±5 %, good enough for a screen readout.</li>
+      <li><strong>Ultrasonic:</strong> reliable from about 3 cm to 350 cm. Reading 0 means no echo. Soft furnishings and angled surfaces can swallow the echo; aim it at a flat wall or door.</li>
+      <li><strong>Cannon:</strong> Dream Cheeky "Thunder" (USB ID 2123:1010), the model Dexter Industries used in the video this extension is based on. Pan is roughly 270°, tilt about 45°, four rockets, about 4 s per shot. The protocol (8-byte HID report, commands 1/2/4/8/16/32) is from Dexter's <code>office_cannon_v1.py</code>. If <code>lsusb</code> shows <code>0a81:0701</code> instead, that is the older model: change the <code>usb.core.find</code> line to those IDs and in <code>cannon_send</code> use <code>cannon.ctrl_transfer(0x21, 0x09, 0x0200, 0, struct.pack("B", command))</code>. The older model has no light.</li>
+      <li><strong>Ctrl+C during an alarm</strong> leaves the buzzer on. Running any program again switches it off at start-up.</li>
+      <li><strong>Pi 5 Active Cooler:</strong> the GrovePi+ will not seat over it. Use low-profile heatsinks or a stacking header on the fleet.</li>
+    </ul>
+  </div></details>
+
+  <details><summary>Lesson plan (five lessons)</summary><div class="inner">
+    <table>
+      <thead><tr><th>Lesson</th><th>Missions</th><th>Students leave with</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Setup, Mission 1</td><td>Working kit, blinking LEDs, the 5-byte message explained in their own words</td></tr>
+        <tr><td>2</td><td>Mission 2</td><td>Distance and light readings on screen, red LED tripwire, one tinker task done</td></tr>
+        <tr><td>3</td><td>Mission 3</td><td>Siren and LCD working, a custom message and colour</td></tr>
+        <tr><td>4</td><td>Mission 4</td><td>Full alarm, log file inspected, PIN discussion (plaintext secrets, brute force)</td></tr>
+        <tr><td>5</td><td>Mission 5 (+ Invent)</td><td>Cannon fires on intrusion; fast finishers start an invention</td></tr>
+      </tbody>
+    </table>
+    <p>Mission 5 works best as a demonstration station if you have fewer cannons than kits: each group brings their calibrated <code>aim_right</code> / <code>aim_up</code> numbers to the station.</p>
+  </div></details>
+
+  <details><summary>Differentiation and assessment</summary><div class="inner">
+    <ul>
+      <li><strong>Support:</strong> the checkpoints are the minimum. A student who completes Missions 1 to 3 has met the hardware-control outcomes; Mission 4 can be run as a demo with them changing settings only.</li>
+      <li><strong>Extend:</strong> the Tinker boxes escalate. The two-ranger sentry and the door counter are the genuinely hard ones.</li>
+      <li><strong>Evidence:</strong> the log file is timestamped evidence of a working alarm. Ask for a screenshot of <code>cat intrusion_log.txt</code> plus a one-paragraph explanation of <code>strikes</code>.</li>
+      <li><strong>Cybersecurity links:</strong> plaintext PIN in source, the wrong-PIN log as an attack record, <code>getpass</code> versus <code>input</code> (shoulder surfing), and why the Pi is "listening" on an unencrypted wire.</li>
+      <li><strong>Quiz:</strong> ten questions on the page, self-marking, no storage. Answers are not shown until a choice is made.</li>
+    </ul>
+  </div></details>
+
+  <details><summary>All the programs</summary><div class="inner">
+    <p>Each program is also downloadable from its code box. File names: <code>mission1_lights.py</code>, <code>mission2_eyes.py</code>, <code>mission3_voice.py</code>, <code>intruder_alarm.py</code>, <code>cannon_test.py</code>, <code>intruder_alarm_cannon.py</code>. They are independent; a student can start at any mission.</p>
+  </div></details>
+</section>
+
+<footer>Operation Sentry · Year 9 Digital Technologies lab · Raspberry Pi 5 running Kali Linux, Dexter Industries GrovePi+, Grove modules, Dream Cheeky USB cannon. Cannon protocol adapted from Dexter Industries' GoPiGo office cannon example (GPL). This page works offline; progress ticks are saved in this browser only.</footer>
+</main>
+</div>
+<script>
+(function(){
+"use strict";
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ease=t=>t<.5?2*t*t:-1+(4-2*t)*t;
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+/* ---------- toast + clipboard ---------- */
+let toastT;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),1600);}
+function copyText(text){
+  if(navigator.clipboard&&window.isSecureContext){return navigator.clipboard.writeText(text).then(()=>true).catch(()=>fallbackCopy(text));}
+  return Promise.resolve(fallbackCopy(text));
+}
+function fallbackCopy(text){
+  const ta=document.createElement("textarea");ta.value=text;ta.setAttribute("readonly","");ta.style.position="fixed";ta.style.top="-1000px";document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,text.length);
+  let ok=false;try{ok=document.execCommand("copy");}catch(e){ok=false;}
+  document.body.removeChild(ta);return ok;
+}
+function flashBtn(btn,label){const old=btn.textContent;btn.textContent=label;btn.classList.add("ok");setTimeout(()=>{btn.textContent=old;btn.classList.remove("ok");},1400);}
+$$(".copybtn[data-copy]").forEach(b=>b.addEventListener("click",()=>copyText(b.dataset.copy).then(ok=>{flashBtn(b,ok?"Copied":"Select & copy");toast(ok?"Copied to clipboard":"Could not copy automatically");})));
+
+/* ---------- animation engine: only runs what is on screen ---------- */
+const anims=new Map();
+const visible=new Set();
+const io=new IntersectionObserver(es=>es.forEach(e=>{e.isIntersecting?visible.add(e.target):visible.delete(e.target);}),{threshold:.05});
+function registerAnim(el,fn){anims.set(el,fn);io.observe(el);}
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;anims.forEach((fn,el)=>{if(visible.has(el))fn(dt,now/1000);});requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+
+/* ---------- LCD mock ---------- */
+function makeLcd(el){el.innerHTML="";for(let i=0;i<32;i++){el.appendChild(document.createElement("span"));}el._cells=$$("span",el);}
+function lcdSet(el,l1,l2,colour){
+  if(!el._cells)makeLcd(el);
+  const a=(l1||"").padEnd(16).slice(0,16), b=(l2||"").padEnd(16).slice(0,16);
+  for(let i=0;i<16;i++){el._cells[i].textContent=a[i];el._cells[16+i].textContent=b[i];}
+  if(colour){el.className="lcd c-"+colour;}
+}
+$$(".lcd").forEach(makeLcd);
+
+/* ---------- nav + checklist progress ---------- */
+const sections=$$("section[id]");
+const navLinks=$$(".rail a[data-nav], .topbar a");
+const secIO=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){navLinks.forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="#"+e.target.id));}});},{rootMargin:"-30% 0px -60% 0px"});
+sections.forEach(s=>secIO.observe(s));
+const checks=$$(".checklist input");
+checks.forEach((c,i)=>{const key="sentry-check-"+i;try{c.checked=localStorage.getItem(key)==="1";}catch(e){}
+  c.addEventListener("change",()=>{try{localStorage.setItem(key,c.checked?"1":"0");}catch(e){}updateProgress();});});
+function updateProgress(){
+  const done=checks.filter(c=>c.checked).length;$("#progText").textContent=done+" / "+checks.length;$("#progBar").style.width=(100*done/checks.length)+"%";
+  $$(".checklist").forEach(ul=>{const all=$$("input",ul).every(c=>c.checked);const a=$('.rail a[data-nav="'+ul.dataset.mission+'"]');if(a)a.classList.toggle("done",all);});
+}
+updateProgress();
+
+/* ---------- Python highlighter (VS Code Dark+ colours) ---------- */
+const KW_CTRL=new Set(["if","elif","else","while","for","return","import","from","break","continue","pass","with","yield","raise","try","except","finally"]);
+const KW_OTHER=new Set(["def","class","True","False","None","and","or","not","in","is","as","global","lambda","del"]);
+const MODS=new Set(["os","sys","fcntl","struct","time","signal","getpass","usb","core"]);
+const BUILT=new Set(["print","str","int","float","round","abs","range","input","open","ord","len","min","max","bool","chr"]);
+const TOKEN=/(#.*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(0[xX][0-9a-fA-F]+|\d+\.?\d*)|([A-Za-z_]\w*)|(\s+)|(.)/g;
+function highlight(line){
+  let out="",m,prevIdent=null,afterDef=false,afterDot=false;
+  TOKEN.lastIndex=0;
+  while((m=TOKEN.exec(line))!==null){
+    const [tok,c,s,n,id,ws,o]=m;
+    if(c){out+='<span class="tk-c">'+esc(c)+'</span>';}
+    else if(s){out+='<span class="tk-s">'+esc(s)+'</span>';}
+    else if(n){out+='<span class="tk-n">'+n+'</span>';}
+    else if(id){
+      const rest=line.slice(TOKEN.lastIndex);const callNext=/^\s*\(/.test(rest);const dotNext=/^\s*\./.test(rest);
+      let cls="tk-v";
+      if(afterDef)cls="tk-f";
+      else if(KW_CTRL.has(id))cls="tk-k";
+      else if(KW_OTHER.has(id))cls="tk-d";
+      else if(!afterDot&&MODS.has(id)&&dotNext)cls="tk-m";
+      else if(afterDot&&MODS.has(id)&&dotNext)cls="tk-m";
+      else if(callNext)cls=(!afterDot&&BUILT.has(id))?"tk-b":"tk-f";
+      out+='<span class="'+cls+'">'+id+'</span>';
+      afterDef=(id==="def");afterDot=false;prevIdent=id;continue;
+    }
+    else if(ws){out+=ws;continue;}
+    else{out+='<span class="tk-o">'+esc(o)+'</span>';afterDot=(o===".");}
+    afterDef=false;
+  }
+  return out;
+}
+const rawByFile={};
+$$(".codebox").forEach(box=>{rawByFile[box.dataset.file]=$(".raw",box).textContent;});
+$$(".codebox").forEach(box=>{
+  const raw=rawByFile[box.dataset.file];const prev=box.dataset.prev?rawByFile[box.dataset.prev]:null;
+  const prevSet=new Set(prev?prev.split("\n").map(l=>l.trim()).filter(Boolean):[]);
+  const lines=raw.split("\n");
+  const rows=lines.map((l,i)=>{const isNew=prev&&l.trim()&&!prevSet.has(l.trim());return '<tr'+(isNew?' class="new"':'')+'><td class="g">'+(i+1)+'</td><td class="c">'+(highlight(l)||" ")+'</td></tr>';}).join("");
+  $(".body",box).innerHTML='<table><tbody>'+rows+'</tbody></table>';
+  $(".lines",box).textContent=lines.length+" lines";
+  const cp=$(".copy",box);cp.addEventListener("click",()=>copyText(raw).then(ok=>{flashBtn(cp,ok?"Copied!":"Select & copy");toast(ok?"Copied "+box.dataset.file+" to clipboard":"Could not copy automatically");}));
+  $(".dl",box).addEventListener("click",()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([raw],{type:"text/x-python"}));a.download=box.dataset.file;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);});
+  const body=$(".body",box),ex=$(".expand",box);
+  ex.addEventListener("click",()=>{body.classList.toggle("open");ex.textContent=body.classList.contains("open")?"Collapse":"Expand to full height";});
+});
+
+/* ---------- part icons (viewBox 0 0 100 64) ---------- */
+function pcb(inner,w=100){return '<svg viewBox="0 0 100 64"><rect x="8" y="6" width="84" height="46" rx="6" fill="#fff" stroke="#8fa0ae" stroke-width="2"/><rect x="38" y="50" width="24" height="10" rx="2" fill="#f5f5f5" stroke="#8fa0ae" stroke-width="2"/><g fill="#8fa0ae"><rect x="42" y="53" width="3" height="4"/><rect x="47" y="53" width="3" height="4"/><rect x="52" y="53" width="3" height="4"/><rect x="57" y="53" width="3" height="4"/></g>'+inner+'</svg>';}
+const ICON={
+  ledg:()=>pcb('<circle cx="50" cy="27" r="11" fill="#39e07a" stroke="#1f9a67" stroke-width="2"/><rect x="22" y="24" width="12" height="6" fill="#c9bda7" stroke="#8fa0ae"/>'),
+  ledr:()=>pcb('<circle cx="50" cy="27" r="11" fill="#ff4e55" stroke="#c1121f" stroke-width="2"/><rect x="22" y="24" width="12" height="6" fill="#c9bda7" stroke="#8fa0ae"/>'),
+  ranger:()=>pcb('<circle cx="34" cy="28" r="12" fill="#cfd8e0" stroke="#5f6f7c" stroke-width="2"/><circle cx="66" cy="28" r="12" fill="#cfd8e0" stroke="#5f6f7c" stroke-width="2"/><circle cx="34" cy="28" r="6" fill="#5f6f7c"/><circle cx="66" cy="28" r="6" fill="#5f6f7c"/>'),
+  light:()=>pcb('<circle cx="50" cy="27" r="11" fill="#f3e3b8" stroke="#8a6d2b" stroke-width="2"/><path d="M42 24 l4 3 -4 3 4 3 -4 3" fill="none" stroke="#8a6d2b" stroke-width="2"/><path d="M58 24 l-4 3 4 3 -4 3 4 3" fill="none" stroke="#8a6d2b" stroke-width="2"/>'),
+  speaker:()=>pcb('<circle cx="44" cy="28" r="14" fill="#2c3a47"/><circle cx="44" cy="28" r="8" fill="#4a5560"/><circle cx="44" cy="28" r="3" fill="#111"/><rect x="66" y="20" width="14" height="14" rx="2" fill="#2a62c8"/><circle cx="73" cy="27" r="3" fill="#fff"/>'),
+  buzzer:()=>pcb('<circle cx="50" cy="28" r="14" fill="#111"/><circle cx="50" cy="28" r="3" fill="#444"/>'),
+  dht:()=>pcb('<rect x="36" y="12" width="28" height="30" rx="3" fill="#2a62c8"/><g fill="#8fb4ff"><rect x="41" y="17" width="4" height="4"/><rect x="48" y="17" width="4" height="4"/><rect x="55" y="17" width="4" height="4"/><rect x="41" y="24" width="4" height="4"/><rect x="48" y="24" width="4" height="4"/><rect x="55" y="24" width="4" height="4"/><rect x="41" y="31" width="4" height="4"/><rect x="48" y="31" width="4" height="4"/><rect x="55" y="31" width="4" height="4"/></g>'),
+  lcd:()=>'<svg viewBox="0 0 100 64"><rect x="4" y="8" width="92" height="44" rx="4" fill="#2d3a46"/><rect x="10" y="14" width="80" height="32" rx="2" fill="#2b4ea8"/><text x="50" y="27" font-size="8" fill="#fff" text-anchor="middle" font-family="monospace">ARMED 23C 46%</text><text x="50" y="40" font-size="8" fill="#fff" text-anchor="middle" font-family="monospace">186cm light 500</text><rect x="38" y="52" width="24" height="10" rx="2" fill="#f5f5f5" stroke="#8fa0ae" stroke-width="2"/></svg>',
+  grovepi:()=>'<svg viewBox="0 0 100 64"><rect x="8" y="12" width="84" height="46" rx="4" fill="#2f7a3a"/><rect x="12" y="6" width="76" height="46" rx="4" fill="#2a7fd4" stroke="#1b5ea3" stroke-width="2"/><g fill="#fff"><rect x="14" y="12" width="8" height="6"/><rect x="14" y="22" width="8" height="6"/><rect x="14" y="32" width="8" height="6"/><rect x="78" y="12" width="8" height="6"/><rect x="78" y="22" width="8" height="6"/><rect x="78" y="32" width="8" height="6"/><rect x="30" y="44" width="8" height="6"/><rect x="44" y="44" width="8" height="6"/><rect x="58" y="44" width="8" height="6"/></g><text x="50" y="30" font-size="9" fill="#fff" text-anchor="middle" font-weight="700">GrovePi+</text></svg>',
+  cable:()=>'<svg viewBox="0 0 100 64"><rect x="4" y="22" width="18" height="20" rx="3" fill="#f5f5f5" stroke="#8fa0ae" stroke-width="2"/><rect x="78" y="22" width="18" height="20" rx="3" fill="#f5f5f5" stroke="#8fa0ae" stroke-width="2"/><path d="M22 27 C50 10 50 54 78 27" stroke="#111" stroke-width="2.5" fill="none"/><path d="M22 31 C50 14 50 58 78 31" stroke="#d62828" stroke-width="2.5" fill="none"/><path d="M22 35 C50 18 50 62 78 35" stroke="#eee" stroke-width="2.5" fill="none"/><path d="M22 39 C50 22 50 66 78 39" stroke="#f3c12e" stroke-width="2.5" fill="none"/></svg>',
+  cannon:()=>'<svg viewBox="0 0 100 64"><ellipse cx="50" cy="52" rx="34" ry="8" fill="#4a5560"/><rect x="34" y="26" width="32" height="26" rx="5" fill="#2c3a47"/><g fill="#3b4a58"><rect x="36" y="10" width="7" height="22" rx="3"/><rect x="45" y="6" width="7" height="26" rx="3"/><rect x="54" y="6" width="7" height="26" rx="3"/><rect x="63" y="10" width="7" height="22" rx="3"/></g><g fill="#df343b"><circle cx="39.5" cy="11" r="3"/><circle cx="48.5" cy="7" r="3"/><circle cx="57.5" cy="7" r="3"/><circle cx="66.5" cy="11" r="3"/></g></svg>',
+};
+const PARTS=[["grovepi","GrovePi+ on a Pi 5","the board that listens"],["cable","Grove cables","4 wires, click in"],["ledg","Green LED","port D2"],["ledr","Red LED","port D3"],["ranger","Ultrasonic ranger","port D5"],["speaker","Speaker","port D6"],["buzzer","Buzzer","port D7"],["dht","Temp & humidity","port D8"],["light","Light sensor","port A0"],["lcd","LCD RGB Backlight","any I2C port"],["cannon","USB office cannon","USB (Mission 5)"]];
+$("#partsGrid").innerHTML=PARTS.map(p=>'<div class="part">'+ICON[p[0]]()+'<b>'+p[1]+'</b><small>'+p[2]+'</small></div>').join("");
+
+/* ---------- board map ---------- */
+(function(){
+  const svg=$("#boardMap");
+  const ports={ "I2C-1":[236,117,"L"],"I2C-2":[236,177,"L"],"I2C-3":[236,237,"L"],"A0":[236,317,"L"],"A1":[236,377,"L"],
+    "D2":[584,117,"R"],"D3":[584,197,"R"],"D4":[584,257,"R"],"D5":[584,317,"R"],"D6":[584,397,"R"],
+    "D7":[330,446,"B"],"D8":[420,446,"B"],"A2":[510,446,"B"] };
+  const parts=[["ledg","Green LED","D2",650,92],["ledr","Red LED","D3",650,172],["ranger","Ultrasonic ranger","D5",650,292],["speaker","Speaker","D6",650,372],
+    ["buzzer","Buzzer","D7",290,478],["dht","Temp & humidity","D8",380,478],["lcd","LCD RGB Backlight","I2C-1",70,92],["light","Light sensor","A0",70,292]];
+  let h='<rect x="250" y="110" width="320" height="332" rx="14" fill="#2a7fd4" stroke="#1b5ea3" stroke-width="3"/>';
+  h+='<rect x="262" y="122" width="296" height="308" rx="10" fill="none" stroke="rgba(255,255,255,.25)" stroke-dasharray="4 4"/>';
+  h+='<text x="410" y="270" font-size="26" font-weight="800" fill="#fff" text-anchor="middle">GrovePi+</text><text x="410" y="292" font-size="13" fill="#d8e8ff" text-anchor="middle">sits on top of the Raspberry Pi 5</text>';
+  h+='<g opacity=".55"><rect x="320" y="96" width="34" height="18" rx="3" fill="#fff"/><text x="337" y="90" font-size="10" fill="#5f6f7c" text-anchor="middle">RPISER</text><rect x="400" y="96" width="34" height="18" rx="3" fill="#fff"/><text x="417" y="90" font-size="10" fill="#5f6f7c" text-anchor="middle">SERIAL</text></g>';
+  for(const [name,[x,y,side]] of Object.entries(ports)){
+    const w=28,hh=18,rx=side==="B"?x-w/2:x-w/2,ry=side==="B"?y-hh/2:y-hh/2;
+    h+='<g class="port" data-port="'+name+'"><rect x="'+rx+'" y="'+ry+'" width="'+w+'" height="'+hh+'" rx="3" fill="#fff" stroke="#8fa0ae" stroke-width="2"/>';
+    h+='<g fill="#8fa0ae"><rect x="'+(rx+5)+'" y="'+(ry+7)+'" width="3" height="4"/><rect x="'+(rx+10)+'" y="'+(ry+7)+'" width="3" height="4"/><rect x="'+(rx+15)+'" y="'+(ry+7)+'" width="3" height="4"/><rect x="'+(rx+20)+'" y="'+(ry+7)+'" width="3" height="4"/></g>';
+    const lx=side==="L"?x+24:side==="R"?x-24:x, ly=side==="B"?y-18:y+5, anchor=side==="L"?"start":side==="R"?"end":"middle";
+    h+='<text x="'+lx+'" y="'+ly+'" font-size="13" font-weight="700" fill="#fff" text-anchor="'+anchor+'">'+name+'</text></g>';
+  }
+  for(const [ic,label,port,x,y] of parts){
+    const [px,py,side]=ports[port];const sw=100*.8, sh=64*.8;
+    const bottom=side==="B";
+    const cx=x+sw/2, cy=bottom?y:y+sh;               // the cable leaves the icon's connector edge: bottom for side parts, top for parts under the board
+    const c1x=bottom?cx:(side==="L"?cx+60:cx-60), c1y=bottom?cy-30:cy+10, c2x=bottom?px:(side==="L"?px-50:px+50), c2y=bottom?py+30:py;
+    h+='<g class="wire" data-port="'+port+'"><path d="M'+cx+' '+cy+' C'+c1x+' '+c1y+' '+c2x+' '+c2y+' '+px+' '+py+'" fill="none" stroke="#2c3a47" stroke-width="5" stroke-linecap="round"/><path d="M'+cx+' '+cy+' C'+c1x+' '+c1y+' '+c2x+' '+c2y+' '+px+' '+py+'" fill="none" stroke="#f3c12e" stroke-width="2" stroke-dasharray="6 8" stroke-linecap="round"/></g>';
+    const icon=bottom?ICON[ic]().replace('<svg viewBox="0 0 100 64">','<g transform="translate(0 64) scale(1 -1)">').replace('</svg>','</g>'):ICON[ic]().replace('<svg viewBox="0 0 100 64">','<g>').replace('</svg>','</g>');
+    const lab=bottom?'<text x="50" y="80" font-size="15" fill="#16212b" text-anchor="middle" font-weight="700">'+label+'</text>':'<text x="50" y="-8" font-size="15" fill="#16212b" text-anchor="middle" font-weight="700">'+label+'</text>';
+    h+='<g class="partg" data-port="'+port+'" tabindex="0" transform="translate('+x+' '+y+') scale(.8)" style="cursor:pointer">'+icon+lab+'</g>';
+  }
+  h+='<text id="mapTip" x="410" y="36" font-size="17" font-weight="700" fill="#16212b" text-anchor="middle">Hover or tap a part</text>';
+  svg.innerHTML=h;
+  const style=document.createElement("style");style.textContent="#boardMap .wire{opacity:.35;transition:opacity .15s}#boardMap .wire.hot{opacity:1}#boardMap .wire.hot path:first-child{stroke:#16212b}#boardMap .port rect{transition:fill .15s}#boardMap .port.hot rect{fill:#ffe28a;stroke:#d9a300}#boardMap .partg{transition:opacity .15s}#boardMap.focus .partg:not(.hot){opacity:.45}";document.head.appendChild(style);
+  const tip=$("#mapTip");
+  function hot(port,label){svg.classList.toggle("focus",!!port);$$(".wire,.port,.partg",svg).forEach(el=>el.classList.toggle("hot",el.dataset.port===port));tip.textContent=port?label+"  →  plug into "+port:"Hover or tap a part";}
+  $$(".partg",svg).forEach(g=>{const label=$("text",g).textContent;const on=()=>hot(g.dataset.port,label),off=()=>hot(null);
+    g.addEventListener("pointerenter",on);g.addEventListener("pointerleave",off);g.addEventListener("focus",on);g.addEventListener("blur",off);
+    g.addEventListener("click",e=>{e.stopPropagation();hot(g.dataset.port,label);});});
+  svg.addEventListener("click",()=>hot(null));
+})();
+
+/* ---------- HERO animation ---------- */
+(function(){
+  const svg=$("#heroScene");if(!svg)return;
+  const E=id=>document.getElementById(id);
+  const ping=E("heroPing"),echo=E("heroEcho"),intr=E("heroIntruder"),bang=E("heroBang"),cannon=E("heroCannon"),cLed=E("heroCannonLed"),dart=E("heroDart"),siren=E("heroSiren"),
+    ledG=E("heroLedG"),ledR=E("heroLedR"),ledGi=E("heroLedGi"),ledRi=E("heroLedRi"),lcdMini=E("heroLcdMini"),lcdMiniT=E("heroLcdMiniText"),stageR=$("#heroStage rect"),stageT=E("heroStageText"),
+    readout=E("heroReadoutText"),lcd=E("heroLcd"),status=E("heroStatus"),log=E("heroLog");
+  const CYCLE=15, PX_PER_CM=(870-212)/186, CX=120, CY=322, TARGET={x:520,y:205};
+  let t=reduced?3.2:0, paused=false, lastStage="";
+  const scene=svg.closest(".scene");scene.addEventListener("pointerenter",()=>paused=true);scene.addEventListener("pointerleave",()=>paused=false);
+  const COL={orange:"#f08c2a",blue:"#2b4ea8",red:"#d8262f",green:"#17a060"};
+  function intruderX(t){ if(t<3)return 905; if(t<6)return lerp(905,520,ease((t-3)/3)); if(t<8.3)return 520; if(t<10)return lerp(520,925,ease((t-8.3)/1.7)); return 925; }
+  function update(dt){
+    if(!paused&&!reduced){t=(t+dt)%CYCLE;}
+    const ix=intruderX(t);
+    intr.setAttribute("transform","translate("+ix.toFixed(1)+" 205)");
+    const walking=(t>3&&t<6)||(t>8.3&&t<10);
+    E("heroIntruderBody").setAttribute("transform","rotate("+(walking?Math.sin(t*14)*10:0)+")");
+    bang.setAttribute("opacity",t>8.25&&t<9.3?1:0);
+    // ping every second while armed/alarm
+    const hitX=Math.min(ix-18,870);
+    const p=t%1;const armedLike=t>=1.5&&t<10.2;
+    if(armedLike&&p<.45){ping.setAttribute("cx",lerp(212,hitX,p/.45));ping.setAttribute("opacity",.9);echo.setAttribute("opacity",0);}
+    else if(armedLike&&p<.9){echo.setAttribute("cx",lerp(hitX,212,(p-.45)/.45));echo.setAttribute("opacity",.9);ping.setAttribute("opacity",0);}
+    else{ping.setAttribute("opacity",0);echo.setAttribute("opacity",0);}
+    const dcm=Math.round((hitX-212)/PX_PER_CM);
+    const shown=(t>=1.5&&t<6)?dcm:(t>=6?92:186);
+    readout.textContent=shown+" cm";
+    // stage
+    let stage,colour,l1,l2,st;
+    if(t<1.5){stage="Stage 1 · ARMING";colour="orange";l1="Arming...";l2="Leave in "+(t<.75?2:1)+" sec";st="Intruder alarm started. Press Ctrl+C to stop.";}
+    else if(t<6){stage="Stage 3 · ARMED";colour="blue";l1="ARMED 23C 46%";l2=shown+"cm light 500";const strikes=t<4.9?0:(t<5.9?1:2);st="Armed. Normal distance: 186 cm   Normal light: 500"+(strikes?"\nstrikes = "+strikes:"");}
+    else if(t<10.2){stage="Stage 4 · ALARM";colour="red";l1="!!! ALARM !!!";l2="Movement 92cm";st="!!! ALARM !!! Movement 92cm"+(t>7.6?"\nFIRE!":"");}
+    else if(t<12){stage="Stage 5 · DISARM";colour="red";l1="!!! ALARM !!!";l2="Movement 92cm";st="Enter PIN to stop the alarm: "+"*".repeat(Math.min(4,Math.floor((t-10.2)*3)));}
+    else if(t<14.5){stage="Stage 5 · DISARMED";colour="green";l1="Disarmed";l2="Rockets left: 3";st="Alarm stopped. Rockets left: 3";}
+    else{stage="Stage 5 · DISARMED";colour="green";l1="Disarmed";l2="Rockets left: 3";st="Press Enter to arm the alarm again...";}
+    lcdSet(lcd,l1,l2,colour);status.textContent=st;
+    if(stage!==lastStage){stageT.textContent=stage;stageR.setAttribute("fill",COL[colour]);lcdMini.setAttribute("fill",COL[colour]);lcdMiniT.textContent=colour==="orange"?"ARMING":colour==="blue"?"ARMED":colour==="red"?"ALARM":"OK";lastStage=stage;}
+    // LEDs
+    const gOn=t<1.5?(t%1<.5):(t<6);const rOn=t>=6&&t<12&&(t<10.2?true:true);
+    ledG.setAttribute("fill",gOn?"#39e07a":"#3b4a58");ledR.setAttribute("fill",rOn?"#ff4e55":"#3b4a58");
+    ledGi.className="led"+(gOn?" on-g":"");ledRi.className="led"+(rOn?" on-r":"");
+    // siren arcs
+    siren.setAttribute("opacity",t>=6&&t<10.2?(.4+.6*Math.abs(Math.sin(t*8))):0);
+    // cannon
+    const aim=Math.atan2(TARGET.y-CY,TARGET.x-CX)*180/Math.PI;
+    let ang=0; if(t>=6.6&&t<7.4)ang=lerp(0,aim,ease((t-6.6)/.8)); else if(t>=7.4&&t<12)ang=aim;
+    cannon.setAttribute("transform","translate("+CX+" "+CY+") rotate("+ang.toFixed(1)+")");
+    cLed.setAttribute("fill",t>=6.4&&t<12?"#ff4e55":"#3b4a58");
+    if(t>=7.6&&t<8.3){const q=(t-7.6)/.7;const a=aim*Math.PI/180;const sx=CX+48*Math.cos(a),sy=CY+48*Math.sin(a);const x=lerp(sx,TARGET.x-14,q),y=lerp(sy,TARGET.y,q);dart.setAttribute("transform","translate("+x.toFixed(1)+" "+y.toFixed(1)+") rotate("+aim.toFixed(1)+")");dart.setAttribute("opacity",1);}
+    else dart.setAttribute("opacity",0);
+    // log
+    const lines=[];if(t>=1.5)lines.push("12:04:01  ARMED  (normal distance 186 cm, light 500)");if(t>=6)lines.push("12:04:08  ALARM - Movement 92cm  (room 23C, 46% humidity)");if(t>=8.3)lines.push("12:04:13  FIRED 1 rocket(s), 3 left");if(t>=12)lines.push("12:04:19  DISARMED after 0 wrong PIN(s)");
+    const txt=lines.join("\n");if(log.textContent!==txt)log.textContent=txt;
+  }
+  registerAnim(svg,update);update(0);
+})();
+
+/* ---------- MISSION 1: message animation ---------- */
+(function(){
+  const svg=$("#msgScene");if(!svg)return;
+  const BX=[215,275,335,395,455], LAB=["always 1","command","port","value","always 0"];
+  let h='<rect x="20" y="58" width="170" height="112" rx="10" fill="#2f7a3a"/><text x="105" y="90" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">Raspberry Pi 5</text><text x="105" y="112" font-size="12" fill="#d8f3dc" text-anchor="middle">your Python program</text><text x="105" y="130" font-size="12" fill="#d8f3dc" text-anchor="middle">grovepi_send( )</text>';
+  h+='<rect x="500" y="58" width="240" height="112" rx="10" fill="#2a7fd4"/><text x="620" y="84" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">GrovePi+</text><text id="msgChip" x="620" y="104" font-size="12" fill="#d8e8ff" text-anchor="middle">the chip waits for a message</text>';
+  h+='<g font-size="12" fill="#fff" text-anchor="middle"><circle id="msgLed2" cx="600" cy="140" r="11" fill="#3b4a58" stroke="#fff" stroke-width="2"/><text x="600" y="162">D2</text><circle id="msgLed3" cx="660" cy="140" r="11" fill="#3b4a58" stroke="#fff" stroke-width="2"/><text x="660" y="162">D3</text></g>';
+  h+='<line x1="190" y1="95" x2="500" y2="95" stroke="#8fa0ae" stroke-width="3"/><line x1="190" y1="128" x2="500" y2="128" stroke="#8fa0ae" stroke-width="3"/><text x="345" y="70" font-size="11" fill="#5f6f7c" text-anchor="middle">SDA: the data wire (the I2C bus) — bytes go one after another</text><text x="345" y="146" font-size="11" fill="#5f6f7c" text-anchor="middle">SCL: the clock wire keeps both ends in step</text>';
+  h+='<g id="msgTravel">'+BX.map((x,i)=>'<g class="tb" opacity="0"><rect x="-25" y="-16" width="50" height="32" rx="6" fill="#16212b" stroke="#ffe28a" stroke-width="2"/><text x="0" y="6" font-size="16" font-weight="700" fill="#ffe28a" text-anchor="middle" font-family="monospace" class="tv"></text></g>').join("")+'</g>';
+  h+='<g id="msgStatic">'+BX.map((x,i)=>'<rect x="'+x+'" y="178" width="50" height="32" rx="6" fill="#fff" stroke="#16212b" stroke-width="2"/><text x="'+(x+25)+'" y="200" font-size="16" font-weight="700" fill="#16212b" text-anchor="middle" font-family="monospace" class="sv">1</text><text x="'+(x+25)+'" y="228" font-size="11" fill="#5f6f7c" text-anchor="middle">'+LAB[i]+'</text>').join("")+'</g>';
+  h+='<text id="msgExplain" x="380" y="30" font-size="15" font-weight="700" fill="#16212b" text-anchor="middle">Press a button below to send a message</text>';
+  svg.innerHTML=h;
+  const travel=$("#msgTravel"),tv=$$(".tv",svg),sv=$$(".sv",svg),chip=$("#msgChip"),explain=$("#msgExplain");
+  const leds={2:$("#msgLed2"),3:$("#msgLed3")};const ledOn={2:false,3:false};const ready={2:false,3:false};
+  let anim=null;
+  const MEAN={5:"command 5 = set up port",2:"command 2 = switch port"};
+  $$("[data-msg]").forEach(b=>b.addEventListener("click",()=>{
+    const [cmd,port,val]=b.dataset.msg.split(",").map(Number);const bytes=[1,cmd,port,val,0];
+    tv.forEach((e,i)=>e.textContent=bytes[i]);sv.forEach((e,i)=>e.textContent=bytes[i]);
+    explain.textContent=b.dataset.name+"  sends  "+bytes.join(", ");
+    anim={t:0,cmd,port,val};chip.textContent="…";
+  }));
+  registerAnim(svg,dt=>{
+    if(!anim)return;anim.t+=dt;const q=anim.t;
+    // I2C sends the bytes one after another down the wire
+    const tb=$$(".tb",travel);let done=true;
+    tb.forEach((g,i)=>{const p=(q-i*.22)/.9;if(p<0){g.setAttribute("opacity",0);done=false;return;}if(p<1){done=false;const x=lerp(215,478,ease(p));g.setAttribute("transform","translate("+x.toFixed(1)+" 95)");g.setAttribute("opacity",p>.85?(1-p)/.15:1);}else g.setAttribute("opacity",0);});
+    if(!done)return;
+    {
+      const {cmd,port,val}=anim;
+      if(cmd===5){ready[port]=true;chip.textContent="port D"+port+" is now an output";}
+      else if(cmd===2){ if(!ready[port]){chip.textContent="D"+port+" isn't set up yet: make_output("+port+") first";} else {ledOn[port]=val===1;chip.textContent="switch D"+port+(val?" ON":" OFF");} }
+      leds[2].setAttribute("fill",ledOn[2]?"#39e07a":"#3b4a58");leds[3].setAttribute("fill",ledOn[3]?"#ff4e55":"#3b4a58");
+      anim=null;}
+  });
+})();
+
+/* ---------- MISSION 2: ping animation + bytes ---------- */
+(function(){
+  const svg=$("#pingScene");if(!svg)return;const range=$("#pingRange"),val=$("#pingVal"),panel=$("#bytePanel");
+  let h='<rect x="30" y="92" width="72" height="64" rx="6" fill="#fff" stroke="#6b7a87" stroke-width="2"/><circle cx="100" cy="112" r="10" fill="#cfd8e0" stroke="#5f6f7c" stroke-width="2"/><circle cx="100" cy="136" r="10" fill="#cfd8e0" stroke="#5f6f7c" stroke-width="2"/><text x="66" y="118" font-size="10" fill="#5f6f7c" text-anchor="middle">send</text><text x="66" y="142" font-size="10" fill="#5f6f7c" text-anchor="middle">listen</text><text x="66" y="80" font-size="13" fill="#16212b" text-anchor="middle" font-weight="700">ranger (D5)</text>';
+  h+='<g id="pingObj"><circle cx="0" cy="78" r="13" fill="#df343b" stroke="#fff" stroke-width="2"/><rect x="-13" y="94" width="26" height="92" rx="9" fill="#2c3a47"/></g>';
+  h+='<path id="pingOut" d="" fill="none" stroke="#2a62c8" stroke-width="4" opacity="0"/><path id="pingBack" d="" fill="none" stroke="#ef8a1f" stroke-width="4" opacity="0"/>';
+  h+='<line id="pingLine" x1="110" y1="215" x2="389" y2="215" stroke="#16212b" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)"/><text id="pingDist" x="250" y="236" font-size="14" font-weight="700" fill="#16212b" text-anchor="middle">186 cm</text>';
+  h+='<text id="pingTime" x="420" y="40" font-size="14" fill="#16212b" text-anchor="middle">echo took 10.8 ms  →  10.8 ms × 343 m/s ÷ 2  =  186 cm</text><text x="420" y="60" font-size="12" fill="#5f6f7c" text-anchor="middle">(÷ 2 because the sound went there and back)</text>';
+  svg.innerHTML=h;
+  const obj=$("#pingObj"),out=$("#pingOut"),back=$("#pingBack"),line=$("#pingLine"),dist=$("#pingDist"),timeT=$("#pingTime");
+  let d=186,ph=0;
+  function arc(x,r){return "M"+(x-r*.35)+" "+(124-r)+" Q"+(x+r*.25)+" 124 "+(x-r*.35)+" "+(124+r);}
+  function setD(){d=+range.value;val.textContent=d;const ox=110+d*1.5;obj.setAttribute("transform","translate("+ox+" 0)");line.setAttribute("x2",ox-14);line.setAttribute("x1",110);dist.setAttribute("x",(110+ox-14)/2);dist.textContent=d+" cm";
+    const ms=(2*d/34300*1000);timeT.textContent="echo took "+ms.toFixed(1)+" ms  →  "+ms.toFixed(1)+" ms × 343 m/s ÷ 2  =  "+d+" cm";
+    const hi=Math.floor(d/256),lo=d%256;
+    panel.innerHTML='<span style="color:var(--muted)">the board answers 3 bytes:</span> <span class="pill blue">label 7</span> <span class="pill orange">high '+hi+'</span> <span class="pill red">low '+lo+'</span> &nbsp;→&nbsp; high × 256 + low = <b>'+hi+' × 256 + '+lo+' = '+d+' cm</b>';
+    ph=0;}
+  range.addEventListener("input",setD);setD();
+  registerAnim(svg,dt=>{ph=(ph+dt)%2.2;const ox=110+d*1.5-14;const T=.9;
+    if(ph<T){const x=lerp(112,ox,ph/T);out.setAttribute("d",arc(x,14+10*ph/T));out.setAttribute("opacity",.9);back.setAttribute("opacity",0);}
+    else if(ph<2*T){const x=lerp(ox,112,(ph-T)/T);back.setAttribute("d",arc(x,24));back.setAttribute("opacity",.9);out.setAttribute("opacity",0);}
+    else{out.setAttribute("opacity",0);back.setAttribute("opacity",0);}});
+})();
+
+/* ---------- MISSION 3: siren + LCD demo ---------- */
+let audio=null;
+function tone(freq,secs,when){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type="square";o.frequency.value=freq;g.gain.value=.04;o.connect(g);g.connect(audio.destination);const t0=audio.currentTime+(when||0);o.start(t0);o.stop(t0+secs);}catch(e){}}
+(function(){
+  const tl=$("#sirenTimeline");if(!tl)return;
+  let h='<div>Speaker</div><div class="row" id="rowS"></div><div>Buzzer</div><div class="row" id="rowB"></div><div></div><div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted)"><span>0 s</span><span>1 s</span><span>2 s</span><span>3 s</span></div>';
+  tl.innerHTML=h;const rs=$("#rowS"),rb=$("#rowB");
+  for(let i=0;i<5;i++){rs.innerHTML+='<div class="seg" style="left:'+(i*20)+'%;width:10%;background:var(--orange)">nee</div>';rb.innerHTML+='<div class="seg" style="left:'+(i*20+10)+'%;width:10%;background:var(--red)">naw</div>';}
+  rs.innerHTML+='<div class="play" id="playS"></div>';rb.innerHTML+='<div class="play" id="playB"></div>';
+  let playing=-1;
+  $("#sirenPlay").addEventListener("click",()=>{playing=0;for(let i=0;i<5;i++){tone(980,.3,i*.6);tone(2300,.3,i*.6+.3);}});
+  registerAnim(tl,dt=>{if(playing<0)return;playing+=dt;const pc=Math.min(100,playing/3*100)+"%";$("#playS").style.left=pc;$("#playB").style.left=pc;if(playing>3)playing=-1;});
+  // LCD demo
+  const lcd=$("#m3Lcd"),line=$("#m3Line");let running=false;
+  $("#m3Run").addEventListener("click",async()=>{if(running)return;running=true;const snd=$("#m3Sound").checked;const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    for(let n=5;n>0;n--){lcdSet(lcd,"Get ready...","Siren in "+n+" sec","orange");line.textContent="Siren in "+n+"\nlcd_show(\"Get ready...\", \"Siren in \" + str(seconds_left) + \" sec\")";if(snd)tone(980,.1);await sleep(1000);}
+    lcdSet(lcd,"!!! NEE-NAW !!!","Siren test","red");line.textContent="Siren!\nsiren(5)";if(snd)for(let i=0;i<5;i++){tone(980,.3,i*.6);tone(2300,.3,i*.6+.3);}await sleep(3000);
+    lcdSet(lcd,"All clear","Mission 3 done","green");line.textContent="Done.\nlcd_colour(0, 255, 0)";running=false;});
+  lcdSet(lcd,"Mission 3","press Run demo","off");
+})();
+
+/* ---------- MISSION 4: stage stepper ---------- */
+(function(){
+  const S=[
+   {tab:"1 Arming",colour:"orange",lcd:["Arming...","Leave in 10 sec"],g:"blink",r:0,sound:"beep each second",title:"Stage 1: Arming",
+    text:"A countdown gives you time to leave the room. The green LED blinks and the speaker beeps once a second. The screen is orange.",
+    code:"seconds_left = arming_delay\nwhile seconds_left > 0:\n    lcd_show(\"Arming...\", \"Leave in \" + str(seconds_left) + \" sec\")\n    turn_on(green_led_port)\n    beep(0.1)\n    time.sleep(0.4)\n    turn_off(green_led_port)\n    time.sleep(0.5)\n    seconds_left = seconds_left - 1"},
+   {tab:"2 Learning",colour:"orange",lcd:["Arming...","Leave in 1 sec"],g:0,r:0,sound:"one long beep",title:"Stage 2: Learning",
+    text:"The alarm takes one reading of each sensor and remembers it as \"normal\": how far away the wall is, and how bright the room is. The log file gets its first line.",
+    extra:"<div class='term'><pre><span class='out'>Armed. Normal distance: 186 cm   Normal light: 500</span></pre></div>",
+    code:"normal_distance = read_distance()\nif normal_distance == 0:          # 0 means nothing in range\n    normal_distance = 400\nnormal_light = read_light()\nwrite_log(\"ARMED  (normal distance \" + str(normal_distance) + \" cm, light \" + str(normal_light) + \")\")\nbeep(0.5)"},
+   {tab:"3 Armed",colour:"blue",lcd:["ARMED 23C 46%","186cm light 500"],g:1,r:0,sound:"silent",title:"Stage 3: Armed",
+    text:"Blue screen, green LED on. Five times a second the alarm reads the ranger and the light sensor and compares them with normal. An unusual reading adds a strike; a normal one resets strikes to 0. Two strikes in a row and the loop ends.",
+    extra:"<table style='margin:6px 0 10px;font-family:var(--mono);font-size:.85rem'><thead><tr><th>reading</th><th>closer than 166?</th><th>strikes</th></tr></thead><tbody id='strikeRows'></tbody></table>",
+    code:"strikes = 0\nwhile strikes < 2:                        # 2 in a row stops false alarms\n    distance = read_distance()\n    light = read_light()\n    if distance > 0 and distance < normal_distance - distance_change:\n        strikes = strikes + 1\n        reason = \"Movement \" + str(distance) + \"cm\"\n    elif abs(light - normal_light) > light_change:\n        strikes = strikes + 1\n        reason = \"Light changed\"\n    else:\n        strikes = 0\n    time.sleep(0.2)"},
+   {tab:"4 Alarm",colour:"red",lcd:["!!! ALARM !!!","Movement 60cm"],g:0,r:1,sound:"siren ×5, then the buzzer stays on",title:"Stage 4: Alarm",
+    text:"Red LED, red screen showing the reason, the siren, and a line in the log with the time and the room conditions. In Mission 5 the cannon fires here too.",
+    extra:"<div class='term'><pre><span class='out'>2026-10-13 12:04:08  ALARM - Movement 60cm  (room 23C, 46% humidity)</span></pre></div>",
+    code:"turn_off(green_led_port)\nturn_on(red_led_port)\nlcd_colour(255, 0, 0)\nlcd_show(\"!!! ALARM !!!\", reason)\nwrite_log(\"ALARM - \" + reason + ...)\nsiren(5)\nturn_on(buzzer_port)"},
+   {tab:"5 Disarm",colour:"red",lcd:["WRONG PIN!","Attempts: 1"],g:0,r:1,sound:"siren ×3 after every wrong PIN",title:"Stage 5: Disarm",
+    text:"The program asks for the PIN and keeps asking until it is right. getpass hides what you type. Every wrong try is logged and shown on the screen. The right PIN turns the screen green and the loop goes back to Stage 1.",
+    extra:"<div class='term'><pre><span class='out'>Enter PIN to stop the alarm: ****\nWrong PIN!\nEnter PIN to stop the alarm: ****\nAlarm stopped.</span></pre></div><div style='margin:6px 0 10px'>then: <span class='lcd c-green' style='font-size:11px;vertical-align:middle'></span></div>",
+    code:"typed_pin = getpass.getpass(\"Enter PIN to stop the alarm: \")\nwhile typed_pin != secret_pin:\n    wrong_tries = wrong_tries + 1\n    write_log(\"WRONG PIN entered (attempt \" + str(wrong_tries) + \")\")\n    lcd_show(\"WRONG PIN!\", \"Attempts: \" + str(wrong_tries))\n    siren(3)\n    typed_pin = getpass.getpass(\"Enter PIN to stop the alarm: \")\nlcd_colour(0, 255, 0)\nlcd_show(\"Disarmed\", \"Wrong PINs: \" + str(wrong_tries))"}
+  ];
+  const tabs=$("#stageTabs"),lcd=$("#stageLcd"),g=$("#stageLedG"),r=$("#stageLedR"),snd=$("#stageSound"),title=$("#stageTitle"),text=$("#stageText"),extra=$("#stageExtra"),code=$("#stageCode");
+  let i=0,auto=false,autoT=0,blink=0,strikeT=0;
+  tabs.innerHTML=S.map((s,k)=>'<button class="btn" data-k="'+k+'">'+s.tab+'</button>').join("");
+  $$("button",tabs).forEach(b=>b.addEventListener("click",()=>show(+b.dataset.k)));
+  function show(k){i=(k+S.length)%S.length;const s=S[i];$$("button",tabs).forEach((b,j)=>b.classList.toggle("primary",j===i));
+    lcdSet(lcd,s.lcd[0],s.lcd[1],s.colour);title.textContent=s.title;text.textContent=s.text;extra.innerHTML=s.extra||"";code.innerHTML=s.code.split("\n").map(highlight).join("\n");
+    snd.textContent="sound: "+s.sound;r.className="led"+(s.r?" on-r":"");g.className="led"+(s.g===1?" on-g":"");strikeT=0;
+    const gl=$(".lcd",extra);if(gl)lcdSet(gl,"Disarmed","Wrong PINs: 1","green");}
+  $("#stagePrev").addEventListener("click",()=>show(i-1));$("#stageNext").addEventListener("click",()=>show(i+1));
+  const ab=$("#stageAuto");ab.addEventListener("click",()=>{auto=!auto;autoT=0;ab.textContent=auto?"Stop auto-play":"Auto-play";ab.classList.toggle("primary",auto);});
+  const READ=[[186,"no",0],[185,"no",0],[60,"yes",1],[60,"yes",2]];
+  registerAnim($("#stagePanel"),dt=>{
+    if(S[i].g==="blink"){blink+=dt;g.className="led"+((blink%1)<.5?" on-g":"");}
+    if(i===2){strikeT+=dt;const rows=$("#strikeRows");if(rows){const n=Math.min(4,Math.floor(strikeT/.8));const want=READ.slice(0,n).map(x=>'<tr><td>'+x[0]+' cm</td><td>'+x[1]+'</td><td>'+x[2]+'</td></tr>').join("")+(n===4?'<tr><td colspan="3" style="color:var(--red);font-weight:700">strikes = 2 → ALARM</td></tr>':"");if(rows.innerHTML!==want)rows.innerHTML=want;if(strikeT>5.5)strikeT=0;}}
+    if(auto){autoT+=dt;if(autoT>4){autoT=0;show(i+1);}}
+  });
+  show(0);
+})();
+
+/* ---------- MISSION 5: cannon simulator ---------- */
+(function(){
+  const svg=$("#cannonScene");if(!svg)return;const msg=$("#cannonMsg"),rk=$("#cannonRockets");
+  const CX=160,CY=185;
+  let h='<text x="160" y="24" font-size="13" fill="#5f6f7c" text-anchor="middle">top view · straight up = towards the doorway</text>';
+  h+='<path d="M'+(CX+120*Math.cos(-225*Math.PI/180))+' '+(CY+120*Math.sin(-225*Math.PI/180))+' A120 120 0 1 1 '+(CX+120*Math.cos(45*Math.PI/180))+' '+(CY+120*Math.sin(45*Math.PI/180))+'" fill="none" stroke="#d6dee6" stroke-width="2" stroke-dasharray="4 6"/>';
+  h+='<text x="'+(CX)+'" y="'+(CY-128)+'" font-size="11" fill="#8fa0ae" text-anchor="middle">0°</text><text x="'+(CX-118)+'" y="'+(CY+100)+'" font-size="11" fill="#8fa0ae" text-anchor="middle">park (left)</text><text x="'+(CX+118)+'" y="'+(CY+100)+'" font-size="11" fill="#8fa0ae" text-anchor="middle">right</text>';
+  h+='<circle cx="'+CX+'" cy="'+CY+'" r="58" fill="#c9bda7" stroke="#a89470" stroke-width="2"/>';
+  h+='<g id="canTurret"><rect x="-26" y="-26" width="52" height="56" rx="8" fill="#2c3a47"/><g id="canBarrels" fill="#3b4a58"><rect x="-22" y="-78" width="9" height="56" rx="4"/><rect x="-10" y="-86" width="9" height="64" rx="4"/><rect x="2" y="-86" width="9" height="64" rx="4"/><rect x="14" y="-78" width="9" height="56" rx="4"/></g><g id="canRockets" fill="#df343b"><circle cx="-17.5" cy="-76" r="4"/><circle cx="-5.5" cy="-84" r="4"/><circle cx="6.5" cy="-84" r="4"/><circle cx="18.5" cy="-76" r="4"/></g><circle id="canLed" cx="0" cy="18" r="5" fill="#3b4a58"/></g>';
+  h+='<g id="canDart" opacity="0"><rect x="-4" y="-12" width="8" height="22" rx="4" fill="#df343b"/><polygon points="-5,-12 0,-22 5,-12" fill="#ef8a1f"/></g>';
+  // tilt gauge
+  h+='<g transform="translate(340 60)"><text x="40" y="-10" font-size="12" fill="#5f6f7c" text-anchor="middle">side view · tilt</text><rect x="0" y="0" width="80" height="120" rx="8" fill="#fff" stroke="#d6dee6"/><path d="M14 92 A56 56 0 0 1 54 52" fill="none" stroke="#d6dee6" stroke-dasharray="3 5"/><text x="40" y="112" font-size="10" fill="#8fa0ae" text-anchor="middle">0° = down</text><text x="58" y="44" font-size="10" fill="#8fa0ae" text-anchor="middle">45° up</text><circle cx="14" cy="92" r="7" fill="#2c3a47"/><g id="canTilt" transform="translate(14 92) rotate(0)"><rect x="0" y="-5" width="54" height="10" rx="4" fill="#3b4a58"/></g></g>';
+  h+='<rect x="345" y="200" width="70" height="10" rx="5" fill="#e8edf1"/><rect id="canReload" x="345" y="200" width="0" height="10" rx="5" fill="var(--orange)"/><text x="380" y="226" font-size="11" fill="#5f6f7c" text-anchor="middle">reloading</text>';
+  h+='<text id="canState" x="160" y="302" font-size="13" font-weight="700" fill="#16212b" text-anchor="middle">pan −135°  tilt 0°</text>';
+  svg.innerHTML=h;
+  const turret=$("#canTurret"),tilt=$("#canTilt"),led=$("#canLed"),dart=$("#canDart"),reload=$("#canReload"),state=$("#canState"),rockDots=$$("#canRockets circle");
+  const st={pan:-135,tilt:0,tpan:-135,ttilt:0,rockets:4,led:false,busy:0,dartT:-1,dartAng:0};
+  const NAMES={1:"DOWN",2:"UP",4:"LEFT",8:"RIGHT",16:"FIRE",32:"STOP"};
+  const bytes=(first,c)=>[first,c,0,0,0,0,0,0].join(", ");
+  const lines=[];function say(s){lines.push(s);while(lines.length>8)lines.shift();msg.textContent=lines.join("\n");}
+  function moveLine(c,secs){say("cannon_send("+c+")   "+NAMES[c]);say("  → "+bytes(2,c));say("time.sleep("+secs+")");say("cannon_send(32)  STOP");say("  → "+bytes(2,32));}
+  const btns=$$("[data-can]");
+  function setBusy(s){st.busy=s;btns.forEach(b=>b.disabled=s>0);}
+  btns.forEach(b=>b.addEventListener("click",()=>{if(st.busy>0)return;const a=b.dataset.can;
+    if(a==="left"||a==="right"){const d=a==="left"?-13.5:13.5;const nt=clamp(st.tpan+d,-135,135);moveLine(a==="left"?4:8,0.3);if(nt===st.tpan)say("(already at the end of its travel)");st.tpan=nt;setBusy(.35);}
+    else if(a==="up"||a==="down"){const d=a==="up"?6.6:-6.6;const nt=clamp(st.ttilt+d,0,45);moveLine(a==="up"?2:1,0.3);if(nt===st.ttilt)say("(already at the end of its travel)");st.ttilt=nt;setBusy(.35);}
+    else if(a==="park"){say("cannon_park()");say("  down 2 s, then left 8 s");st.tpan=-135;st.ttilt=0;setBusy(1.6);}
+    else if(a==="led"){st.led=!st.led;say("cannon_light("+(st.led?1:0)+")");say("  → "+bytes(3,st.led?1:0));led.setAttribute("fill",st.led?"#ff4e55":"#3b4a58");}
+    else if(a==="fire"){if(st.rockets<=0){say("Out of rockets! Press Reload.");return;}say("cannon_send(16)  FIRE");say("  → "+bytes(2,16));say("time.sleep(4.5)  # fire + reload");st.rockets--;rk.textContent=st.rockets;rockDots.forEach((c,k)=>c.setAttribute("opacity",k<st.rockets?1:.15));st.dartT=0;st.dartAng=st.pan;setBusy(2.2);}
+  }));
+  $("#cannonReload").addEventListener("click",()=>{st.rockets=4;rk.textContent=4;rockDots.forEach(c=>c.setAttribute("opacity",1));say("(4 rockets loaded)");});
+  registerAnim(svg,dt=>{
+    st.pan+=clamp(st.tpan-st.pan,-45*dt*2,45*dt*2);st.tilt+=clamp(st.ttilt-st.tilt,-22*dt*2,22*dt*2);
+    turret.setAttribute("transform","translate("+CX+" "+CY+") rotate("+st.pan.toFixed(1)+")");tilt.setAttribute("transform","translate(14 92) rotate("+(-st.tilt).toFixed(1)+")");
+    state.textContent="pan "+Math.round(st.pan)+"°   tilt "+Math.round(st.tilt)+"°   rockets "+st.rockets;
+    if(st.busy>0){st.busy-=dt;if(st.busy<=0)setBusy(0);}
+    if(st.dartT>=0){st.dartT+=dt;const q=st.dartT/.6;const a=(st.dartAng-90)*Math.PI/180;const r=lerp(80,190,q);dart.setAttribute("transform","translate("+(CX+r*Math.cos(a)).toFixed(1)+" "+(CY+r*Math.sin(a)).toFixed(1)+") rotate("+st.dartAng.toFixed(1)+")");dart.setAttribute("opacity",q<1?1:0);
+      reload.setAttribute("width",Math.min(70,70*Math.max(0,(st.dartT-.4)/1.8)));if(st.dartT>2.2){st.dartT=-1;reload.setAttribute("width",0);}}
+  });
+})();
+
+/* ---------- QUIZ ---------- */
+(function(){
+  const Q=[
+   ["How many bytes are in every message the Pi sends to the GrovePi+?",["3","5","8","16"],1,"Always five: 1, command, port, value, 0."],
+   ["Which command number switches a port on or off?",["1","2","5","7"],1,"Command 2 is a digital write. Command 5 sets a port up, 7 reads the ranger."],
+   ["In grovepi_send(2, 3, 1), what does the 3 mean?",["the command","the port (D3)","the value","how many times to repeat"],1,"The order is command, port, value. So 2 = switch, 3 = port D3, 1 = on."],
+   ["The ranger replies with high = 1 and low = 44. What is the distance?",["44 cm","144 cm","300 cm","1044 cm"],2,"high × 256 + low = 256 + 44 = 300 cm."],
+   ["read_distance() returns 0. What does that mean?",["the object is touching the sensor","nothing bounced back in range","the sensor is broken","the room is dark"],1,"No echo came back, so the program treats 0 as \"nothing there\" and uses 400 instead."],
+   ["Why does the alarm wait until strikes reaches 2?",["to give the intruder a chance","so one glitchy reading doesn't set it off","because the LCD is slow","to save battery"],1,"One odd reading could be a fly or a glitch. Two in a row is much more likely to be real."],
+   ["Why use getpass.getpass() instead of input() for the PIN?",["it is faster","it hides what you type","it checks the PIN is a number","it saves the PIN to the log"],1,"getpass does not show the keys you press, so nobody can read the PIN over your shoulder."],
+   ["In open(log_file_name, \"a\"), what does \"a\" mean?",["all","add to the end (append)","alarm","ask before writing"],1,"\"a\" opens the file for appending, so every new line goes after the old ones instead of wiping the file."],
+   ["Which cannon command number fires a rocket?",["4","8","16","32"],2,"1 down, 2 up, 4 left, 8 right, 16 fire, 32 stop."],
+   ["Why does the program call cannon.detach_kernel_driver(0)?",["to make the cannon faster","Linux grabbed the cannon as if it were a keyboard, and must let go first","to charge the cannon","to reload the rockets"],1,"The cannon looks like a keyboard-type (HID) device to Linux, which claims it automatically. Python can only talk to it once the system lets go."]
+  ];
+  const box=$("#quizBox"),score=$("#quizScore");let answered=0,right=0;
+  function render(){answered=0;right=0;score.textContent="";box.innerHTML=Q.map((q,i)=>'<div class="q"><p>'+(i+1)+'. '+esc(q[0])+'</p><div class="opts">'+q[1].map((o,k)=>'<button data-q="'+i+'" data-k="'+k+'">'+esc(o)+'</button>').join("")+'</div><div class="fb"></div></div>').join("");
+    $$("button",box).forEach(b=>b.addEventListener("click",()=>{const q=Q[+b.dataset.q],k=+b.dataset.k,wrap=b.closest(".q");if(wrap.dataset.done)return;wrap.dataset.done=1;answered++;
+      $$("button",wrap).forEach(x=>{x.disabled=true;if(+x.dataset.k===q[2])x.classList.add("right");});if(k===q[2]){right++;}else b.classList.add("wrong");
+      $(".fb",wrap).textContent=(k===q[2]?"Correct. ":"Not quite. ")+q[3];
+      if(answered===Q.length)score.textContent="Score: "+right+" / "+Q.length+(right===Q.length?" — flawless.":right>=7?" — solid.":" — read the comments in the code again, then retry.");}));}
+  $("#quizReset").addEventListener("click",render);render();
+})();
+})();
+</script>
+</body>
+</html>
