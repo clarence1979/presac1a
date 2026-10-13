@@ -257,6 +257,17 @@ textarea{width:100%;min-height:110px;resize:vertical;line-height:1.45}
 .present .resp.notes .rbox.weak ul.notes{display:block}
 .present .reveal{margin-top:1rem;background:#ffd166;color:#1b2430;border-color:#ffd166;font-weight:700;font-size:1rem;padding:.55rem 1rem}
 
+/* overview + downloads */
+.ovwrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.ovwrap svg{display:block;width:100%;height:auto}
+.dlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.8rem;margin-bottom:1rem}
+.dl{border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem;background:#f6f8fb;display:flex;flex-direction:column;gap:.3rem}
+.dl h4{margin:0;font-size:1rem;color:var(--accent)}
+.dl p{margin:0 0 .4rem;font-size:.88rem;color:var(--muted);flex:1}
+.dl button{align-self:flex-start}
+.present .pov{background:#fff;border-radius:12px;padding:.6rem;max-width:1500px}
+.present .pov svg{display:block;width:100%;height:auto;max-height:72vh}
+
 </style>
 </head>
 <body>
@@ -285,7 +296,8 @@ textarea{width:100%;min-height:110px;resize:vertical;line-height:1.45}
       <li><b>Press “Present”</b> to teach from full-screen slides (arrow keys or space to move, Esc to exit). Both clocks stay visible in the top-right of the presenter view.</li>
       <li><b>Response clinic:</b> in presenter mode each clinic slide shows the weak answer first — have students mark it, press <b>Enter</b> to reveal why it loses marks, then <b>Enter</b> again for the strong response. The commentary paraphrases patterns from VCAA Applied Computing examination reports.</li>
       <li><b>Practice:</b> students work through the auto-marked set on their own devices (open the same file), or you run it on the projector. “Mark all” gives a score; short answers are marked on key ideas with a model answer.</li>
-      <li><b>Summary PDF:</b> every session has a one-click PDF of the key terms, memory hooks and exam tips — generated inside the page, no internet needed.</li>
+      <li><b>Overview diagram:</b> each session opens with a one-page visual of the whole chapter (mind map, pipeline, network diagram or threat-to-defence map). It is also the first presenter slide, and downloads as PNG or SVG for the wall or a workbook.</li>
+      <li><b>Downloads:</b> every session has a one-click revision summary PDF, a printable <b>practice paper</b> (short-response questions with writing space, about 25 minutes) and a separate <b>answer key</b> PDF with marking guidance — all generated inside the page, no internet needed.</li>
     </ol>
     <p><b>Scope note.</b> Units 1 and 2 are school-assessed, so there is no VCAA exam for them. Content is mapped to the Units 1 &amp; 2 key knowledge of the <i>VCE Applied Computing Study Design</i> (accredited from 2025). Sample questions are original and written in VCAA style; where a question is “modelled on” a VCAA Units 3 &amp; 4 exam question it is because that topic is common to both levels and the examiner commentary transfers directly. Examiner commentary is drawn from the VCAA Software Development examination reports 2020–2025 and Data Analytics reports 2020–2021.</p>
   </div>
@@ -303,29 +315,25 @@ textarea{width:100%;min-height:110px;resize:vertical;line-height:1.45}
 
 <script>
 /* ---------- Minimal inline PDF writer (no external libraries) ----------
-   Produces an A4 text PDF using the standard Helvetica fonts (WinAnsi encoding).
-   blocks: array of [kind, text] where kind is
-     'h'  = section heading, 'h2' = sub-heading, 'p' = paragraph,
-     'b'  = bullet, 'n' = numbered-style bullet (text supplies its own label),
-     'k'  = key term line "Term — definition" (term bolded up to the dash),
-     'sp' = vertical space, 'rule' = horizontal rule
+   A4 text + simple vector PDF using the standard Helvetica fonts (WinAnsi encoding).
+   MiniPDF.Doc gives a page cursor with text, lines and rectangles;
+   MiniPDF.build(opts) renders the summary block format used by the session summaries;
+   PaperPDF (below) renders practice papers and answer keys.
 */
 var MiniPDF = (function(){
-  // Helvetica & Helvetica-Bold advance widths for ASCII 32..126 (per 1000 em)
   var WR=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
   var WB=[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
-  // Unicode -> WinAnsi byte map for the characters we use
   var MAP={'‘':0x91,'’':0x92,'“':0x93,'”':0x94,'–':0x96,'—':0x97,'•':0x95,'…':0x85,'€':0x80,'™':0x99,' ':0x20};
-  var REPL={'→':'->','←':'<-','↔':'<->','✓':'[tick]','✔':'[tick]','✗':'[x]','✘':'[x]','≤':'<=','≥':'>=','≠':'!=','×':'x','−':'-','≈':'~','↑':'up','↓':'down','▶':'>','★':'*','☆':'*','☑':'[x]','☐':'[ ]','·':'-',' ':' ',' ':' ','​':'','‹':'<','›':'>','«':'"','»':'"','…':'...'};
+  var REPL={'→':'->','←':'<-','↔':'<->','✓':'[tick]','✔':'[tick]','✗':'[x]','✘':'[x]','≤':'<=','≥':'>=','≠':'!=','×':'x','−':'-','≈':'~','↑':'up','↓':'down','▶':'>','★':'*','☆':'*','☑':'[x]','☐':'[ ]','·':'-',' ':' ',' ':' ','​':'','‹':'<','›':'>','«':'"','»':'"','…':'...','①':'1','②':'2','③':'3','④':'4','⑤':'5'};
   function toBytes(s){
+    s=String(s==null?'':s).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&nbsp;/g,' ');
     var out='';
     for(var i=0;i<s.length;i++){
       var ch=s[i], c=s.charCodeAt(i);
       if(REPL[ch]!==undefined){out+=REPL[ch];continue;}
       if(MAP[ch]!==undefined){out+=String.fromCharCode(MAP[ch]);continue;}
-      if(c<32){ if(ch==='\t') out+='  '; continue; }
+      if(c<32){ if(ch==='\t') out+='  '; else if(ch==='\n') out+='\n'; continue; }
       if(c<256){out+=ch;continue;}
-      // strip diacritics where possible
       var base=ch.normalize?ch.normalize('NFD').replace(/[̀-ͯ]/g,''):'?';
       out+= (base && base.charCodeAt(0)<256)?base:'?';
     }
@@ -338,84 +346,64 @@ var MiniPDF = (function(){
     return w*size/1000;
   }
   function wrap(text,bold,size,maxW){
-    var words=text.split(/\s+/),lines=[],cur='';
-    for(var i=0;i<words.length;i++){
-      var w=words[i]; if(!w) continue;
-      var t=cur?cur+' '+w:w;
-      if(width(t,bold,size)<=maxW||!cur){cur=t;}
-      else{lines.push(cur);cur=w;}
-      // very long single word: hard split
-      while(width(cur,bold,size)>maxW&&cur.length>8){
-        var cut=cur.length-1; while(cut>4&&width(cur.slice(0,cut),bold,size)>maxW)cut--;
-        lines.push(cur.slice(0,cut)+'-'); cur=cur.slice(cut);
+    var out=[];
+    text.split('\n').forEach(function(paraText){
+      var words=paraText.split(/\s+/),lines=[],cur='';
+      for(var i=0;i<words.length;i++){
+        var w=words[i]; if(!w) continue;
+        var t=cur?cur+' '+w:w;
+        if(width(t,bold,size)<=maxW||!cur){cur=t;}
+        else{lines.push(cur);cur=w;}
+        while(width(cur,bold,size)>maxW&&cur.length>8){
+          var cut=cur.length-1; while(cut>4&&width(cur.slice(0,cut),bold,size)>maxW)cut--;
+          lines.push(cur.slice(0,cut)+'-'); cur=cur.slice(cut);
+        }
       }
-    }
-    if(cur) lines.push(cur);
-    return lines;
+      if(cur) lines.push(cur); else if(!lines.length) lines.push('');
+      out=out.concat(lines);
+    });
+    return out;
   }
-  function build(opts){
-    var title=toBytes(opts.title||'Summary'), subtitle=toBytes(opts.subtitle||''), footer=toBytes(opts.footer||'');
-    var blocks=opts.blocks||[];
-    var W=595.28,H=841.89,ML=54,MR=54,MT=64,MB=60,TW=W-ML-MR;
-    var pages=[],cur=[],y=H-MT;
-    function newPage(){pages.push(cur);cur=[];y=H-MT;}
-    function ensure(h){if(y-h<MB)newPage();}
-    function put(txt,bold,size,x,color){cur.push({t:txt,b:bold,s:size,x:x,y:y,c:color||null});}
-    function para(text,bold,size,indent,lead,color){
-      var ls=wrap(toBytes(text),bold,size,TW-indent);
-      for(var i=0;i<ls.length;i++){ensure(size*lead);put(ls[i],bold,size,ML+indent,color);y-=size*lead;}
-    }
-    // Title block
-    var tsize=width(title,true,20)>TW?17:20; var tl=wrap(title,true,tsize,TW); for(var ti=0;ti<tl.length;ti++){put(tl[ti],true,tsize,ML,'#0f766e'); y-=tsize*1.25;} y-=6;
-    if(subtitle){ para(subtitle,false,11,0,1.3,'#5b6672'); }
-    y-=6; cur.push({rule:true,y:y}); y-=14;
-    for(var b=0;b<blocks.length;b++){
-      var k=blocks[b][0],t=blocks[b][1]||'';
-      if(k==='h'){ y-=4; ensure(28); put(toBytes(t),true,13.5,ML,'#1b2430'); y-=13.5*1.35; cur.push({rule:true,y:y+4,light:true}); y-=6; }
-      else if(k==='h2'){ y-=2; ensure(22); put(toBytes(t),true,11.5,ML,'#4338ca'); y-=11.5*1.45; }
-      else if(k==='p'){ para(t,false,10.5,0,1.38); y-=3; }
-      else if(k==='b'){
-        var ls=wrap(toBytes(t),false,10.5,TW-18);
-        for(var i=0;i<ls.length;i++){ensure(10.5*1.38); if(i===0)put(String.fromCharCode(0x95),false,10.5,ML+4); put(ls[i],false,10.5,ML+18); y-=10.5*1.38;}
-        y-=1.5;
-      }
-      else if(k==='n'){
-        var m=/^(\S+)\s+([\s\S]*)$/.exec(t); var lab=m?m[1]:'', rest=m?m[2]:t;
-        var ls2=wrap(toBytes(rest),false,10.5,TW-26);
-        for(var j=0;j<ls2.length;j++){ensure(10.5*1.38); if(j===0)put(toBytes(lab),true,10.5,ML+2); put(ls2[j],false,10.5,ML+26); y-=10.5*1.38;}
-        y-=1.5;
-      }
-      else if(k==='k'){
-        var parts=t.split(/\s[—–-]\s/); // term — definition
-        if(parts.length<2){para(t,false,10.5,0,1.38);continue;}
-        var term=toBytes(parts[0]), def=toBytes(parts.slice(1).join(' - '));
-        var tw=width(term+':  ',true,10.5);
-        var first=wrap(def,false,10.5,TW-tw-14);
-        ensure(10.5*1.38); put(term+':',true,10.5,ML+4); put(first[0]||'',false,10.5,ML+4+tw); y-=10.5*1.38;
-        var restLines=first.slice(1).join(' ');
-        if(restLines){ var ls3=wrap(restLines,false,10.5,TW-18); for(var q=0;q<ls3.length;q++){ensure(10.5*1.38);put(ls3[q],false,10.5,ML+18);y-=10.5*1.38;} }
-        y-=1.5;
-      }
-      else if(k==='sp'){ y-=8; }
-      else if(k==='rule'){ y-=2; cur.push({rule:true,y:y,light:true}); y-=10; }
-    }
-    pages.push(cur);
-    // ---- assemble objects ----
-    var objs=[]; // index+1 = object number
+  function rgb(hex){var n=parseInt(hex.slice(1),16);return (((n>>16)&255)/255).toFixed(3)+' '+(((n>>8)&255)/255).toFixed(3)+' '+((n&255)/255).toFixed(3);}
+
+  /* ---- Doc: page cursor + primitives ---- */
+  function Doc(opts){
+    opts=opts||{};
+    this.W=595.28;this.H=841.89;this.ML=54;this.MR=54;this.MT=64;this.MB=60;this.TW=this.W-this.ML-this.MR;
+    this.pages=[];this.cur=[];this.y=this.H-this.MT;
+    this.header=toBytes(opts.header||'');this.footerLeft=toBytes(opts.footer||'');this.title=toBytes(opts.title||'Document');
+  }
+  Doc.prototype.newPage=function(){this.pages.push(this.cur);this.cur=[];this.y=this.H-this.MT;};
+  Doc.prototype.ensure=function(h){if(this.y-h<this.MB)this.newPage();};
+  Doc.prototype.text=function(x,y,str,bold,size,color){this.cur.push({t:toBytes(str),b:!!bold,s:size||10.5,x:x,y:y,c:color||null});};
+  Doc.prototype.line=function(x1,y1,x2,y2,w,color){this.cur.push({line:[x1,y1,x2,y2],w:w||0.6,c:color||'#9aa3ad'});};
+  Doc.prototype.rect=function(x,y,w,h,opts){opts=opts||{};this.cur.push({rect:[x,y,w,h],w:opts.w||0.6,c:opts.stroke||'#1b2430',f:opts.fill||null});};
+  Doc.prototype.para=function(text,o){
+    o=o||{};var bold=!!o.bold,size=o.size||10.5,indent=o.indent||0,lead=o.lead||1.38,color=o.color||null,x=this.ML+indent,maxW=(o.width||this.TW)-indent;
+    var ls=wrap(toBytes(text),bold,size,maxW);
+    for(var i=0;i<ls.length;i++){this.ensure(size*lead);this.text(x,this.y,ls[i],bold,size,color);this.y-=size*lead;}
+    return ls.length;
+  };
+  Doc.prototype.measure=function(text,bold,size,maxW){return wrap(toBytes(text),bold,size,maxW).length;};
+  Doc.prototype.gap=function(h){this.y-=h;};
+  Doc.prototype.hr=function(light){this.cur.push({rule:true,y:this.y,light:light!==false});};
+  Doc.prototype.finish=function(){
+    this.pages.push(this.cur);
+    var pages=this.pages,W=this.W,H=this.H,ML=this.ML,MR=this.MR,objs=[];
     function add(s){objs.push(s);return objs.length;}
-    var catalog=add(''), pagesObj=add(''), fontR=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'),
-        fontB=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    var catalog=add(''),pagesObj=add(''),fontR=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'),fontB=add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
     var pageIds=[];
-    function rgb(hex){var n=parseInt(hex.slice(1),16);return ((n>>16)&255)/255+' '+((n>>8)&255)/255+' '+(n&255)/255;}
     for(var p=0;p<pages.length;p++){
       var items=pages[p],s='';
-      // header & footer
-      s+='BT /F1 8.5 Tf 0.36 0.4 0.45 rg '+ML+' '+(H-34)+' Td ('+esc(footer)+') Tj ET\n';
-      s+='BT /F1 8.5 Tf 0.36 0.4 0.45 rg '+(W-MR-60)+' '+36+' Td (Page '+(p+1)+' of '+pages.length+') Tj ET\n';
+      s+='BT /F1 8.5 Tf 0.36 0.4 0.45 rg '+ML+' '+(H-34)+' Td ('+esc(this.header)+') Tj ET\n';
+      s+='BT /F1 8.5 Tf 0.36 0.4 0.45 rg '+ML+' 36 Td ('+esc(this.footerLeft)+') Tj ET\n';
+      s+='BT /F1 8.5 Tf 0.36 0.4 0.45 rg '+(W-MR-60)+' 36 Td (Page '+(p+1)+' of '+pages.length+') Tj ET\n';
       s+='0.85 0.87 0.9 RG 0.6 w '+ML+' '+(H-40)+' m '+(W-MR)+' '+(H-40)+' l S\n';
       for(var i=0;i<items.length;i++){
         var it=items[i];
-        if(it.rule){ s+=(it.light?'0.85 0.87 0.9 RG 0.6 w ':'0.06 0.46 0.43 RG 1.2 w ')+ML+' '+it.y.toFixed(2)+' m '+(W-MR)+' '+it.y.toFixed(2)+' l S\n'; continue; }
+        if(it.rule){s+=(it.light?'0.85 0.87 0.9 RG 0.6 w ':'0.06 0.46 0.43 RG 1.2 w ')+ML+' '+it.y.toFixed(2)+' m '+(W-MR)+' '+it.y.toFixed(2)+' l S\n';continue;}
+        if(it.line){s+=rgb(it.c)+' RG '+it.w+' w '+it.line[0].toFixed(2)+' '+it.line[1].toFixed(2)+' m '+it.line[2].toFixed(2)+' '+it.line[3].toFixed(2)+' l S\n';continue;}
+        if(it.rect){s+=rgb(it.c)+' RG '+(it.f?rgb(it.f)+' rg ':'')+it.w+' w '+it.rect[0].toFixed(2)+' '+it.rect[1].toFixed(2)+' '+it.rect[2].toFixed(2)+' '+it.rect[3].toFixed(2)+' re '+(it.f?'B':'S')+'\n';continue;}
         s+='BT /'+(it.b?'F2':'F1')+' '+it.s+' Tf '+(it.c?rgb(it.c):'0.1 0.14 0.19')+' rg '+it.x.toFixed(2)+' '+it.y.toFixed(2)+' Td ('+esc(it.t)+') Tj ET\n';
       }
       var cid=add('<< /Length '+s.length+' >>\nstream\n'+s+'endstream');
@@ -429,21 +417,304 @@ var MiniPDF = (function(){
     var xref=out.length;
     out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
     for(var x=0;x<offs.length;x++){out+=('0000000000'+offs[x]).slice(-10)+' 00000 n \n';}
-    var info='<< /Title ('+esc(title)+') /Producer (VCE Applied Computing Revision Tool) >>';
     out+='trailer\n<< /Size '+(objs.length+1)+' /Root '+catalog+' 0 R >>\nstartxref\n'+xref+'\n%%EOF\n';
     var bytes=new Uint8Array(out.length);
     for(var i2=0;i2<out.length;i2++)bytes[i2]=out.charCodeAt(i2)&255;
     return bytes;
+  };
+  Doc.prototype.titleBlock=function(title,subtitle){
+    var t=toBytes(title),tsize=width(t,true,20)>this.TW?17:20,tl=wrap(t,true,tsize,this.TW);
+    for(var i=0;i<tl.length;i++){this.text(this.ML,this.y,tl[i],true,tsize,'#0f766e');this.y-=tsize*1.25;}
+    this.y-=6;
+    if(subtitle){this.para(subtitle,{size:11,lead:1.3,color:'#5b6672'});}
+    this.y-=6;this.hr(false);this.y-=14;
+  };
+
+  /* ---- summary block renderer (session summaries) ---- */
+  function build(opts){
+    var d=new Doc({header:opts.footer,footer:'',title:opts.title});
+    d.titleBlock(opts.title,opts.subtitle);
+    var blocks=opts.blocks||[];
+    for(var b=0;b<blocks.length;b++){
+      var k=blocks[b][0],t=blocks[b][1]||'';
+      if(k==='h'){d.y-=4;d.ensure(28);d.text(d.ML,d.y,t,true,13.5,'#1b2430');d.y-=13.5*1.35;d.cur.push({rule:true,y:d.y+4,light:true});d.y-=6;}
+      else if(k==='h2'){d.y-=2;d.ensure(22);d.text(d.ML,d.y,t,true,11.5,'#4338ca');d.y-=11.5*1.45;}
+      else if(k==='p'){d.para(t,{});d.y-=3;}
+      else if(k==='b'){var ls=wrap(toBytes(t),false,10.5,d.TW-18);for(var i=0;i<ls.length;i++){d.ensure(10.5*1.38);if(i===0)d.text(d.ML+4,d.y,String.fromCharCode(0x95),false,10.5);d.text(d.ML+18,d.y,ls[i],false,10.5);d.y-=10.5*1.38;}d.y-=1.5;}
+      else if(k==='n'){var m=/^(\S+)\s+([\s\S]*)$/.exec(t);var lab=m?m[1]:'',rest=m?m[2]:t;var ls2=wrap(toBytes(rest),false,10.5,d.TW-26);for(var j=0;j<ls2.length;j++){d.ensure(10.5*1.38);if(j===0)d.text(d.ML+2,d.y,lab,true,10.5);d.text(d.ML+26,d.y,ls2[j],false,10.5);d.y-=10.5*1.38;}d.y-=1.5;}
+      else if(k==='k'){var parts=t.split(/\s[—–-]\s/);if(parts.length<2){d.para(t,{});continue;}var term=toBytes(parts[0]),def=toBytes(parts.slice(1).join(' - '));var tw=width(term+':  ',true,10.5);var first=wrap(def,false,10.5,d.TW-tw-14);d.ensure(10.5*1.38);d.text(d.ML+4,d.y,term+':',true,10.5);d.text(d.ML+4+tw,d.y,first[0]||'',false,10.5);d.y-=10.5*1.38;var restLines=first.slice(1).join(' ');if(restLines){var ls3=wrap(restLines,false,10.5,d.TW-18);for(var q=0;q<ls3.length;q++){d.ensure(10.5*1.38);d.text(d.ML+18,d.y,ls3[q],false,10.5);d.y-=10.5*1.38;}}d.y-=1.5;}
+      else if(k==='sp'){d.y-=8;}
+      else if(k==='rule'){d.y-=2;d.hr(true);d.y-=10;}
+    }
+    return d.finish();
   }
-  function download(opts,filename){
-    var bytes=build(opts);
+  function download(bytes,filename){
     var blob=new Blob([bytes],{type:'application/pdf'});
     var url=URL.createObjectURL(blob);
-    var a=document.createElement('a');a.href=url;a.download=filename||'summary.pdf';document.body.appendChild(a);a.click();
+    var a=document.createElement('a');a.href=url;a.download=filename||'document.pdf';document.body.appendChild(a);a.click();
     setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1500);
     return bytes.length;
   }
-  return {build:build,download:download};
+  return {Doc:Doc,build:build,download:download,wrap:wrap,width:width,toBytes:toBytes};
+})();
+
+/* ---------- Practice paper + answer key ---------- */
+var PaperPDF=(function(){
+  var LETTERS='ABCDEFGHIJ';
+  function seeded(n,seed){var a=[];for(var i=0;i<n;i++)a.push(i);var x=seed*9301+49297;for(var j=n-1;j>0;j--){x=(x*9301+49297)%233280;var k=x%(j+1);var tmp=a[j];a[j]=a[k];a[k]=tmp;}return a;}
+  function marksOf(it){if(it.marks)return it.marks;if(it.t==='match')return it.pairs.length;if(it.t==='classify')return it.items.length;if(it.t==='order')return it.items.length;return 1;}
+  function totalMarks(paper){return paper.items.reduce(function(a,it){return a+marksOf(it);},0);}
+
+  function ruledLines(d,n){
+    for(var i=0;i<n;i++){d.ensure(19);d.y-=15;d.line(d.ML+8,d.y,d.W-d.MR,d.y,0.5,'#b8c0c9');d.y-=4;}
+    d.y-=4;
+  }
+  function qHeader(d,num,it,textOnly){
+    var m=marksOf(it),lab='('+m+' mark'+(m>1?'s':'')+')',labW=MiniPDF.width(lab,false,9.5);
+    var qtext='Q'+num+'.  '+it.q.replace(/<[^>]+>/g,'');
+    var ls=MiniPDF.wrap(MiniPDF.toBytes(qtext),true,10.5,d.TW-labW-10);
+    d.ensure(10.5*1.4*ls.length+22);
+    for(var i=0;i<ls.length;i++){d.text(d.ML,d.y,ls[i],true,10.5);if(i===0)d.text(d.W-d.MR-labW,d.y,lab,false,9.5,'#5b6672');d.y-=10.5*1.4;}
+    if(it.hint&&!textOnly){d.para(it.hint,{size:9.5,color:'#5b6672',indent:22,lead:1.3});}
+    d.y-=2;
+  }
+  function renderItem(d,num,it,seed){
+    qHeader(d,num,it);
+    if(it.t==='mc'){
+      d.para('Circle the correct letter.',{size:9.5,color:'#5b6672',indent:22,lead:1.3});
+      it.opts.forEach(function(o,k){var ls=MiniPDF.wrap(MiniPDF.toBytes(o),false,10.5,d.TW-46);for(var i=0;i<ls.length;i++){d.ensure(15);if(i===0)d.text(d.ML+22,d.y,LETTERS[k]+'.',true,10.5);d.text(d.ML+40,d.y,ls[i],false,10.5);d.y-=14;}});
+      d.y-=6;
+    }else if(it.t==='tf'){
+      d.ensure(18);d.text(d.ML+22,d.y,'Circle one:      TRUE          FALSE',false,10.5);d.y-=18;
+      if(it.why){d.para('Why? ',{size:9.5,color:'#5b6672',indent:22});ruledLines(d,1);}else d.y-=4;
+    }else if(it.t==='blank'){
+      d.y-=2;
+      if(it.lines!==false){d.text(d.ML+22,d.y,'Answer:',false,10,'#5b6672');d.line(d.ML+70,d.y-2,d.W-d.MR,d.y-2,0.5,'#b8c0c9');d.y-=22;}
+    }else if(it.t==='match'){
+      d.para('Draw a line to join each item on the left to its match on the right.',{size:9.5,color:'#5b6672',indent:22,lead:1.3});
+      var order=seeded(it.pairs.length,seed+num),colW=(d.TW-22-90)/2,lx=d.ML+22,rx=d.ML+22+colW+90;
+      for(var i=0;i<it.pairs.length;i++){
+        var L=MiniPDF.wrap(MiniPDF.toBytes((i+1)+'.  '+it.pairs[i][0]),false,10,colW-14);
+        var R=MiniPDF.wrap(MiniPDF.toBytes(LETTERS[i]+'.  '+it.pairs[order[i]][1]),false,10,colW-14);
+        var rows=Math.max(L.length,R.length);d.ensure(rows*13+10);
+        var top=d.y;
+        for(var r=0;r<rows;r++){if(L[r])d.text(lx,d.y,L[r],false,10);if(R[r])d.text(rx,d.y,R[r],false,10);d.y-=13;}
+        d.rect(lx+colW+6,top-7,5,5,{fill:'#1b2430'});d.rect(rx-16,top-7,5,5,{fill:'#1b2430'});
+        d.y-=5;
+      }
+      it._order=order;d.y-=4;
+    }else if(it.t==='classify'){
+      d.para('Put a tick in the correct column for each row.',{size:9.5,color:'#5b6672',indent:22,lead:1.3});
+      var catW=Math.min(96,(d.TW-22)*0.6/it.cats.length),firstW=d.TW-22-catW*it.cats.length,x0=d.ML+22;
+      var catLines=it.cats.map(function(c){return MiniPDF.wrap(MiniPDF.toBytes(c),true,8.5,catW-8);});
+      var hh=10.5*Math.max.apply(null,catLines.map(function(l){return l.length;}))+10;
+      d.ensure(hh+30);
+      var hTop=d.y+6;
+      d.rect(x0,hTop-hh,firstW,hh,{stroke:'#9aa3ad',fill:'#f1f4f8'});for(var c2=0;c2<it.cats.length;c2++)d.rect(x0+firstW+c2*catW,hTop-hh,catW,hh,{stroke:'#9aa3ad',fill:'#f1f4f8'});
+      catLines.forEach(function(cl,c){cl.forEach(function(s2,ii){d.text(x0+firstW+c*catW+4,hTop-12-ii*10.5,s2,true,8.5);});});
+      d.y=hTop-hh;
+      it.items.forEach(function(row){var ls=MiniPDF.wrap(MiniPDF.toBytes(row[0]),false,9.5,firstW-8);var rh=Math.max(20,ls.length*11.5+8);d.ensure(rh);var top=d.y;d.rect(x0,top-rh,firstW,rh,{stroke:'#9aa3ad'});for(var c3=0;c3<it.cats.length;c3++)d.rect(x0+firstW+c3*catW,top-rh,catW,rh,{stroke:'#9aa3ad'});ls.forEach(function(s,ii){d.text(x0+4,top-12-ii*11.5,s,false,9.5);});d.y=top-rh;});
+      d.y-=10;
+    }else if(it.t==='order'){
+      d.para('Write 1, 2, 3 ... in the boxes to show the correct order.',{size:9.5,color:'#5b6672',indent:22,lead:1.3});
+      var ord=seeded(it.items.length,seed+num*3);
+      ord.forEach(function(k){var ls=MiniPDF.wrap(MiniPDF.toBytes(it.items[k]),false,10,d.TW-60);d.ensure(ls.length*13+8);var top=d.y;d.rect(d.ML+22,top-11,16,16,{stroke:'#1b2430'});ls.forEach(function(s,ii){d.text(d.ML+48,top-ii*13,s,false,10);});d.y=top-Math.max(16,ls.length*13)-6;});
+      it._order=ord;d.y-=4;
+    }else if(it.t==='short'||it.t==='long'){
+      ruledLines(d,it.lines||(it.t==='long'?6:3));
+    }
+    d.y-=4;
+  }
+  function buildPaper(s,paper){
+    var d=new MiniPDF.Doc({header:'VCE Applied Computing Units 1 & 2  -  Session '+s.num+' practice paper  -  '+s.title,footer:'Name: ___________________________'});
+    d.titleBlock('Session '+s.num+' practice paper: '+s.title,s.unit+'   ·   Time allowed: '+(paper.time||'25 minutes')+'   ·   Total: '+totalMarks(paper)+' marks');
+    d.text(d.ML,d.y,'Name: ________________________________________        Class: ____________        Date: ____________',false,10.5);d.y-=22;
+    d.para('Instructions: answer every question in the space provided. Multiple-choice: circle one letter. Short answers: write in full sentences and refer to the scenario where one is given. Use the exact terms from the study design.',{size:9.5,color:'#5b6672',lead:1.35});
+    d.y-=6;
+    if(paper.scenario){d.hr(true);d.y-=10;d.para('Scenario',{bold:true,size:10.5});d.para(paper.scenario,{size:10.5,lead:1.4});d.y-=4;d.hr(true);d.y-=12;}
+    var seed=s.num*17;
+    paper.items.forEach(function(it,i){renderItem(d,i+1,it,seed);});
+    d.y-=8;d.ensure(40);d.hr(false);d.y-=14;d.text(d.ML,d.y,'End of paper.   Score: ______ / '+totalMarks(paper),true,10.5);
+    return d.finish();
+  }
+  function answerText(it){
+    if(it.t==='mc')return LETTERS[it.a]+'  ('+it.opts[it.a].replace(/<[^>]+>/g,'')+')';
+    if(it.t==='tf')return (it.a?'TRUE':'FALSE')+(it.why?'. '+it.why:'');
+    if(it.t==='blank')return it.a+(it.alt?'  (also accept: '+it.alt+')':'');
+    if(it.t==='match'){var order=it._order||seeded(it.pairs.length,0);var parts=[];for(var i=0;i<it.pairs.length;i++){var letter=LETTERS[order.indexOf(i)];parts.push((i+1)+' - '+letter);}return parts.join(',  ')+'   ['+it.pairs.map(function(p,i){return (i+1)+' '+p[0]+' = '+p[1];}).join('; ')+']';}
+    if(it.t==='classify')return it.items.map(function(r){return r[0]+' -> '+it.cats[r[1]];}).join('; ');
+    if(it.t==='order'){var ord=it._order||seeded(it.items.length,0);return 'Correct order: '+it.items.map(function(x,i){return (i+1)+' '+x;}).join('; ')+'.  (Box numbers as printed, top to bottom: '+ord.map(function(k){return k+1;}).join(', ')+')';}
+    return it.a;
+  }
+  function buildKey(s,paper){
+    var d=new MiniPDF.Doc({header:'VCE Applied Computing Units 1 & 2  -  Session '+s.num+' practice paper  -  ANSWER KEY',footer:'Teacher copy - not for distribution before the paper is attempted'});
+    d.titleBlock('Answer key: Session '+s.num+' practice paper',''+s.title+'   ·   Total: '+totalMarks(paper)+' marks');
+    var seed=s.num*17;
+    paper.items.forEach(function(it,i){
+      if(it.t==='match')it._order=seeded(it.pairs.length,seed+i+1);
+      if(it.t==='order')it._order=seeded(it.items.length,seed+(i+1)*3);
+      var m=marksOf(it);
+      d.ensure(30);
+      d.text(d.ML,d.y,'Q'+(i+1)+'  ('+m+' mark'+(m>1?'s':'')+')',true,10.5,'#0f766e');d.y-=14;
+      d.para(it.q,{size:9.5,color:'#5b6672',indent:14,lead:1.3});
+      d.para(answerText(it),{size:10.5,indent:14,lead:1.4});
+      if(it.mark){d.para('Marking: '+it.mark,{size:9.5,indent:14,lead:1.3,color:'#4338ca'});}
+      d.y-=6;
+    });
+    return d.finish();
+  }
+  return {buildPaper:buildPaper,buildKey:buildKey,totalMarks:totalMarks};
+})();
+
+</script>
+<script>
+/* ---------- Session overview diagrams (inline SVG, no libraries) ---------- */
+var Overview=(function(){
+  var FONT='"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif';
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function tw(s,size){var w=0;for(var i=0;i<s.length;i++){var c=s[i];w+=(/[A-Z]/.test(c)?0.66:/[il.,;:' ]/.test(c)?0.3:/[mw]/.test(c)?0.85:0.54);}return w*size;}
+  function wrapText(s,size,maxW){var words=String(s).split(/\s+/),lines=[],cur='';words.forEach(function(w){var t=cur?cur+' '+w:w;if(tw(t,size)<=maxW||!cur)cur=t;else{lines.push(cur);cur=w;}});if(cur)lines.push(cur);return lines;}
+  function text(x,y,s,o){o=o||{};var size=o.size||13,lines=o.wrap?wrapText(s,size,o.wrap):[s],lh=o.lh||size*1.3,out='';
+    lines.forEach(function(l,i){out+='<text x="'+x+'" y="'+(y+i*lh)+'" font-size="'+size+'" font-family=\''+FONT+'\' fill="'+(o.fill||'#1b2430')+'"'+(o.bold?' font-weight="700"':'')+(o.anchor?' text-anchor="'+o.anchor+'"':'')+(o.italic?' font-style="italic"':'')+'>'+esc(l)+'</text>';});
+    return {svg:out,h:lines.length*lh,lines:lines.length};}
+  function rect(x,y,w,h,o){o=o||{};return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+(o.r==null?10:o.r)+'" fill="'+(o.fill||'#fff')+'" stroke="'+(o.stroke||'#1b2430')+'" stroke-width="'+(o.sw||1.5)+'"'+(o.dash?' stroke-dasharray="'+o.dash+'"':'')+'/>';}
+  function line(x1,y1,x2,y2,o){o=o||{};return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(o.stroke||'#1b2430')+'" stroke-width="'+(o.sw||1.5)+'"'+(o.dash?' stroke-dasharray="'+o.dash+'"':'')+(o.arrow?' marker-end="url(#arr)"':'')+'/>';}
+  function path(d,o){o=o||{};return '<path d="'+d+'" fill="'+(o.fill||'none')+'" stroke="'+(o.stroke||'#1b2430')+'" stroke-width="'+(o.sw||1.5)+'"'+(o.dash?' stroke-dasharray="'+o.dash+'"':'')+(o.arrow?' marker-end="url(#arr)"':'')+'/>';}
+  var PAL=['#0f766e','#4338ca','#b45309','#be185d','#0369a1','#15803d','#7c3aed','#b91c1c'];
+  var SOFT=['#e6f4f2','#ecebfb','#fff3df','#fce7f3','#e0f2fe','#e7f6ec','#f3e8ff','#fdeaea'];
+  function open(w,h,title){return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" role="img" aria-label="'+esc(title)+'"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1b2430"/></marker><marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker></defs><rect width="'+w+'" height="'+h+'" fill="#ffffff"/>';}
+
+  /* ---- mind map: centre node, branches stacked left/right ---- */
+  function mindmap(o){
+    var W=1120,BW=350,pad=24,gap=16,font=12.5,lh=16;
+    var L=[],R=[];o.branches.forEach(function(b,i){(i%2===0?L:R).push(b);});
+    function measure(list){var h=0;list.forEach(function(b){b._lines=b.items.map(function(it){return wrapText('\u2022 '+it,font,BW-26);});var n=b._lines.reduce(function(a,l){return a+l.length;},0);b._h=34+n*lh+10;h+=b._h+gap;});return h-gap;}
+    var hl=measure(L),hr=measure(R),H=Math.max(hl,hr,300)+pad*2+30;
+    var out=open(W,H,o.centre),cx=W/2,cy=H/2;
+    function draw(list,side,total){var y=(H-total)/2;list.forEach(function(b,i){var idx=o.branches.indexOf(b),col=PAL[idx%PAL.length],soft=SOFT[idx%SOFT.length];var x=side<0?pad:W-pad-BW;
+      out+=rect(x,y,BW,b._h,{fill:soft,stroke:col,sw:1.6,r:12});
+      out+=rect(x,y,BW,28,{fill:col,stroke:col,r:12});out+='<rect x="'+x+'" y="'+(y+16)+'" width="'+BW+'" height="12" fill="'+col+'"/>';
+      out+=text(x+12,y+19,b.label,{size:13.5,bold:true,fill:'#fff'}).svg;
+      var yy=y+34+lh-4;b._lines.forEach(function(ls){ls.forEach(function(l,li){out+=text(x+14+(li?12:0),yy,l,{size:font}).svg;yy+=lh;});});
+      var bx=side<0?x+BW:x,by=y+b._h/2,sx=side<0?cx-115:cx+115;
+      out+=path('M'+sx+','+cy+' C'+(sx+side*70)+','+cy+' '+(bx-side*70)+','+by+' '+bx+','+by,{stroke:col,sw:2.2});
+      y+=b._h+gap;});}
+    draw(L,-1,hl);draw(R,1,hr);
+    out+=rect(cx-115,cy-38,230,76,{fill:'#101826',stroke:'#101826',r:16});
+    var t=text(cx,cy-6,o.centre,{size:15,bold:true,fill:'#ffd166',anchor:'middle',wrap:210});out+=t.svg;
+    if(o.sub)out+=text(cx,cy-6+t.h+2,o.sub,{size:11,fill:'#cfd8e3',anchor:'middle'}).svg;
+    return out+'</svg>';
+  }
+
+  /* ---- flow: stages left-to-right with bullet lists; optional loop-back and bottom band ---- */
+  function flow(o){
+    var W=1120,pad=24,n=o.stages.length,gapx=26,bw=(W-pad*2-gapx*(n-1))/n,font=12,lh=15.5;
+    o.stages.forEach(function(s){s._lines=s.items.map(function(it){return wrapText('\u2022 '+it,font,bw-22);});s._n=s._lines.reduce(function(a,l){return a+l.length;},0);});
+    var maxItems=Math.max.apply(null,o.stages.map(function(s){return s._n;}));
+    var headH=40,bodyH=maxItems*lh+16,boxH=headH+bodyH,top=pad+(o.title?34:0);
+    var colw=(W-pad*2-24)/3,bandRows=0,bandLines=[];
+    if(o.band){o.band.items.forEach(function(it){bandLines.push(wrapText('\u2022 '+it,11.5,colw-14));});var rows=Math.ceil(o.band.items.length/3);for(var r=0;r<rows;r++){var m=1;for(var c=0;c<3;c++){var L2=bandLines[r*3+c];if(L2&&L2.length>m)m=L2.length;}bandRows+=m;}}
+    var bandH=o.band?(28+bandRows*lh+14):0;
+    var H=top+boxH+(o.loop?44:16)+bandH+pad;
+    var out=open(W,H,o.title||'Overview');
+    if(o.title)out+=text(pad,pad+14,o.title,{size:16,bold:true}).svg;
+    o.stages.forEach(function(s,i){var x=pad+i*(bw+gapx),col=PAL[i%PAL.length],soft=SOFT[i%SOFT.length];
+      out+=rect(x,top,bw,boxH,{fill:soft,stroke:col,sw:1.6,r:12});
+      out+=rect(x,top,bw,headH,{fill:col,stroke:col,r:12});out+='<rect x="'+x+'" y="'+(top+headH-12)+'" width="'+bw+'" height="12" fill="'+col+'"/>';
+      out+=text(x+bw/2,top+17,s.label,{size:13.5,bold:true,fill:'#fff',anchor:'middle',wrap:bw-16,lh:15}).svg;
+      var yy=top+headH+lh+2;s._lines.forEach(function(ls){ls.forEach(function(l,li){out+=text(x+12+(li?12:0),yy,l,{size:font}).svg;yy+=lh;});});
+      if(i<n-1)out+=line(x+bw+3,top+headH/2,x+bw+gapx-4,top+headH/2,{sw:2.2,arrow:true});
+    });
+    if(o.loop){var fx=pad+o.loop.from*(bw+gapx)+bw/2,tx=pad+o.loop.to*(bw+gapx)+bw/2,yb=top+boxH;
+      out+=path('M'+fx+','+yb+' L'+fx+','+(yb+26)+' L'+tx+','+(yb+26)+' L'+tx+','+(yb+4),{stroke:'#b45309',sw:2,dash:'6 4',arrow:true});
+      out+=text((fx+tx)/2,yb+22,o.loop.label,{size:11.5,fill:'#b45309',anchor:'middle',italic:true}).svg;}
+    if(o.band){var by=top+boxH+(o.loop?44:16);out+=rect(pad,by,W-pad*2,bandH,{fill:'#f6f8fb',stroke:'#9aa3ad',sw:1.2,r:10});
+      out+=text(pad+12,by+19,o.band.label,{size:12.5,bold:true}).svg;
+      var rowY=by+28+lh-2,rows2=Math.ceil(o.band.items.length/3);for(var r2=0;r2<rows2;r2++){var mh=1;for(var c2=0;c2<3;c2++){var k2=r2*3+c2,Lk=bandLines[k2];if(!Lk)continue;Lk.forEach(function(l,li){out+=text(pad+12+c2*colw+(li?12:0),rowY+li*lh,l,{size:11.5}).svg;});if(Lk.length>mh)mh=Lk.length;}rowY+=mh*lh;}}
+    return out+'</svg>';
+  }
+
+  /* ---- pairs: left column (threats) linked to right column (defences) ---- */
+  function pairs(o){
+    var W=1120,pad=24,colW=400,rowH=56,gap=10,lh=14;
+    var n=Math.max(o.left.items.length,o.right.items.length),top=pad+54;
+    var H=top+n*(rowH+gap)+(o.bottom?60:10)+pad;
+    var out=open(W,H,o.title),lx=pad,rx=W-pad-colW;
+    out+=text(pad,pad+14,o.title,{size:16,bold:true}).svg;
+    out+=text(lx+colW/2,top-16,o.left.title,{size:13,bold:true,anchor:'middle',fill:'#b91c1c'}).svg;
+    out+=text(rx+colW/2,top-16,o.right.title,{size:13,bold:true,anchor:'middle',fill:'#0f766e'}).svg;
+    var CAT={A:['#b45309','#fff3df','Accidental'],D:['#b91c1c','#fdeaea','Deliberate'],E:['#0369a1','#e0f2fe','Events-based']};
+    o.left.items.forEach(function(it,i){var y=top+i*(rowH+gap),c=CAT[it.cat]||CAT.D;out+=rect(lx,y,colW,rowH,{fill:c[1],stroke:c[0],sw:1.5,r:10});
+      out+=text(lx+12,y+20,it.text,{size:12.5,bold:true,wrap:colW-100,lh:lh}).svg;out+=text(lx+colW-10,y+20,c[2],{size:10,fill:c[0],anchor:'end'}).svg;
+      if(it.sub)out+=text(lx+12,y+38,it.sub,{size:11,fill:'#5b6672',wrap:colW-24,lh:13}).svg;});
+    o.right.items.forEach(function(it,i){var y=top+i*(rowH+gap);out+=rect(rx,y,colW,rowH,{fill:'#e6f4f2',stroke:'#0f766e',sw:1.5,r:10});
+      out+=text(rx+12,y+20,it.text,{size:12.5,bold:true,wrap:colW-24,lh:lh}).svg;if(it.sub)out+=text(rx+12,y+38,it.sub,{size:11,fill:'#5b6672',wrap:colW-24,lh:13}).svg;});
+    o.links.forEach(function(l){var y1=top+l[0]*(rowH+gap)+rowH/2,y2=top+l[1]*(rowH+gap)+rowH/2;out+=path('M'+(lx+colW)+','+y1+' C'+(lx+colW+120)+','+y1+' '+(rx-120)+','+y2+' '+(rx-2)+','+y2,{stroke:'#0f766e',sw:1.6,arrow:true});});
+    if(o.bottom){var by=top+n*(rowH+gap)+6;out+=rect(pad,by,W-pad*2,44,{fill:'#101826',stroke:'#101826',r:10});out+=text(W/2,by+27,o.bottom,{size:13,bold:true,fill:'#ffd166',anchor:'middle'}).svg;}
+    return out+'</svg>';
+  }
+
+  /* ---- network diagram for Session 6 ---- */
+  function network(){
+    var W=1120,H=560,out=open(W,H,'Network overview');
+    function node(x,y,w,h,label,sub,col,soft,shape){
+      if(shape==='cloud'){out+='<ellipse cx="'+(x+w/2)+'" cy="'+(y+h/2)+'" rx="'+(w/2)+'" ry="'+(h/2)+'" fill="'+soft+'" stroke="'+col+'" stroke-width="1.6"/>';}
+      else out+=rect(x,y,w,h,{fill:soft,stroke:col,sw:1.6,r:12});
+      var t=text(x+w/2,y+22,label,{size:13,bold:true,anchor:'middle',fill:col,wrap:w-14,lh:15});out+=t.svg;
+      if(sub)out+=text(x+w/2,y+22+t.h+2,sub,{size:10.5,anchor:'middle',fill:'#334155',wrap:w-14,lh:12.5}).svg;
+    }
+    out+=text(24,34,'Session 6: how the pieces of a network fit together (Northside Physio)',{size:16,bold:true}).svg;
+    // zones
+    out+=rect(300,70,800,470,{fill:'#f6f8fb',stroke:'#cbd5e1',sw:1.2,dash:'6 4',r:16});
+    out+=text(312,92,'LAN — one site, owned and controlled by the clinic',{size:12,bold:true,fill:'#475569'}).svg;
+    out+=rect(24,70,250,470,{fill:'#fff7ed',stroke:'#f59e0b',sw:1.2,dash:'6 4',r:16});
+    out+=text(36,92,'WAN / the internet — public, global, TCP/IP',{size:12,bold:true,fill:'#b45309',wrap:230}).svg;
+    node(60,130,180,80,'Internet','DNS turns names into IP addresses; HTTPS = TLS padlock','#b45309','#fff3df','cloud');
+    node(50,260,200,90,'Remote clinician (home)','VPN client: encrypted tunnel to the intranet over the public internet','#b45309','#fff3df');
+    node(50,400,200,90,'Mobile (4G/5G) tablet','Reach anywhere; data plan per device; coverage decides reliability','#b45309','#fff3df');
+    node(330,120,200,96,'Router + Firewall','Connects the LAN to the internet; forwards by IP; filters traffic by rules','#0f766e','#e6f4f2');
+    node(560,120,200,96,'IDS / IPS','IDS watches and alerts; IPS sits inline and blocks; signatures + anomalies (AI)','#4338ca','#ecebfb');
+    node(790,120,290,96,'Intranet server + NAS backups','Private web services; data storage and backup systems (full / differential / incremental)','#0f766e','#e6f4f2');
+    node(330,280,200,90,'Switch','Connects devices within the LAN; forwards frames by MAC address','#0f766e','#e6f4f2');
+    node(560,280,200,90,'Wireless access point','Joins Wi-Fi devices to the wired LAN; WPA2/WPA3 encryption; signal leaves the walls','#4338ca','#ecebfb');
+    node(790,280,290,90,'Reception PCs + patient database (wired)','Highest reliability and security; physical access needed to tap a cable','#0f766e','#e6f4f2');
+    node(330,430,200,90,'Clinician tablets (Wi-Fi)','Mobility between treatment rooms; interference and congestion possible','#4338ca','#ecebfb');
+    node(560,430,200,90,'Smartwatch + earbuds (WPAN)','Bluetooth, a few metres around one person','#7c3aed','#f3e8ff');
+    node(790,430,290,90,'Encryption everywhere','Symmetric AES for stored data and bulk traffic; asymmetric RSA/ECDH to exchange keys; MFA + Zero Trust: never trust, always verify','#b91c1c','#fdeaea');
+    // links
+    out+=line(240,170,330,168,{sw:2.2});
+    out+=line(150,210,150,260,{sw:2.2});
+    out+=path('M250,305 L290,305 L290,170 L330,170',{stroke:'#b45309',sw:2.2,dash:'7 5'});
+    out+=text(252,322,'VPN tunnel',{size:10.5,fill:'#b45309',italic:true}).svg;
+    out+=line(150,350,150,400,{sw:1.5,dash:'4 4'});
+    out+=line(530,168,560,168,{sw:2.2});out+=line(760,168,790,168,{sw:2.2});
+    out+=line(430,216,430,280,{sw:2.2});
+    out+=line(530,325,560,325,{sw:2.2});out+=line(760,325,790,325,{sw:2.2});
+    out+=path('M660,370 C660,400 480,400 430,430',{stroke:'#4338ca',sw:2,dash:'5 4'});
+    out+=text(545,395,'wireless',{size:10.5,fill:'#4338ca',italic:true}).svg;
+    out+=path('M430,520 C500,545 600,545 660,520',{stroke:'#7c3aed',sw:1.6,dash:'3 4'});
+    out+=text(545,548,'Bluetooth',{size:10.5,fill:'#7c3aed',italic:true}).svg;
+    return out+'</svg>';
+  }
+
+  function render(o){
+    if(!o)return '';
+    if(o.type==='mindmap')return mindmap(o);
+    if(o.type==='flow')return flow(o);
+    if(o.type==='pairs')return pairs(o);
+    if(o.type==='network')return network();
+    return '';
+  }
+  function downloadSvg(svg,filename){var blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1500);}
+  function downloadPng(svg,filename,scale){
+    var m=/viewBox="0 0 (\d+) (\d+)"/.exec(svg),w=parseInt(m[1],10),h=parseInt(m[2],10);scale=scale||2;
+    var img=new Image(),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    img.onload=function(){var c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      c.toBlob(function(b){var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=filename;document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u);},1500);},'image/png');};
+    img.onerror=function(){URL.revokeObjectURL(url);downloadSvg(svg,filename.replace(/\.png$/,'.svg'));};
+    img.src=url;
+  }
+  return {render:render,downloadSvg:downloadSvg,downloadPng:downloadPng};
 })();
 
 </script>
@@ -1181,6 +1452,172 @@ summary:[
 });
 
 
+/* ---- overviews ---- */
+window.OVERVIEWS={
+ s1:{type:'mindmap',centre:'Session 1 · Data, quality, privacy & referencing',sub:'Unit 1 AOS1 — getting and trusting data',branches:[
+   {label:'Qualitative vs quantitative (KK1)',items:['Qualitative = words: interviews, open answers, observation notes','Quantitative = numbers: sensors, census, time series, AI data','Purpose: why (qual) vs how much / how many (quant)']},
+   {label:'Data types (KK2)',items:['Text: character, string — IDs, postcodes, phone numbers','Numeric: integer, floating point, date/time','Boolean: exactly two states','Calc test: not for maths → text']},
+   {label:'Quality of data (KK3)',items:['Accuracy · Bias · Integrity · Relevance · Reliability','"A Big Idea: Relevant & Reliable"']},
+   {label:'Data integrity — the six',items:['Accuracy · Authenticity · Correctness','Reasonableness · Relevance · Timeliness','Distractors: completeness, clarity, readability, consistency']},
+   {label:'Characteristics of data (KK4)',items:['Size · Structure · Relevance','Accessibility · Clarity · Context']},
+   {label:'Primary vs secondary (KK7)',items:['Primary: you collect — survey, interview, observation','Secondary: ABS, repositories, reports','APA referencing: Author (Year). Title. Publisher. URL']},
+   {label:'Privacy Act 1988 (KK5)',items:['APP 2 anonymity & pseudonymity','APP 6 use/disclose only for the primary purpose','APP 11 security; destroy or de-identify','Notifiable Data Breaches → OAIC']},
+   {label:'Ethical issues (KK6)',items:['Lack of transparency · inaccurate/incomplete data','Ownership & control · misuse of personal data','AI repurposing & sharing','Ethical ≠ illegal']}]},
+ s2:{type:'flow',title:'Session 2: the problem-solving methodology for a data-visualisation solution',stages:[
+   {label:'Analysis',items:['Functional requirements — what it does','Non-functional — qualities (usability, reliability…)','Constraints: economic, technical, social, legal, usability','Scope: in / out']},
+   {label:'Design',items:['Design tools: IPO chart, mock-up, annotated diagram, query design, data dictionary, storyboard','Design principles: alignment, balance, contrast, image use, space, text/table formatting','Evaluation criteria written HERE as measurable questions']},
+   {label:'Development',items:['Database: tables, PK/FK, SQL (SELECT FROM WHERE ORDER BY)','Spreadsheet: formulas, functions, AVERAGE/MEDIAN/COUNTIF/STDEV','Validation: existence, type, range','Testing: test data → expected → actual','Formats vs conventions']},
+   {label:'Evaluation',items:['3–6 months after implementation','Strategy: when, what data, who','Judge efficiency (time, cost, effort)','Judge effectiveness (accuracy, clarity, usability…)','Uses the Design-stage criteria']}],
+   loop:{from:3,to:1,label:'criteria written in Design, applied in Evaluation'},
+   band:{label:'Visualisations: purpose → type → chart',items:['Purposes: educate, entertain, inform, persuade','Types: infographic, poster series, dashboard','Components: text & graphics, tables, charts','Pie = parts of a whole','Bar = compare categories','Line = change over time','Histogram = distribution','Scatter = relationship','Map = spatial']}},
+ s3:{type:'mindmap',centre:'Session 3 · Programming foundations',sub:'Unit 1 AOS2 — data, design, OOP, documentation, IP',branches:[
+   {label:'Data types (KK2)',items:['integer (counts, cents) · floating point (decimals)','string · character (one symbol) · Boolean · date/time','"3"+"4" = "34" — type decides the operator']},
+   {label:'Data structures (KK3)',items:['1-D array: fixed size, same type, index from 0','List: grows and shrinks','Record: fields of varying types, one entity']},
+   {label:'Requirements & constraints (KK4)',items:['Functional = does · Non-functional = is','Constraints: economic, technical, social, legal, usability','Scope: in / out']},
+   {label:'Design tools (KK5)',items:['Mock-up = appearance','IPO chart = one task, three columns','Flowchart = oval, rectangle, diamond, parallelogram','Pseudocode = language-independent logic']},
+   {label:'OOP (KK7)',items:['Class = blueprint; object = instance','Abstraction: model only what matters','Encapsulation: data + methods inside; change via methods']},
+   {label:'Naming conventions (KK9)',items:['camelCase · PascalCase · snake_case','Hungarian: strName, intCount, blnPaid','Consistent → readable → maintainable']},
+   {label:'Internal documentation (KK10)',items:['Explain data & code structures','Support maintenance and debugging','Comment the WHY; header blocks; meaningful names']},
+   {label:'Trends & law (KK1, KK6)',items:['Low-code platforms; AI code generators — human checks','Copyright Act 1968: automatic; licence or permission','Citation ≠ permission']}]},
+ s4:{type:'flow',title:'Session 4: from requirement to proven algorithm',stages:[
+   {label:'Design the logic',items:['Inputs → process → outputs','Control structures: sequence, selection, iteration','Pseudocode: BEGIN/END, IF…ENDIF, WHILE…ENDWHILE, FOR…ENDFOR','← to assign; indent; close every structure']},
+   {label:'Desk-check (trace)',items:['One column per variable + condition result','One row per change','Check the loop condition every pass','Finds logic errors before coding']},
+   {label:'Code + validate input',items:['Existence → type → range, in that order','Each check with a scenario example','Syntax stops · Logic lies · Run-time dies']},
+   {label:'Test',items:['Test table: test data, expected, actual, pass/fail','Boundaries: below, on, above','Both values of every Boolean; every branch','Exact expected output; no repeated tests','Breakpoints, debug prints, comment out']},
+   {label:'Fix & document',items:['Quote the faulty line — not its number','What is wrong, why, corrected line in full','Internal documentation of the fix']}],
+   loop:{from:3,to:0,label:'a failed test sends you back to the design'},
+   band:{label:'Language features (KK8)',items:['Variables: declare, initialise, update','Arithmetic + − × / MOD','Comparison = ≠ < > ≤ ≥','Logical AND OR NOT','Function returns, procedure performs, method belongs','WHILE tests before; REPEAT…UNTIL tests after; FOR counts']}},
+ s5:{type:'flow',title:'Session 5: an innovative solution from idea to evaluation',stages:[
+   {label:'Identify',items:['Curiosity, ingenuity, UN SDGs','Problem, need or opportunity involving an emerging trend','Innovative = original, effective, user-centred, disruptive']},
+   {label:'Analyse',items:['Interviews (deep, few) · surveys (wide, many)','Functional & non-functional requirements','Constraints and scope','Impacts: automation, cyberbullying, productivity, economic, decline of face-to-face']},
+   {label:'Design',items:['Empathise → ideate → diverge → converge','Mock-ups, pseudocode, sitemaps, storyboards','Evaluation criteria from the requirements']},
+   {label:'Develop',items:['Proof of concept → prototype → product','Gantt: tasks, dependencies, milestones, critical path','Project journal · version control','User testing · expert review']},
+   {label:'Evaluate',items:['Criteria: efficiency & effectiveness','Strategy: when, what data, who','Criterion → evidence → judgement → improvement']}],
+   band:{label:'Law & ethics running underneath every stage',items:['Privacy Act 1988: APP 1, 2, 6','PDPA 2014 (Vic): IPP 1, 2, 5, 8','Health Records Act 2001: HPP 1, 2, 5','Copyright Act 1968','Australia\'s AI Ethics Principles (framework)','Ethics: biometrics, job displacement; AI = biased, weaponised, borrowed']}},
+ s6:{type:'network'},
+ s7:{type:'pairs',title:'Session 7: match every threat to the practice that reduces it',
+   left:{title:'Threats to data on networks',items:[
+     {text:'Phishing / social engineering',cat:'D',sub:'Fake emails harvest credentials'},
+     {text:'Weak passwords; poor credential management',cat:'D',sub:'Guessed, cracked, reused, leaked elsewhere'},
+     {text:'Malware: virus, worm, spyware, ransomware',cat:'D',sub:'Host-borne, self-replicating, spying, hostage'},
+     {text:'Outdated software and firmware',cat:'D',sub:'Known vulnerabilities attackers scan for'},
+     {text:'Denial of service',cat:'D',sub:'Floods a service — availability'},
+     {text:'Accidental deletion, misdelivery, lost devices',cat:'A',sub:'Human error'},
+     {text:'Fire, flood, power outage, hardware failure',cat:'E',sub:'Events-based'}]},
+   right:{title:'Practices and controls (KK9, Essential Eight, ISM)',items:[
+     {text:'Staff procedures and training',sub:'Recognise phishing, handle data, report incidents'},
+     {text:'Multifactor authentication + password policy',sub:'Stolen password alone is useless; lockout after N attempts'},
+     {text:'Anti-malware updates; application control',sub:'Blocks installation; only approved programs run'},
+     {text:'Patch OS, applications and firmware',sub:'Closes known vulnerabilities'},
+     {text:'Firewall, IDS/IPS, segmentation',sub:'Filter, alert, block, limit spread'},
+     {text:'Access control / least privilege; encryption',sub:'Revoke ex-staff; data unreadable if stolen'},
+     {text:'Backup strategy + disaster recovery plan',sub:'Frequency, type, media, location; test the restore'}]},
+   links:[[0,0],[0,1],[1,1],[2,2],[2,6],[3,3],[4,4],[5,0],[5,6],[6,6],[1,5]],
+   bottom:'Case-study method: Threat → Vulnerability → Impact (C-I-A, legal) → Strategy → Justification (efficiency + effectiveness)'}
+};
+
+/* ---- papers ---- */
+window.PAPERS={
+s1:{time:'25 minutes',scenario:'Hillcrest Community Library is building an infographic about how residents use the library. It has a 2016 council survey of reading habits, its own 2026 online survey of 400 members (a 1–5 rating plus a comment box), and visitor counts from the door sensor. Member records (name, email, postcode, borrowing history) are stored on the library server.',items:[
+ {t:'mc',q:'Which list contains only characteristics of data integrity as defined in the study design?',opts:['accuracy, completeness, relevance','authenticity, correctness, timeliness','clarity, accuracy, reasonableness','reliability, relevance, readability'],a:1},
+ {t:'mc',q:'The most appropriate data type for the postcode field in the member records is…',opts:['integer, because a postcode is made of digits','floating point, so that it can be rounded','text (string), because it is never calculated and must keep a leading zero','Boolean, because each member has only one postcode'],a:2},
+ {t:'mc',q:'Which Australian Privacy Principle requires personal information to be used or disclosed only for the primary purpose it was collected for?',opts:['APP 2','APP 6','APP 11','APP 13'],a:1},
+ {t:'tf',q:'The Privacy and Data Protection Act 2014 applies to every business operating in Australia.',a:false,why:'It applies to the Victorian public sector; businesses are covered by the Privacy Act 1988 (Cwlth).'},
+ {t:'tf',q:'The door-sensor visitor counts are quantitative data.',a:true,why:'They are numbers that can be counted and averaged.'},
+ {t:'blank',q:'The referencing system named in the study design for acknowledging intellectual property is ____________ (give the abbreviation).',a:'APA',alt:'American Psychological Association'},
+ {t:'blank',q:'Data collected by the researcher directly from the source, such as the library\'s own 2026 survey, is called ____________ data.',a:'primary'},
+ {t:'match',q:'Join each data characteristic (KK4) to its meaning.',pairs:[['Size','How many records or how many gigabytes there are'],['Structure','Whether the data is in consistent columns or is free text'],['Accessibility','Whether you can obtain and open it (format, licence, login)'],['Context','Who collected it, when, where and why'],['Clarity','Whether fields and units are labelled so it can be understood']]},
+ {t:'classify',q:'Tick whether each item from the scenario is qualitative or quantitative data.',cats:['Qualitative','Quantitative'],items:[['Comments typed into the survey comment box',0],['The 1–5 ratings from the 2026 survey',1],['Daily visitor counts from the door sensor',1],['A librarian\'s written notes on how people use the study rooms',0]]},
+ {t:'classify',q:'Tick the data-quality factor (KK3) that each situation most affects.',cats:['Accuracy','Bias','Relevance','Reliability'],items:[['The door sensor double-counts people who walk in together',0],['The 2026 survey was emailed only to members under 30',1],['The 2016 council survey asked about bookshops, not libraries',2],['The sensor stops recording at random for hours at a time',3]]},
+ {t:'short',q:'Identify two reasons the library should be concerned about the integrity of the 2016 council survey. Name the integrity characteristic in each reason.',marks:2,lines:3,a:'Timeliness — the survey is ten years old, so reading and borrowing habits (e-books, online reservations) have changed and the data no longer describes current residents. Relevance — it was collected by the council about general reading habits, not about use of this library, so it may not answer the library\'s question.',mark:'1 mark per reason; each must name a characteristic (timeliness, relevance, authenticity, accuracy...) AND link it to the 2016 council survey. "It is old" with no characteristic = 0.'},
+ {t:'short',q:'Name the legislation that applies to the member records stored on the library server and describe one obligation it places on the library.',marks:3,lines:4,a:'Privacy Act 1988 (Cwlth). Under APP 11 the library must take reasonable steps to protect members\' personal information from misuse, loss and unauthorised access (e.g. encrypted storage, staff access controls) and must destroy or de-identify records once they are no longer needed. If a breach is likely to cause serious harm, the Notifiable Data Breaches scheme requires the library to notify the OAIC and the affected members.',mark:'1 mark Act with year; 1 mark a specific principle (APP 11 security / APP 6 use / APP 2 anonymity) correctly stated; 1 mark applying it to the library\'s records with a concrete measure. No year = lose the first mark.'}
+]},
+s2:{time:'25 minutes',scenario:'Hillcrest Community Library wants a dashboard showing monthly loans by genre, and a printed poster for the foyer persuading residents to join. Loans are stored in a database with tables Member, Loan and Book. The dashboard must be finished before the June open day, must run on the library\'s existing tablets, and must be usable by volunteers with little training.',items:[
+ {t:'order',q:'Place the stages of the problem-solving methodology in order.',items:['Analysis — requirements, constraints and scope','Design — solution design and evaluation criteria','Development — manipulation, validation, testing, documentation','Evaluation — strategy and solution evaluation']},
+ {t:'mc',q:'In which stage of the problem-solving methodology are evaluation criteria written?',opts:['Analysis','Design','Development','Evaluation'],a:1},
+ {t:'mc',q:'Which chart type is most appropriate for showing how monthly loans changed across the year?',opts:['Pie chart','Line chart','Histogram','Scatter plot'],a:1},
+ {t:'mc',q:'Which SQL query lists the titles of books with more than 20 loans, highest first?',opts:['SELECT Title FROM Book WHERE Loans > 20 ORDER BY Loans DESC;','SELECT Title FROM Book WHERE Loans >= 20 ORDER BY Title;','SELECT Loans FROM Book WHERE Title > 20 ORDER BY Loans ASC;','SELECT * FROM Book ORDER BY Loans DESC WHERE Loans > 20;'],a:0},
+ {t:'tf',q:'Testing of the solution takes place in the Development stage of the problem-solving methodology.',a:true,why:'Testing is a Development activity; evaluation happens after implementation.'},
+ {t:'blank',q:'In the Loan table, the MemberID field that points to the primary key of the Member table is called a ____________ key.',a:'foreign'},
+ {t:'blank',q:'The spreadsheet function that counts how many loans in a column are over 14 days long is ____________.',a:'COUNTIF',alt:'COUNTIFS'},
+ {t:'classify',q:'Classify each statement about the dashboard.',cats:['Functional requirement','Non-functional requirement','Constraint','Scope'],items:[['The dashboard must display total loans for each genre',0],['It must be usable by volunteers with little training',1],['It must be finished before the June open day',2],['E-book loans will not be included',3],['It must run on the library\'s existing tablets',2]]},
+ {t:'classify',q:'Is each item a format or a convention?',cats:['Format','Convention'],items:[['Bar chart',0],['Axis titles that include the units',1],['Table',0],['Legend placed beside the chart',1]]},
+ {t:'match',q:'Join each of the four Vs to the activity that describes it.',pairs:[['Validation','The spreadsheet rejects a loan period of 400 days as it is typed in'],['Verification','Proofreading entered loan dates against the paper due-date slips'],['Testing','Entering 0, 1, 14, 15 into the loan-days field and comparing with expected results'],['Evaluation','Surveying volunteers three months after launch about whether the dashboard answers their questions']]},
+ {t:'short',q:'Write two evaluation criteria for the dashboard: one for efficiency and one for effectiveness.',marks:2,lines:3,a:'Efficiency: Can a volunteer find the most-borrowed genre for any month in fewer than three taps using the filters? Effectiveness: Does the dashboard show the correct monthly loan total for every genre when compared with the Loan table?',mark:'1 mark each. A criterion must be a measurable question/statement linked to the dashboard; single words such as "accuracy" = 0. The two must be of different kinds (efficiency = time/steps/cost; effectiveness = accuracy/clarity/usability).'},
+ {t:'long',q:'Recommend either a printed infographic or an interactive dashboard for the foyer poster and justify your recommendation.',marks:3,lines:6,a:'A printed infographic. Residents walking through the foyer need the message in a few seconds, and an infographic combines headline statistics, a simple chart and images to persuade at a glance with no interaction. A dashboard would need a screen and someone willing to stop and use filters, and its strength — live, interactive data — is not needed for a fixed persuasive message.',mark:'1 mark for the choice with a reason that fits the purpose (persuade) and audience; 1 mark for a second reason linked to the foyer/poster situation; 1 mark for stating why the alternative is less suitable. Arguing one side only caps the answer at 2.'}
+]},
+s3:{time:'25 minutes',scenario:'A gym is having a booking app written in Python. For each member it stores an ID such as M042, a name, the date they joined, and whether their fees are paid. The app must work with the gym\'s existing membership database and must be ready before Term 1.',items:[
+ {t:'mc',q:'What does the Python expression "3" + "4" evaluate to?',opts:['7','"34"','34','a syntax error'],a:1},
+ {t:'mc',q:'The best data type for a field that stores exactly one of the symbols C, M or X is…',opts:['integer','string','character','Boolean'],a:2},
+ {t:'mc',q:'A developer copies a security module from a friend at another company into her own app. The most relevant legislation is the…',opts:['Privacy Act 1988','Copyright Act 1968','Privacy and Data Protection Act 2014','Health Records Act 2001'],a:1},
+ {t:'mc',q:'Which identifier follows Hungarian notation?',opts:['member_name','MemberName','strMemberName','memberName'],a:2},
+ {t:'tf',q:'Citing the source of a copied code snippet is enough to avoid breaching copyright.',a:false,why:'A citation avoids plagiarism; only a licence or the owner\'s permission avoids infringement.'},
+ {t:'blank',q:'The OOP principle of bundling data and the methods that act on it inside a class, so the data is changed only through those methods, is ____________.',a:'encapsulation'},
+ {t:'blank',q:'The design tool that shows the appearance of a screen — controls, labels, fonts and colours — is a ____________.',a:'mock-up',alt:'layout diagram'},
+ {t:'match',q:'Join each design tool to what it shows.',pairs:[['Mock-up','The appearance of a screen'],['IPO chart','The input, process and output of one task'],['Flowchart','Logic as shapes: oval, rectangle, diamond, parallelogram'],['Pseudocode','Language-independent, English-like statements of the logic'],['Data dictionary','Every field\'s name, type, size and validation']]},
+ {t:'classify',q:'Choose the best data structure for each situation.',cats:['One-dimensional array','List','Record'],items:[['The 30 test scores of one class, fixed for the term',0],['The waiting list for a class — members join and leave all day',1],['One member: ID, name, date joined, fees paid',2],['Seven daily temperatures used for a weekly average',0]]},
+ {t:'classify',q:'Identify the type of each constraint from the scenario.',cats:['Economic','Technical','Social','Legal'],items:[['The app must work with the existing membership database',1],['It must be ready before Term 1',0],['Members\' health information must be protected',3],['Most members are over 60 and new to apps',2]]},
+ {t:'short',q:'Name the most appropriate data structure for one member\'s details (ID, name, date joined, fees paid) and explain why, including why a one-dimensional array is unsuitable.',marks:3,lines:4,a:'A record. The four fields are of different types (string, string, date, Boolean) and a record groups fields of varying types under one name so a member is handled as a single unit. A one-dimensional array is unsuitable because every element must be the same type.',mark:'1 mark record; 1 mark the reason (fields of varying types / one entity); 1 mark why the array is unsuitable (single type). The 2024 VCAA report awarded the justification mark only with the comparison.'},
+ {t:'short',q:'Describe two distinct purposes of internal documentation in the gym app.',marks:2,lines:3,a:'(1) Explaining the data and code structures so another developer can understand what each module, variable and parameter is for. (2) Supporting maintenance and debugging: a fault can be found and the code safely changed later, reducing time and errors.',mark:'1 mark each for two different purposes. The same purpose reworded earns one mark only.'}
+]},
+s4:{time:'25 minutes',scenario:'The gym app lets a member book a class only if their fees are paid AND they are 16 or older. Line 3 of the pseudocode currently reads:   IF feesPaid = TRUE OR age >= 16 THEN',items:[
+ {t:'mc',q:'A loop that checks its condition before each pass, and so may run zero times, is a…',opts:['FOR loop','pre-test WHILE loop','post-test REPEAT…UNTIL loop','selection structure'],a:1},
+ {t:'mc',q:'Which set of test data best tests a rule that accepts class sizes from 1 to 20?',opts:['5, 10, 15','1, 20','0, 1, 2, 20, 21','−5, 100'],a:2},
+ {t:'mc',q:'A routine calculates a member\'s BMI and must hand the value back to the code that called it. It should be a…',opts:['procedure, because it performs a calculation','function, because it returns a value','method, because it uses parameters','loop, because many members have a BMI'],a:1},
+ {t:'mc',q:'The purpose of a breakpoint while debugging is to…',opts:['stop the program compiling until the syntax is fixed','pause execution at a chosen line so variable values can be inspected','mark the line where the program ends','delete the line permanently'],a:1},
+ {t:'tf',q:'A REPEAT…UNTIL loop always executes its body at least once.',a:true,why:'It tests the condition after the body (post-test).'},
+ {t:'blank',q:'Trace this algorithm and write the output.\n   total <- 0;  count <- 1\n   WHILE count <= 4\n      IF count MOD 2 = 0 THEN total <- total + count ENDIF\n      count <- count + 1\n   ENDWHILE\n   OUTPUT total',a:'6',lines:true},
+ {t:'order',q:'Put the three validation checks in the order they should be applied to the age field.',items:['Existence check — is there a value?','Type check — is it a whole number?','Range check — is it between 16 and 99?']},
+ {t:'classify',q:'Classify each error.',cats:['Syntax error','Logic error','Run-time error'],items:[['A missing closing bracket means the program will not run',0],['The program runs but applies a 1% discount instead of 10%',1],['The program crashes when it divides by the number of items, which is zero',2],['Typing "abc" into an integer input stops the program with a type error',2]]},
+ {t:'match',q:'Join each validation check to its example.',pairs:[['Existence check','The form cannot be submitted while the name box is empty'],['Type check','"sixteen" is rejected because the age box accepts whole numbers only'],['Range check','An age of 15 or 100 is rejected because it is outside 16–99']]},
+ {t:'short',q:'Quote the faulty line in the scenario\'s pseudocode, explain the effect of the error, and write the corrected line in full.',marks:3,lines:4,a:'Faulty line: IF feesPaid = TRUE OR age >= 16 THEN. Because it uses OR, a booking is accepted when only one condition is true — a 15-year-old with paid fees, or an 18-year-old who has not paid, would both be accepted. Corrected line: IF feesPaid = TRUE AND age >= 16 THEN.',mark:'1 mark quoting the line (a line number alone = 0, per the 2024 VCAA report); 1 mark the effect (either condition alone accepts a booking, with an example); 1 mark the corrected line written in full with AND.'},
+ {t:'long',q:'Complete a test table for the corrected rule. For each row give feesPaid, age and the exact expected output ("Booking accepted" or "Booking refused"). Include the age boundary and both values of feesPaid. Write at least four rows.',marks:4,lines:7,a:'TRUE, 16 -> Booking accepted;  TRUE, 15 -> Booking refused;  FALSE, 16 -> Booking refused;  FALSE, 15 -> Booking refused;  (TRUE, 17 -> Booking accepted tests above the boundary).',mark:'1 mark for testing both TRUE and FALSE; 1 mark for the boundary pair 15/16; 1 mark for every branch covered (accepted and refused both appear); 1 mark for exact output text throughout. Repeated rows and abbreviated outputs earn nothing.'}
+]},
+s5:{time:'25 minutes',scenario:'A Year 11 team is building a prototype app that matches volunteer tutors with primary-school students (UN SDG 4: Quality Education). They will interview six tutors, survey 120 students, build the matching algorithm (Task 4, 5 days, on the critical path), then user-test with Year 3 students. Artwork is generated with an AI image tool.',items:[
+ {t:'mc',q:'Which list gives the four characteristics of creative and innovative solutions named in the study design?',opts:['Originality, effectiveness, user-centred, disruptiveness','Speed, cost, size, appearance','Accuracy, authenticity, correctness, timeliness','Curiosity, ingenuity, productivity, automation'],a:0},
+ {t:'mc',q:'On a Gantt chart, a milestone is…',opts:['the task with the longest duration','a zero-duration checkpoint marking a key achievement','the arrow between two dependent tasks','the person responsible for a task'],a:1},
+ {t:'mc',q:'Which testing technique is most likely to reveal that Year 3 students cannot find the "book a tutor" button?',opts:['Expert review by the development team','User testing with Year 3 students','Desk-checking the pseudocode','Reading the Gantt chart'],a:1},
+ {t:'mc',q:'Which instrument is a framework rather than legislation?',opts:['Privacy Act 1988','Copyright Act 1968','Australia\'s AI Ethics Principles','Health Records Act 2001'],a:2},
+ {t:'tf',q:'A delay to a task that is not on the critical path always moves the project finish date.',a:false,why:'Non-critical tasks have slack; only critical-path delays extend the project.'},
+ {t:'blank',q:'An early, partial build made to show that an idea is technically feasible is called a proof of ____________.',a:'concept'},
+ {t:'blank',q:'Under the Privacy Act 1988, APP ______ requires personal information to be used or disclosed only for the primary purpose it was collected for.',a:'6'},
+ {t:'order',q:'Put the design-thinking steps in order.',items:['Empathise with the end-user','Ideate — explore multiple perspectives on the problem','Generate a divergence of possible design ideas','Develop the preferred design idea']},
+ {t:'match',q:'Join each legislation or framework to the scenario it governs.',pairs:[['Privacy Act 1988 (Cwlth)','A private online store shares customers\' emails with an advertiser for a new purpose'],['Privacy and Data Protection Act 2014 (Vic)','A state government department collects drivers\' personal details'],['Health Records Act 2001 (Vic)','A Melbourne clinic app stores patients\' blood-pressure readings'],['Copyright Act 1968 (Cwlth)','The team reuses a song from a streaming service in a promo video'],['Australia\'s AI Ethics Principles','The team wants the chatbot\'s decisions to be explainable and contestable']]},
+ {t:'classify',q:'Classify each item as a driver of innovation, a digital-system capability, or an impact of emerging technology.',cats:['Driver','Digital system','Impact'],items:[['Curiosity about why a process keeps failing',0],['GPS devices tracking a delivery fleet',1],['Deskilling of workers whose tasks are automated',2],['Assistive technology that reads screen text aloud',1]]},
+ {t:'short',q:'Recommend interviews or a survey for finding out WHY students stopped using the current sign-up form, and justify your choice.',marks:3,lines:4,a:'Interviews. The team needs depth — reasons — so an interviewer can ask follow-up questions and uncover causes the team has not thought of. A survey reaches more students quickly but gives shallow pre-set answers with no follow-up, so it would show how many stopped but not why.',mark:'1 mark choice; 1 mark reason tied to needing reasons/depth/follow-up; 1 mark why the survey is weaker for this purpose. Single-word answers = 0.'},
+ {t:'short',q:'Identify one ethical issue raised by using an AI image tool for the app\'s artwork and explain why it is an issue.',marks:2,lines:3,a:'The tool generates images from existing artists\' copyrighted work without their consent or payment, so artists are harmed and not recognised — unfair even where no law is broken. (Or: the images may reproduce biased or stereotyped depictions of students or tutors.)',mark:'1 mark naming an issue from KK13 (generation from copyright material / biased content); 1 mark explaining who is affected and why it is a matter of fairness or consent. Answering "it breaches the Copyright Act" is a legal claim, not an ethical issue (0).'}
+]},
+s6:{time:'25 minutes',scenario:'Northside Physio has two reception PCs, a server room holding the patient database, and six clinicians who move between treatment rooms with tablets. A clinician sometimes works from home and connects to the clinic\'s intranet.',items:[
+ {t:'mc',q:'Which device connects the clinic\'s LAN to the internet and forwards packets by IP address?',opts:['Switch','Router','Wireless access point','Network-attached storage'],a:1},
+ {t:'mc',q:'"Never trust, always verify — authenticate every user and device for every resource" describes…',opts:['a firewall rule','Zero Trust Architecture','a Caesar cipher','a WPAN'],a:1},
+ {t:'mc',q:'A 40 MB scan is sent over a 20 Mbps link. Approximately how long does it take?',opts:['2 seconds','16 seconds','0.5 seconds','40 seconds'],a:1},
+ {t:'mc',q:'Which combination is multifactor authentication?',opts:['A password and a PIN','A password and a one-time code sent to the user\'s phone','Two different passwords','A username and a password'],a:1},
+ {t:'tf',q:'An intrusion detection system (IDS) automatically blocks suspicious traffic.',a:false,why:'An IDS detects and alerts; an IPS blocks.'},
+ {t:'blank',q:'Decode this Caesar cipher with a shift of 3 (so D stands for A):  KHOOR',a:'HELLO'},
+ {t:'blank',q:'Encryption that uses one shared secret key to both encrypt and decrypt (for example AES) is called ____________ encryption.',a:'symmetric'},
+ {t:'match',q:'Join each network component to its function.',pairs:[['Router','Connects different networks and forwards by IP address'],['Switch','Connects devices within one LAN by MAC address'],['Firewall','Monitors and controls traffic against a set of rules'],['IPS','Sits inline and blocks traffic that matches an attack pattern'],['VPN','An encrypted tunnel across the public internet to the private network']]},
+ {t:'classify',q:'Identify the network type.',cats:['LAN','WAN','WPAN'],items:[['All the computers, printers and Wi-Fi in the clinic',0],['A physio chain linking 40 clinics to head office',1],['A smartwatch connected to a phone by Bluetooth',2],['Three clinics in different cities sharing one database over the internet',1]]},
+ {t:'classify',q:'Symmetric or asymmetric?',cats:['Symmetric','Asymmetric'],items:[['AES — one shared key encrypts and decrypts',0],['RSA — public key encrypts, private key decrypts',1],['ECDSA — digital signatures proving who sent a message',1],['A backup drive encrypted with a single passphrase',0]]},
+ {t:'short',q:'Explain how a VPN protects the clinician who works from home on café Wi-Fi and reaches the clinic\'s intranet.',marks:2,lines:3,a:'The VPN client and the clinic\'s VPN server set up an encrypted tunnel, so packets crossing the café network and the internet are unreadable to anyone intercepting them; the home device then appears to be on the clinic\'s private network and can reach the intranet services that are not exposed to the public internet.',mark:'1 mark encrypted tunnel / traffic unreadable to others on the café network; 1 mark access to the private network/intranet as if inside it.'},
+ {t:'long',q:'Recommend wired or wireless networking for the clinic and justify your recommendation using at least two of: cost, data storage options, reliability, security.',marks:3,lines:6,a:'A combination. Wire the reception PCs and the server because cabling gives the highest reliability and speed for the patient database and is harder to intercept than a radio signal (security). Give the clinicians\' tablets wireless access points in the treatment rooms for mobility, with WPA3 encryption because the signal reaches beyond the walls. This costs more up front than wireless alone but avoids dropouts that would disrupt reception.',mark:'1 mark a recommendation by device role (desks/server wired, tablets wireless); 1 mark each for two named measures applied to the clinic (reliability, security, cost, storage). "Wireless because it is modern" with no measure = 0.'}
+]},
+s7:{time:'25 minutes',scenario:'Northside Physio\'s receptionist clicked a link in an email that appeared to come from the clinic\'s software supplier and entered her login details. Two days later patient records were accessed from overseas. The clinic runs its patient software on an operating system that stopped receiving updates two years ago, and backs up to a hard drive in the server room "when someone remembers".',items:[
+ {t:'mc',q:'Thousands of fake requests per second make the clinic\'s booking website unavailable to real patients. This is…',opts:['a denial-of-service attack','a man-in-the-middle attack','spyware','SQL injection'],a:0},
+ {t:'mc',q:'Which of these is one of the Essential Eight mitigation strategies?',opts:['Regular backups','Installing a VPN','Using a Caesar cipher','Buying cyber insurance'],a:0},
+ {t:'mc',q:'The clinic does a full backup on Sunday and an incremental backup every other night. The server fails on Friday afternoon. To restore, the clinic needs…',opts:['Sunday\'s full backup only','Sunday\'s full backup and Thursday\'s incremental only','Sunday\'s full backup and every incremental from Monday to Thursday, in order','Thursday\'s incremental only'],a:2},
+ {t:'mc',q:'Which ISM networking guideline would stop an infected guest laptop in the waiting room from reaching the patient database?',opts:['Encryption','Segmentation and segregation','Wireless network footprint','Application control'],a:1},
+ {t:'tf',q:'A firewall prevents malware from being installed on a computer.',a:false,why:'A firewall filters traffic by rules; anti-malware software prevents installation.'},
+ {t:'blank',q:'Under the Notifiable Data Breaches scheme, an eligible breach must be reported to affected individuals and to the ____________ (four-letter abbreviation).',a:'OAIC',alt:'Office of the Australian Information Commissioner'},
+ {t:'blank',q:'The email that tricked the receptionist is an example of ____________, a form of social engineering.',a:'phishing'},
+ {t:'classify',q:'Classify each threat.',cats:['Accidental','Deliberate','Events-based'],items:[['A clinician loses a USB drive containing patient notes',0],['A lightning strike causes a power failure that corrupts the database',2],['An ex-employee uses a still-active login to copy client lists',1],['The receptionist emails a referral to the wrong patient',0],['A ransomware attack encrypts the file server',1]]},
+ {t:'match',q:'Join each type of malware to how it works.',pairs:[['Virus','Attaches to a host file and spreads when the file is run or shared'],['Worm','Self-replicates across the network with no user action'],['Spyware','Secretly records keystrokes or screens and sends them to an attacker'],['Ransomware','Encrypts files and demands payment for the key']]},
+ {t:'match',q:'Join each Act to the principle number that covers data security.',pairs:[['Privacy Act 1988 (Cwlth)','APP 11'],['Health Records Act 2001 (Vic)','HPP 4'],['Privacy and Data Protection Act 2014 (Vic)','IPP 4']]},
+ {t:'short',q:'Identify the threat in the scenario and recommend one strategy, matched to that threat, that would prevent it recurring. Explain how the strategy works.',marks:3,lines:4,a:'Threat: a deliberate phishing (social engineering) attack that captured the receptionist\'s credentials. Strategy: enforce multifactor authentication on every account that can reach patient records, so the attacker overseas would also need the receptionist\'s phone code or security key and the login would fail; pair it with phishing-awareness training so staff recognise fake supplier emails.',mark:'1 mark naming phishing/social engineering (not "hacking"); 1 mark a strategy that addresses stolen credentials (MFA, training, lockout) — antivirus/firewall do not match; 1 mark explaining how it stops the attack in the clinic.'},
+ {t:'long',q:'Recommend a backup strategy for the clinic\'s patient database. Include frequency, type, media and location.',marks:4,lines:6,a:'A full backup every Sunday night plus an incremental backup every weeknight (frequency and type), written to a NAS in the server room and automatically copied to an encrypted cloud service (media and off-site location) so that fire, theft or ransomware cannot destroy both copies; the cloud copy is kept separate from everyday network logins, and the restore is tested monthly so at most one day\'s data would be lost.',mark:'1 mark each for frequency, type (full/differential/incremental), media and off-site location. A bonus idea (test the restore; keep a copy offline) can replace one missing element. "Back up regularly to a hard drive" = 1.'}
+]}
+};
+
+
 </script>
 <script>
 /* ================= Engine: tabs, timers, presenter, auto-marking, PDF ================= */
@@ -1423,17 +1860,23 @@ summary:[
     if(open)h+='</ul>';return h;
   }
 
+  var OVCAP={mindmap:'A mind map: the session\'s topics branch out from the centre, each with the terms students must be able to use. Read it clockwise from the top left.',flow:'A pipeline: the stages run left to right, with what happens in each stage listed underneath; the dashed loop shows where the process doubles back.',pairs:'A mapping: each threat on the left is linked to the practice on the right that reduces it — the matching examiners want to see in a case-study answer.',network:'A labelled network diagram: every component named in the key knowledge, placed where it sits between the clinic and the internet.'};
+  function ovData(s){return window.OVERVIEWS&&window.OVERVIEWS[s.id];}
+  function ovSvg(s){var o=ovData(s);return o?Overview.render(o):'';}
+  function ovCaption(s){var o=ovData(s);return o?OVCAP[o.type]||'':'';}
+  function paperDesc(s){var p=window.PAPERS&&window.PAPERS[s.id];if(!p)return '';var n=p.items.length,longs=p.items.filter(function(i){return i.t==='long';}).length;return n+' questions · '+PaperPDF.totalMarks(p)+' marks · '+(p.time||'25 minutes')+'. Multiple choice, true/false, fill the gap, join-the-line matching, tick-the-column and ordering, with ruled space for '+p.items.filter(function(i){return i.t==='short';}).length+' short responses'+(longs?' and '+longs+' extended response':'')+'. Print double-sided.';}
   function renderSession(s){
     var root=document.createElement('section');root.className='session '+unitClass(s);root.id='sess-'+s.id;
     var n=s.slides.length;
     root.innerHTML=
       '<div class="shead"><div class="num">'+s.num+'</div><div><div class="unit">'+esc(s.unit)+' · 45 minutes</div><h2>'+esc(s.title)+'</h2><div class="kkwrap">'+s.kk.map(function(k){return '<span class="kk" title="Key knowledge covered">'+esc(k)+'</span>';}).join('')+'</div></div></div>'+
-      '<nav class="subnav"><a href="#run-'+s.id+'">① Run sheet &amp; timers</a><a href="#teach-'+s.id+'">② Teach</a><a href="#clinic-'+s.id+'">③ Response clinic</a><a href="#prac-'+s.id+'">④ Student practice</a><a href="#sum-'+s.id+'">⑤ Summary &amp; PDF</a></nav>'+
+      '<nav class="subnav"><a href="#ov-'+s.id+'">⓪ Overview</a><a href="#run-'+s.id+'">① Run sheet &amp; timers</a><a href="#teach-'+s.id+'">② Teach</a><a href="#clinic-'+s.id+'">③ Response clinic</a><a href="#prac-'+s.id+'">④ Student practice</a><a href="#sum-'+s.id+'">⑤ Summary, practice paper &amp; answer key</a></nav>'+
+      '<div class="sec" id="ov-'+s.id+'"><h3><span class="pill">Overview</span>The whole session on one page</h3><p class="intro">'+esc(ovCaption(s))+'</p><div class="ovwrap" id="ovsvg-'+s.id+'">'+ovSvg(s)+'</div><div class="qbtns"><button data-act="ovpng">⬇ Download overview (PNG)</button><button data-act="ovsvg">⬇ Download overview (SVG)</button><button data-act="present">⬛ Show on the projector</button></div></div>'+
       '<div class="sec" id="run-'+s.id+'"><h3><span class="pill">Run sheet</span>How the 45 minutes are spent</h3><p class="intro">'+s.goal+'</p><div class="runctl"><button class="primary" data-act="startall">▶ Start session (45:00) &amp; section 1</button><button data-act="present">⬛ Present (full screen)</button><label><input type="checkbox" data-act="auto" checked> Auto-advance to the next section when a section ends</label></div><table class="plan"><thead><tr><th>Section</th><th>Time</th><th></th></tr></thead><tbody id="plan-'+s.id+'"></tbody></table></div>'+
       '<div class="sec" id="teach-'+s.id+'"><h3><span class="pill">Teach</span>Theory, memory hooks &amp; worked examples</h3><p class="intro">Each card is one presenter slide. Press <b>Present</b> for a full-screen version (arrow keys to move). Yellow boxes are memory hooks for students; blue boxes are notes for you and are hidden in presenter mode.</p><div class="slides">'+s.slides.map(function(sl,i){return slideHtml(sl,i,n);}).join('')+'</div></div>'+
       '<div class="sec" id="clinic-'+s.id+'"><h3><span class="pill">Response clinic</span>What a good and a bad response look like</h3><p class="intro">Questions are written in the style of VCAA exam questions; the marking commentary paraphrases patterns from VCAA Applied Computing examination reports. Ask students to mark the weak response first, then compare.</p>'+s.clinic.map(clinicHtml).join('')+'</div>'+
       '<div class="sec" id="prac-'+s.id+'"><h3><span class="pill">Practice</span>Auto-marked student exercises</h3><p class="intro">Students answer, press <b>Check</b>, and get instant feedback. Short-answer questions are marked by the key ideas they contain; the model answer appears when ideas are missing.</p>'+s.practice.map(function(q,i){return practiceHtml(q,i,s.id);}).join('')+'<div class="scoredock" id="dock-'+s.id+'"><span class="big">— / —</span><span class="mu">0 of '+s.practice.length+' questions marked</span><span style="flex:1"></span><button data-act="markall">Mark all</button><button data-act="resetall">Reset all</button></div></div>'+
-      '<div class="sec summary" id="sum-'+s.id+'"><h3><span class="pill">Summary</span>One-page revision summary</h3><button class="primary pdfbtn" data-act="pdf">⬇ Download PDF summary — Session '+s.num+'</button>'+summaryHtml(s.summary)+'</div>';
+      '<div class="sec summary" id="sum-'+s.id+'"><h3><span class="pill">Downloads</span>Summary, practice paper and answer key</h3><div class="dlgrid"><div class="dl"><h4>Revision summary</h4><p>Key terms, memory hooks and exam tips for students\' notes.</p><button class="primary pdfbtn" data-act="pdf">⬇ Summary PDF</button></div><div class="dl"><h4>Practice paper</h4><p>'+paperDesc(s)+'</p><button class="primary pdfbtn" data-act="paper">⬇ Practice paper PDF</button></div><div class="dl"><h4>Answer key</h4><p>Answers and marking guidance for every question — a separate file, for you.</p><button class="pdfbtn" data-act="key">⬇ Answer key PDF</button></div></div>'+summaryHtml(s.summary)+'</div>';
     $('#sessions').appendChild(root);
     renderPlan(s.id);
 
@@ -1443,25 +1886,30 @@ summary:[
       if(act==='startall'){resetSession(s.id);startSection(s.id,0,true);startSession(s.id);}
       else if(act==='present'){openPresent(s,0);}
       else if(act==='pdf'){downloadPdf(s);}
+      else if(act==='paper'){var pp=window.PAPERS&&window.PAPERS[s.id];if(pp)MiniPDF.download(PaperPDF.buildPaper(s,pp),'AC-U12-Session'+s.num+'-Practice-Paper.pdf');}
+      else if(act==='key'){var pk=window.PAPERS&&window.PAPERS[s.id];if(pk)MiniPDF.download(PaperPDF.buildKey(s,pk),'AC-U12-Session'+s.num+'-Answer-Key.pdf');}
+      else if(act==='ovpng'){Overview.downloadPng(ovSvg(s),'AC-U12-Session'+s.num+'-Overview.png',2);}
+      else if(act==='ovsvg'){Overview.downloadSvg(ovSvg(s),'AC-U12-Session'+s.num+'-Overview.svg');}
       else if(act==='check'){var card=b.closest('.qcard');var idx=$$('#prac-'+s.id+' .qcard').indexOf(card);markQuestion(card,s.practice[idx]);updateDock(s.id);}
       else if(act==='clear'){clearQuestion(b.closest('.qcard'));updateDock(s.id);}
       else if(act==='model'){var card2=b.closest('.qcard');var idx2=$$('#prac-'+s.id+' .qcard').indexOf(card2);var m=$('.model',card2);m.innerHTML='<b>Model answer:</b> '+esc(s.practice[idx2].model);m.classList.toggle('show');}
       else if(act==='markall'){$$('#prac-'+s.id+' .qcard').forEach(function(c,i){markQuestion(c,s.practice[i]);});updateDock(s.id);}
       else if(act==='resetall'){$$('#prac-'+s.id+' .qcard').forEach(clearQuestion);updateDock(s.id);}
-      else if(b.hasAttribute('data-slide')){openPresent(s,parseInt(b.getAttribute('data-slide'),10));}
+      else if(b.hasAttribute('data-slide')){openPresent(s,parseInt(b.getAttribute('data-slide'),10)+(ovSvg(s)?1:0));}
     });
     $('input[data-act="auto"]',root).addEventListener('change',function(e){T[s.id].auto=e.target.checked;});
   }
 
   function downloadPdf(s){
     var blocks=[['p','Covers: '+s.kk.join('; ')]].concat(s.summary);
-    MiniPDF.download({title:'Session '+s.num+' — '+s.title,subtitle:s.unit+'  ·  VCE Applied Computing Units 1 & 2 revision (VCAA study design accredited from 2025)',footer:'VCE Applied Computing Units 1 & 2 · Revision summary · Session '+s.num+' · '+s.title,blocks:blocks},'AC-U12-Revision-Session'+s.num+'-'+s.title.replace(/[^a-z0-9]+/gi,'-')+'.pdf');
+    MiniPDF.download(MiniPDF.build({title:'Session '+s.num+' — '+s.title,subtitle:s.unit+'  ·  VCE Applied Computing Units 1 & 2 revision (VCAA study design accredited from 2025)',footer:'VCE Applied Computing Units 1 & 2 · Revision summary · Session '+s.num+' · '+s.title,blocks:blocks}),'AC-U12-Revision-Session'+s.num+'-'+s.title.replace(/[^a-z0-9]+/gi,'-')+'.pdf');
   }
 
   /* ---------- presenter ---------- */
   var P={s:null,i:0,slides:[]};
   function presentSlides(s){
     var arr=s.slides.map(function(sl){return {h:sl.h,sub:sl.sub||'',body:sl.body+(sl.memory?'<div class="memo"><b>Remember it:</b> '+sl.memory+'</div>':'')};});
+    var ov=ovSvg(s);if(ov)arr.unshift({h:'Session '+s.num+' at a glance',sub:ovCaption(s),body:'<div class="pov">'+ov+'</div>'});
     arr.push({h:'Response clinic',sub:'What earns marks — and what does not',body:'<ul>'+s.clinic.map(function(c){return '<li>'+c.q.replace(/<[^>]+>/g,'')+' <b>('+c.marks+' marks)</b></li>';}).join('')+'</ul>'});
     s.clinic.forEach(function(c,k){
       arr.push({h:'Response clinic '+(k+1)+' · '+c.marks+' mark'+(c.marks>1?'s':''),sub:(c.context?c.context.replace(/<[^>]+>/g,''):''),body:'<p class="pq">'+c.q+'</p><div class="resp"><div class="rbox weak"><h5>Weak response — mark it first</h5><div class="txt">'+esc(c.weak)+'</div><ul class="notes">'+c.weakNotes.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div><div class="rbox strong"><h5>Strong response</h5><div class="txt">'+esc(c.strong)+'</div><ul>'+c.strongNotes.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div></div><button class="reveal" data-step="1">Reveal: why it loses marks ▶</button>'});
@@ -1512,7 +1960,7 @@ summary:[
     $('#soundtest').addEventListener('click',function(){beep(BEEP_END);});
     showHome();
   }
-  window.ACR={show:show,showHome:showHome,T:T,startSession:startSession,startSection:startSection,markQuestion:markQuestion,openPresent:openPresent,downloadPdf:downloadPdf,build:function(id){var s=S.filter(function(x){return x.id===id;})[0];return MiniPDF.build({title:'Session '+s.num+' — '+s.title,subtitle:s.unit,footer:'test',blocks:[['p','Covers: '+s.kk.join('; ')]].concat(s.summary)});},tick:tick};
+  window.ACR={show:show,showHome:showHome,T:T,buildPaper:function(id){var s=S.filter(function(x){return x.id===id;})[0];return PaperPDF.buildPaper(s,window.PAPERS[id]);},buildKey:function(id){var s=S.filter(function(x){return x.id===id;})[0];return PaperPDF.buildKey(s,window.PAPERS[id]);},ovSvg:function(id){var s=S.filter(function(x){return x.id===id;})[0];return ovSvg(s);},startSession:startSession,startSection:startSection,markQuestion:markQuestion,openPresent:openPresent,downloadPdf:downloadPdf,build:function(id){var s=S.filter(function(x){return x.id===id;})[0];return MiniPDF.build({title:'Session '+s.num+' — '+s.title,subtitle:s.unit,footer:'test',blocks:[['p','Covers: '+s.kk.join('; ')]].concat(s.summary)});},tick:tick};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 
