@@ -7801,7 +7801,16 @@ const SCENE = (() => {
     if (FX) { col(W / 2 + 1.5, zA, D / 2 - 1.6); col(W / 2 + 4.3, zA, D / 2 - 1.6); }
     col(W / 2 - 1.35, zA, zB);
     col(-W / 2 + 1.4, -D / 2 + 2.8, zB, true);
-    return { W, D, FX, desks, spots, slots, door: { x: W / 2 - 1.2, z: D / 2 + 1.5 }, cols, rows, level, xMin: -W / 2, xMax: W / 2 + FX };
+    // the Tower gets a roof terrace beside the office (the pool goes there)
+    const terrace = level >= 4 ? { w: 8.6, x0: W / 2 + FX + 0.25, d: D + 0.5 } : null;
+    if (terrace) { terrace.x1 = terrace.x0 + terrace.w; terrace.cx = terrace.x0 + terrace.w / 2; }
+    return { W, D, FX, desks, spots, slots, door: { x: W / 2 - 1.2, z: D / 2 + 1.5 }, cols, rows, level, xMin: -W / 2, xMax: W / 2 + FX, terrace };
+  }
+  // the Tower's footprint and its streets, shared by the building, the car park and the traffic
+  function towerGeo() {
+    const L = layout, TW = L.W + L.FX, cx = L.FX / 2, TX = L.terrace ? L.terrace.w : 0;
+    const bw = TW + 0.9 + TX, bx = cx + TX / 2, bd = L.D + 0.9, gy = -0.56 - 3.4 * 4, px0 = bx - bw / 2 - 4, px1 = bx + bw / 2 + 11;
+    return { bw, bx, bd, gy, px0, px1, sxR: px1 + 2.5, szF: bd / 2 + 6.5 };
   }
   function drawCode(ctx, w, h, seed) {
     ctx.fillStyle = "#101633"; ctx.fillRect(0, 0, w, h);
@@ -7949,9 +7958,9 @@ const SCENE = (() => {
       if (!hwNow.net) { mesh(G.rbox(0.56, 0.035, 0.32, 0.01), mat("#c98d55", { roughness: 0.55 }), 0, 1.0, -0.3, rk); [-0.2, 0.2].forEach((bx) => mesh(G.box(0.03, 0.12, 0.2), M.darker, bx, 0.93, -0.36, rk, NOSH)); buildRouter(rk, 0, 1.02, -0.3, 0); mesh(G.cyl(0.008, 0.008, 1.0, 4), M.darker, 0.24, 0.5, -0.42, rk, NOSH); rk.userData.use = [{ x: 0, z: 0.42, ry: Math.PI, pose: "counter", dur: [4, 7], weight: 0.15 }]; registerSpots("net", rk); }
       else { mesh(G.rbox(0.7, 1.4, 0.55, 0.03), mat("#2b2f4a", { roughness: 0.5, metalness: 0.3 }), 0, 0.7, 0, rk); for (let i = 0; i < 5; i++) { mesh(G.box(0.58, 0.14, 0.02), mat("#3d4466"), 0, 0.3 + i * 0.2, 0.28, rk, NOSH); for (let j = 0; j < 6; j++) mesh(G.box(0.04, 0.03, 0.01), basic((i + j) % 3 ? "#4be08a" : "#ffc61a"), -0.2 + j * 0.08, 0.3 + i * 0.2, 0.3, rk, NOSH); } if (hwNow.net >= 2) wallPoster(rk, 0, 1.9, -0.28, 0, ["#0b1630", "#3bc7ff", "FIBRE", "1 Gbps", "VPN ON"]); buildRouter(rk, 0, 1.4, 0.02, 0); rk.userData.use = [{ x: 0, z: 0.8, ry: Math.PI, pose: "counter", dur: [4, 8], weight: 0.15 }]; registerSpots("net", rk); }
     }
-    // the tower: storeys under the floor, a street far below
+    // the tower: storeys under the floor, a street far below, and a roof terrace beside the office
     if (level >= 4) {
-      const ST = 4, SH = 3.4, bx = cx, bw = TW + 0.9, bd = D + 0.9;
+      const TG = towerGeo(), { bw, bx, bd, gy, px0, px1, sxR, szF } = TG, ST = 4, SH = 3.4, TR = layout.terrace;
       for (let i = 0; i < ST; i++) {
         const y = -0.56 - SH * (i + 1) + SH / 2;
         mesh(G.box(bw, SH - 0.5, bd), mat(i % 2 ? "#dfe4f3" : "#e9ecf7", { roughness: 0.6 }), bx, y, 0, room, NOSH);
@@ -7960,17 +7969,37 @@ const SCENE = (() => {
         for (let k = 0; k < nx; k++) { const x = bx - bw / 2 + 0.8 + k * 1.6; mesh(G.box(1.1, 1.5, 0.06), basic("#9ed0ff"), x, y, bd / 2 + 0.02, room, NOSH); mesh(G.box(1.1, 1.5, 0.06), basic("#9ed0ff"), x, y, -bd / 2 - 0.02, room, NOSH); }
         for (let k = 0; k < nz; k++) { const z = -bd / 2 + 0.8 + k * 1.6; mesh(G.box(0.06, 1.5, 1.1), basic("#9ed0ff"), bx + bw / 2 + 0.02, y, z, room, NOSH); mesh(G.box(0.06, 1.5, 1.1), basic("#9ed0ff"), bx - bw / 2 - 0.02, y, z, room, NOSH); }
       }
-      const gy = -0.56 - SH * ST;
-      mesh(G.plane(bw + 70, bd + 70), mat("#cfe3b8", { roughness: 1 }), bx, gy - 0.02, 0, room, { cast: false }).rotation.x = -Math.PI / 2;
-      mesh(G.box(bw + 8, 0.04, bd + 8), mat("#b8bccc", { roughness: 1 }), bx, gy, 0, room, { cast: false });
-      mesh(G.box(bw + 70, 0.05, 5), mat("#5b6075", { roughness: 1 }), bx, gy + 0.01, bd / 2 + 6.5, room, { cast: false });
-      mesh(G.box(5, 0.05, bd + 70), mat("#5b6075", { roughness: 1 }), bx + bw / 2 + 6.5, gy + 0.01, 0, room, { cast: false });
+      mesh(G.box(bw + 0.3, 0.32, bd + 0.3), mat("#cfd4e4", { roughness: 0.7 }), bx, gy + 0.16, 0, room, NOSH); // plinth
+      // the ground: grass, the plaza (with room for the staff car park on the right), and two streets that meet at a crossing
+      const span = px1 - px0, pcx = (px0 + px1) / 2;
+      mesh(G.plane(span + 90, bd + 90), mat("#cfe3b8", { roughness: 1 }), pcx, gy - 0.02, 0, room, { cast: false }).rotation.x = -Math.PI / 2;
+      mesh(G.box(span, 0.04, bd + 8), mat("#b8bccc", { roughness: 1 }), pcx, gy, 0, room, { cast: false });
+      const roadT = (vert) => { const t = tex(64, 256, (c, w, h) => { c.fillStyle = "#5b6075"; c.fillRect(0, 0, w, h); c.fillStyle = "rgba(255,255,255,.04)"; for (let i = 0; i < 90; i++) c.fillRect((i * 37) % w, (i * 53) % h, 2, 2); c.fillStyle = "#eef0f6"; c.fillRect(w / 2 - 2, 0, 4, h * 0.5); c.fillStyle = "#c9ccd6"; c.fillRect(0, 0, 3, h); c.fillRect(w - 3, 0, 3, h); }); t.tex.wrapS = t.tex.wrapT = T.RepeatWrapping; if (!vert) { t.tex.rotation = Math.PI / 2; t.tex.center.set(0.5, 0.5); } return t.tex; };
+      const fsL = span + 90, rsL = bd + 90;
+      const fT = roadT(false); fT.repeat.set(fsL / 4.8, 1);
+      const rT = roadT(true); rT.repeat.set(1, rsL / 4.8);
+      mesh(G.plane(fsL, 5), new T.MeshStandardMaterial({ map: fT, roughness: 1 }), pcx, gy + 0.03, szF, room, { cast: false }).rotation.x = -Math.PI / 2;
+      mesh(G.plane(5, rsL), new T.MeshStandardMaterial({ map: rT, roughness: 1 }), sxR, gy + 0.035, 0, room, { cast: false }).rotation.x = -Math.PI / 2;
+      mesh(G.box(5, 0.004, 5), mat("#5b6075", { roughness: 1 }), sxR, gy + 0.04, szF, room, { cast: false }); // the crossing itself, no centre lines
+      for (let k = 0; k < 6; k++) { mesh(G.box(0.3, 0.004, 1.6), basic("#eef0f6"), sxR - 1.9 + k * 0.76, gy + 0.045, szF - 3.4, room, NOSH); mesh(G.box(1.6, 0.004, 0.3), basic("#eef0f6"), sxR - 3.4, gy + 0.045, szF - 1.9 + k * 0.76, room, NOSH); }
+      // the lobby doors face the car park
+      const lz = bd / 2 - 4.2, lxF = bx + bw / 2;
+      mesh(G.box(0.12, 2.1, 3.0), mat("#2b3550", { roughness: 0.15, metalness: 0.5 }), lxF + 0.04, gy + 1.37, lz, room, NOSH);
+      mesh(G.box(0.14, 0.08, 3.1), mat("#d5dae3", { metalness: 0.8, roughness: 0.3 }), lxF + 0.05, gy + 2.44, lz, room, NOSH);
+      mesh(G.box(0.14, 2.1, 0.06), mat("#d5dae3", { metalness: 0.8, roughness: 0.3 }), lxF + 0.05, gy + 1.37, lz, room, NOSH);
+      mesh(G.box(1.5, 0.12, 3.6), mat("#f6f7fc", { roughness: 0.5 }), lxF + 0.75, gy + 2.62, lz, room);
+      mesh(G.box(1.6, 0.012, 2.2), mat("#e3dccd", { roughness: 0.9 }), lxF + 0.8, gy + 0.05, lz, room, { cast: false });
+      // trees, kept off the streets and the car park
       const r2 = rng(level * 31);
-      for (let i = 0; i < 9; i++) { const c = new T.Group(); const along = r2() < 0.5; c.position.set(along ? bx - bw / 2 - 30 + r2() * (bw + 55) : bx + bw / 2 + 6.5 + (r2() < 0.5 ? -1.3 : 1.3), gy + 0.02, along ? bd / 2 + 6.5 + (r2() < 0.5 ? -1.3 : 1.3) : -bd / 2 - 30 + r2() * (bd + 55)); c.rotation.y = along ? Math.PI / 2 : 0; room.add(c); mesh(G.rbox(1.0, 0.4, 2.0, 0.08), mat(["#ef4444", "#3b82f6", "#ffc61a", "#ffffff", "#22c55e"][i % 5]), 0, 0.3, 0, c, NOSH); mesh(G.rbox(0.9, 0.3, 1.0, 0.08), mat("#9ed0ff"), 0, 0.62, -0.1, c, NOSH); }
-      for (let i = 0; i < 18; i++) { const t = buildTree(1.8 + r2() * 1.2, i + 40); const side = r2(); t.position.set(side < 0.5 ? bx - bw / 2 - 6 - r2() * 24 : bx - bw / 2 - 30 + r2() * (bw + 50), gy, side < 0.5 ? -bd / 2 - 25 + r2() * (bd + 25) : -bd / 2 - 8 - r2() * 20); room.add(t); }
-      // rooftop: parapet and a helipad circle
+      for (let i = 0; i < 22; i++) { const side = r2(), x = side < 0.5 ? px0 - 3 - r2() * 24 : px0 - 26 + r2() * (span + 52), z = side < 0.5 ? -bd / 2 - 25 + r2() * (bd + 25) : -bd / 2 - 8 - r2() * 20, s3 = 1.8 + r2() * 1.2; if (Math.abs(x - sxR) < 4.2 || Math.abs(z - szF) < 4.2 || (x > px0 - 1 && x < px1 + 1 && z > -bd / 2 - 5 && z < bd / 2 + 5)) continue; const t = buildTree(s3, i + 40); t.position.set(x, gy, z); room.add(t); }
+      // traffic on both streets: each lane keeps to its side, and cars on the side street give way at the crossing
+      const tr = makeTraffic(room, gy + 0.04, false), xa = px0 - 45, xb = px1 + 50, za = -bd / 2 - 45, zb = bd / 2 + 45;
+      tr.zones.push({ x0: sxR - 2.6, x1: sxR + 2.6, z0: szF - 2.6, z1: szF + 2.6 });
+      [[xa, szF, xb, szF], [xb, szF, xa, szF], [sxR, za, sxR, zb], [sxR, zb, sxR, za]].forEach(([ax, az, bx2, bz], li) => { for (let k = 0; k < 2; k++) tr.add(laneRoute(ax, az, bx2, bz, 1.25), { s0: (k * 0.5 + li * 0.17) * 140, v: 2.9 + ((li + k) % 3) * 0.35, col: CAR_COLS[(li * 3 + k * 5) % CAR_COLS.length] }); });
+      room.userData.tick = [tr.tick]; room.userData.traffic = tr;
+      // the office's front parapet; the terrace has its own glass balustrade
       mesh(G.box(TW + 0.5, 0.9, 0.2), mat("#eef0f8"), cx, -0.1, D / 2 + 0.25, room, NOSH);
-      mesh(G.box(0.2, 0.9, D + 0.5), mat("#eef0f8"), W / 2 + FX + 0.25, -0.1, 0, room, NOSH);
+      buildTerrace(TR, perksNow.has("swim") && !preview);
     }
     (company && company.perks || []).forEach((k) => addPerk(k, true));
     if (!preview) (company && company.items || []).forEach((k) => addItem(k));
@@ -7987,10 +8016,10 @@ const SCENE = (() => {
   function disposeTex() { roomTex.forEach((t) => t.dispose()); roomTex = []; }
   /* ---------- perks in 3D ---------- */
   const perkMeshes = {};
-  const SLOT_PERKS = { beanbags: 1, sneakers: 1, scooters: 1, games: 1, arcade: 1, pool: 1, bubbletea: 1, quietpod: 1, naps: 1, vr: 1, music: 1, gym: 1, chef: 1, climbing: 1, court: 1, slide: 1, spa: 1, cinema: 1, massage: 1, childcare: 1, garden: 1, swim: 2, hackathon: 1 };
+  const SLOT_PERKS = { beanbags: 1, sneakers: 1, scooters: 1, games: 1, arcade: 1, pool: 1, bubbletea: 1, quietpod: 1, naps: 1, vr: 1, music: 1, gym: 1, chef: 1, climbing: 1, court: 2, slide: 1, spa: 1, cinema: 1, massage: 1, childcare: 1, garden: 1, swim: 2, hackathon: 1 };
   const LOW_OK = { beanbags: 1, sneakers: 1, scooters: 1, naps: 1, vr: 1, chef: 1, bubbletea: 1, spa: 1, massage: 1, garden: 1 };
   function usedSlots() { const u = new Set(); Object.values(perkMeshes).forEach((g) => { if (g.userData.slot != null) u.add(g.userData.slot); if (g.userData.slot2 != null) u.add(g.userData.slot2); }); return u; }
-  function freeSlot(k) { const used = usedSlots(); if (SLOT_PERKS[k] === 2) return layout.slots.findIndex((s, i) => !s.low && !used.has(i) && layout.slots[i + 1] && !used.has(i + 1) && Math.abs(layout.slots[i + 1].x - s.x) < 0.01); return layout.slots.findIndex((s, i) => !used.has(i) && (!s.low || LOW_OK[k])); }
+  function freeSlot(k, single) { const used = usedSlots(); if (SLOT_PERKS[k] === 2 && !single) return layout.slots.findIndex((s, i) => !s.low && !used.has(i) && layout.slots[i + 1] && !used.has(i + 1) && Math.abs(layout.slots[i + 1].x - s.x) < 0.01); return layout.slots.findIndex((s, i) => !used.has(i) && (!s.low || LOW_OK[k])); }
   const P3 = {
     beanbags(g) { [["#ff6fa8", -0.6, 0.2], ["#3bc7ff", 0.55, -0.3], ["#ffc61a", 0.1, 0.55]].forEach(([c, x, z]) => { const b = mesh(G.sphere(0.42, 20, 14), mat(c, { roughness: 0.85 }), x, 0.3, z, g); b.scale.set(1, 0.68, 1); }); },
     sneakers(g) { mesh(G.rbox(1.7, 0.9, 0.5, 0.04), M.white, 0, 0.45, 0, g); ["#ff4fa0", "#4b3ff0", "#22c55e", "#ffc61a", "#3bc7ff", "#f2662a"].forEach((c, i) => { const x = -0.6 + (i % 3) * 0.6, y = i < 3 ? 0.98 : 0.6; mesh(G.rbox(0.36, 0.14, 0.2, 0.05), mat(c, { roughness: 0.5 }), x, y, 0.12, g, NOSH); mesh(G.box(0.36, 0.04, 0.2), mat("#ffffff"), x, y - 0.08, 0.12, g, NOSH); }); },
@@ -8006,7 +8035,34 @@ const SCENE = (() => {
     gym(g) { mesh(G.rbox(0.8, 0.18, 1.8, 0.05), mat("#3d4466"), -0.6, 0.09, 0, g); mesh(G.box(0.62, 0.02, 1.5), M.darker, -0.6, 0.19, 0.05, g, NOSH); [-0.3, -0.9].forEach((x) => mesh(G.cyl(0.03, 0.03, 1.1, 8), M.alu, x, 0.7, -0.75, g)); mesh(G.rbox(0.7, 0.3, 0.12, 0.04), M.darker, -0.6, 1.25, -0.78, g); mesh(G.rbox(0.9, 0.08, 0.4, 0.02), M.alu, 0.6, 0.6, 0, g); [-0.2, 0.25].forEach((z) => [0.3, 0.9].forEach((x) => mesh(G.cyl(0.09, 0.09, 0.14, 14), mat("#ef4444"), x, 0.72, z, g, NOSH).rotation.z = Math.PI / 2)); mesh(G.rbox(0.6, 0.02, 1.6, 0.01), mat("#22c3a6", { roughness: 1 }), 0.6, 0.012, 0, g, { cast: false }); },
     chef(g) { mesh(G.rbox(2.2, 0.92, 0.75, 0.04), M.white, 0, 0.46, 0, g); mesh(G.rbox(2.3, 0.06, 0.82, 0.02), mat("#3d4466"), 0, 0.95, 0, g); [["#ffc61a", -0.75], ["#22c55e", -0.25], ["#ef4444", 0.25], ["#f2a35a", 0.75]].forEach(([c, x]) => { mesh(G.rbox(0.42, 0.05, 0.45, 0.02), M.alu, x, 1.0, 0, g, NOSH); mesh(G.sphere(0.15, 12, 8), mat(c, { roughness: 0.8 }), x, 1.04, 0, g, NOSH).scale.set(1.2, 0.35, 1.2); }); mesh(G.box(2.1, 0.5, 0.02), mat("#dff3ff", { transparent: true, opacity: 0.4, roughness: 0.05 }), 0, 1.32, 0.3, g, NOSH); const hat = mesh(G.cyl(0.18, 0.15, 0.25, 16), M.white, 0.9, 1.7, -0.25, g); mesh(G.sphere(0.22, 14, 10), M.white, 0.9, 1.88, -0.25, g); },
     climbing(g) { const w = mesh(G.box(2.4, 3.2, 0.25), mat("#8b93b5", { roughness: 0.8 }), 0, 1.6, -0.75, g); w.rotation.x = 0.12; const r = rng(77); for (let i = 0; i < 22; i++) { const h = mesh(G.ico(0.08 + r() * 0.04, 0), mat(["#ef4444", "#ffc61a", "#22c55e", "#3b82f6", "#ec4899", "#f59e0b"][i % 6], { roughness: 0.6 }), -1 + r() * 2, 0.3 + r() * 2.7, -0.62, g, NOSH); h.position.z = -0.62 + (h.position.y - 1.6) * -0.12 * -1; } mesh(G.rbox(2.4, 0.25, 1.2, 0.08), mat("#3b82f6", { roughness: 1 }), 0, 0.125, 0.15, g); },
-    court(g) { mesh(G.box(2.6, 0.012, 2.2), mat("#f2a35a", { roughness: 0.9 }), 0, 0.012, 0, g, { cast: false }); mesh(G.torus(0.7, 0.025, 6, 32, Math.PI), basic("#ffffff"), 0, 0.022, -1.1, g, NOSH).rotation.x = -Math.PI / 2; mesh(G.box(0.8, 0.005, 0.05), basic("#ffffff"), 0, 0.022, 0.2, g, NOSH); mesh(G.cyl(0.06, 0.08, 2.8, 10), mat("#3d4466"), 0, 1.4, -1.15, g); mesh(G.box(1.1, 0.75, 0.05), M.white, 0, 2.75, -1.02, g); mesh(G.box(0.4, 0.3, 0.01), basic("#ef4444"), 0, 2.7, -0.99, g, NOSH); mesh(G.torus(0.2, 0.02, 6, 20), mat("#f2662a"), 0, 2.5, -0.78, g, NOSH).rotation.x = Math.PI / 2; mesh(G.sphere(0.13, 16, 12), mat("#f2662a", { roughness: 0.7 }), 0.6, 0.13, 0.4, g); },
+    court(g) {
+      // a half court: two slots long when there is room (one slot, shorter, when there isn't)
+      const full = !g.userData.compact, L = full ? 4.7 : 2.3, Wd = 2.6, z0 = -L / 2, ph = Math.round(L * 100);
+      const ct = tex(260, ph, (c, w, h) => {
+        c.fillStyle = "#e9a35e"; c.fillRect(0, 0, w, h); c.fillStyle = "rgba(150,80,20,.12)"; for (let x = 0; x < w; x += 13) c.fillRect(x, 0, 1, h);
+        const hx = w / 2, hy = 52, kl = full ? 160 : 120;
+        c.fillStyle = "#3b62c4"; c.fillRect(hx - 60, 0, 120, kl);
+        c.strokeStyle = "#ffffff"; c.lineWidth = 4; c.strokeRect(2, 2, w - 4, h - 4); c.strokeRect(hx - 60, 0, 120, kl);
+        c.beginPath(); c.arc(hx, kl, 45, 0, Math.PI); c.stroke();
+        if (full) { const a0 = Math.acos(126 / 175); c.beginPath(); c.arc(hx, hy, 175, a0, Math.PI - a0); c.stroke(); [-126, 126].forEach((dx) => { c.beginPath(); c.moveTo(hx + dx, 0); c.lineTo(hx + dx, hy + 175 * Math.sin(a0)); c.stroke(); }); c.beginPath(); c.arc(hx, h, 60, Math.PI, Math.PI * 2); c.stroke(); }
+      });
+      mesh(G.rbox(Wd + 0.1, 0.03, L + 0.1, 0.01), mat("#7c5232", { roughness: 0.8 }), 0, 0.015, 0, g, { cast: false });
+      mesh(G.plane(Wd, L), new T.MeshStandardMaterial({ map: ct.tex, roughness: 0.45 }), 0, 0.032, 0, g, { cast: false }).rotation.x = -Math.PI / 2;
+      // the hoop on its stand at the baseline: padded pole, arm, backboard, rim and net
+      const navy = mat("#2d3245", { roughness: 0.5 });
+      mesh(G.rbox(0.5, 0.22, 0.55, 0.05), navy, 0, 0.11, z0 - 0.12, g); mesh(G.cyl(0.055, 0.065, 2.8, 10), navy, 0, 1.4, z0 - 0.12, g); mesh(G.cyl(0.1, 0.1, 1.1, 12), mat("#3b62c4", { roughness: 0.8 }), 0, 0.77, z0 - 0.12, g, NOSH);
+      mesh(G.box(0.08, 0.08, 0.42), navy, 0, 2.72, z0 + 0.08, g, NOSH);
+      mesh(G.box(1.15, 0.74, 0.04), M.white, 0, 2.66, z0 + 0.3, g);
+      [[0, 0.16, 0.44, 0.03], [0, -0.06, 0.44, 0.03], [-0.205, 0.05, 0.03, 0.25], [0.205, 0.05, 0.03, 0.25]].forEach(([x, y, w, h]) => mesh(G.box(w, h, 0.01), basic("#ef4444"), x, 2.5 + y, z0 + 0.325, g, NOSH));
+      mesh(G.torus(0.2, 0.02, 6, 20), mat("#f2662a"), 0, 2.38, z0 + 0.52, g, NOSH).rotation.x = Math.PI / 2;
+      mesh(G.cyl(0.19, 0.12, 0.3, 12), mat("#ffffff", { transparent: true, opacity: 0.55, roughness: 0.9 }), 0, 2.23, z0 + 0.52, g, NOSH);
+      // a ball rack in the corner and a ball on the floor
+      const rk = new T.Group(); rk.position.set(Wd / 2 - 0.3, 0, z0 + 0.25); g.add(rk);
+      [-0.12, 0.12].forEach((x) => mesh(G.box(0.03, 0.42, 0.3), M.alu, x, 0.21, 0, rk, NOSH));
+      [0.14, 0.34].forEach((y) => mesh(G.box(0.27, 0.02, 0.3), M.alu, 0, y, 0, rk, NOSH));
+      [[0, 0.25, -0.07], [0, 0.25, 0.08], [0, 0.45, 0]].forEach(([x, y, z]) => mesh(G.sphere(0.1, 14, 10), mat("#f2662a", { roughness: 0.7 }), x, y, z, rk));
+      mesh(G.sphere(0.13, 16, 12), mat("#f2662a", { roughness: 0.7 }), 0.75, 0.16, z0 + (full ? 2.6 : 1.6), g);
+    },
     slide(g) { [[-0.95, -0.55], [-0.95, 0.55], [-0.25, -0.55], [-0.25, 0.55]].forEach(([x, z]) => mesh(G.cyl(0.05, 0.05, 2.1, 8), M.alu, x, 1.05, z, g)); mesh(G.rbox(0.9, 0.1, 1.3, 0.03), mat("#4b3ff0"), -0.6, 2.1, 0, g); [0.4, 0.8, 1.2, 1.6].forEach((y) => mesh(G.box(0.05, 0.05, 0.9), M.alu, -1.0, y, 0, g, NOSH)); const s = mesh(G.rbox(2.2, 0.08, 0.7, 0.03), mat("#ffc61a", { roughness: 0.3 }), 0.55, 1.05, 0, g); s.rotation.z = -0.78; [-0.36, 0.36].forEach((z) => { const r2 = mesh(G.box(2.2, 0.18, 0.05), mat("#f2662a"), 0.55, 1.12, z, g); r2.rotation.z = -0.78; }); }
   };
   /* ---------- things bought in office events (air purifier, a plant, snacks, board games) ---------- */
@@ -8054,7 +8110,12 @@ const SCENE = (() => {
     if (!room || perkMeshes[k]) return;
     const { W, D } = layout, fz = D / 2 - 1.1;
     const g = new T.Group(); room.add(g); perkMeshes[k] = g;
-    if (SLOT_PERKS[k]) { const si = freeSlot(k); if (si < 0) { g.visible = false; return; } const s = layout.slots[si]; g.userData.slot = si; g.position.set(s.x, 0, s.z); if (SLOT_PERKS[k] === 2) { g.userData.slot2 = si + 1; g.position.z = (s.z + layout.slots[si + 1].z) / 2; } if (s.low) g.rotation.y = Math.PI / 2; P3[k](g); registerSpots(k, g); return; }
+    if (k === "swim" && layout.terrace) {
+      // the pool fills the roof terrace; buying it rebuilds the terrace without its garden
+      if (!silent) { const st = getState(); if (st) { buildRoom(st.office.level, { perks: st.office.perks, items: st.office.items || [], hw: st.hw }); settle(); return; } }
+      g.position.set(layout.terrace.cx, 0, 0); P3.swim(g); registerSpots(k, g); return;
+    }
+    if (SLOT_PERKS[k]) { let si = freeSlot(k), two = SLOT_PERKS[k] === 2; if (si < 0 && two && k === "court") { si = freeSlot(k, true); two = false; g.userData.compact = true; } if (si < 0) { g.visible = false; return; } const s = layout.slots[si]; g.userData.slot = si; g.position.set(s.x, 0, s.z); if (two) { g.userData.slot2 = si + 1; g.position.z = (s.z + layout.slots[si + 1].z) / 2; } if (s.low) g.rotation.y = Math.PI / 2; P3[k](g); registerSpots(k, g); return; }
     placeInline(k, g);
     registerSpots(k, g);
     if (k === "standing" && !silent) { const st = getState(); if (st) { buildRoom(st.office.level, { perks: st.office.perks, items: st.office.items || [], hw: st.hw }); settle(); } return; }
@@ -8633,7 +8694,11 @@ const SCENE = (() => {
   const EXTRA_SPOTS = {
     chef(g) { [-0.5, 0.5].forEach((x) => SPOT(g, { x, z: 0.82, ry: Math.PI, pose: "eat", prop: "pizza", dur: [7, 12], weight: 1.2 })); },
     climbing(g) { SPOT(g, { x: 0.15, z: -0.42, ry: Math.PI, pose: "climb", dur: [10, 16] }); },
-    court(g) { SPOT(g, { x: 0.1, z: 0.45, ry: Math.PI, pose: "shoot", dur: [10, 16] }); },
+    court(g) {
+      const L = g.userData.compact ? 2.3 : 4.7, z0 = -L / 2, rz = z0 + 0.52;
+      const at = (x, z, w) => SPOT(g, { x, z, ry: Math.atan2(-x, rz - z), pose: "shoot", dur: [10, 16], weight: w });
+      at(0.1, z0 + 1.75, 1); if (!g.userData.compact) { at(-0.85, z0 + 2.5, 0.8); at(0.95, z0 + 2.2, 0.8); }
+    },
     cinema(g) { [-0.72, 0, 0.72].forEach((x) => SPOT(g, { x, z: 0.28, ry: Math.PI, pose: "sofa", dur: [14, 26] })); },
     spa(g) { SPOT(g, { x: -0.4, z: -0.15, ry: 1.2, pose: "soak", y: 0.12, dur: [14, 24] }); SPOT(g, { x: 0.42, z: 0.12, ry: -1.95, pose: "soak", y: 0.12, dur: [14, 24] }); },
     massage(g) { SPOT(g, { x: 0.88, z: 0, ry: Math.PI / 2, pose: "lie", y: 0.97, ax: 0.9, az: 0.65, dur: [14, 22] }); }
@@ -8895,54 +8960,68 @@ const SCENE = (() => {
     [[-0.17, -0.12, -0.25], [-0.06, -0.135, -0.08], [0.08, -0.135, 0.08], [0.2, -0.04, 0.3]].forEach(([ax2, az2, tilt]) => { const a = new T.Group(); a.position.set(ax2, 0.07, az2); a.rotation.z = -tilt; a.rotation.x = -0.12; r.add(a); mesh(G.cyl(0.018, 0.022, 0.04, 8), GL.black, 0, 0.02, 0, a, NOSH); mesh(G.rbox(0.032, 0.26, 0.014, 0.006), GL.black, 0, 0.17, 0, a, NOSH); });
     return r;
   }
-  /* ---------- Mythic: rooftop swimming pool (matches the shop picture) ---------- */
+  /* ---------- Mythic: rooftop swimming pool, a raised lap pool that fills the Tower's roof terrace ---------- */
   P3.swim = function (g) {
-    const DH = 0.55, creamB = mat("#efe4cf", { roughness: 0.85 }), band = mat("#7a7d85", { roughness: 0.5, metalness: 0.3 }), coping = mat("#f3e9d6", { roughness: 0.6 }), deck = mat("#b9794a", { roughness: 0.7 }), seamM = mat("#9a6038", { roughness: 0.7 });
-    const X0 = -1.25, X1 = 1.25, Z0 = -2.45, Z1 = 1.95, PX0 = -0.95, PX1 = 0.2, PZ0 = -2.0, PZ1 = 1.3;
+    const TR = layout && layout.terrace, hw = TR ? TR.w / 2 : 4.3, hd = TR ? TR.d / 2 : 11.75;
+    const DH = 0.55, creamB = mat("#efe4cf", { roughness: 0.85 }), band = mat("#7a7d85", { roughness: 0.5, metalness: 0.3 }), coping = mat("#f3e9d6", { roughness: 0.6 }), timber = mat("#a8693d", { roughness: 0.6 }), deckC = mat("#b9794a", { roughness: 0.7 }), seamM = mat("#9a6038", { roughness: 0.7 });
+    // the raised deck, and the 25 m pool in it: four lanes, 4.2 wide and 15.4 long
+    const X0 = -hw + 0.3, X1 = hw - 0.06, Z0 = -hd + 0.06, Z1 = 9.8, PX0 = X0 + 1.3, PX1 = PX0 + 4.2, PZ0 = Z0 + 2.6, PZ1 = PZ0 + 15.4, PW = PX1 - PX0, PL = PZ1 - PZ0;
     const box = (x0, x1, y0, y1, z0, z1, m, o) => mesh(G.box(x1 - x0, y1 - y0, z1 - z0), m, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, g, o);
-    // raised block: walls around the pool, with a grey band and a timber panel like the picture
     box(X0, PX0, 0, DH - 0.02, Z0, Z1, creamB); box(PX1, X1, 0, DH - 0.02, Z0, Z1, creamB); box(PX0, PX1, 0, DH - 0.02, Z0, PZ0, creamB); box(PX0, PX1, 0, DH - 0.02, PZ1, Z1, creamB);
-    box(X0 - 0.01, X1 + 0.01, DH - 0.14, DH - 0.06, Z1 - 0.01, Z1 + 0.01, band, NOSH); box(X1 - 0.01, X1 + 0.01, DH - 0.14, DH - 0.06, Z0, Z1, band, NOSH);
-    for (let k = 0; k < 4; k++) box(X1 + 0.005, X1 + 0.02, 0.08 + k * 0.08, 0.14 + k * 0.08, -1.7, -0.6, mat("#a8693d", { roughness: 0.6 }), NOSH);
-    // deck boards with seams, and the cream coping around the pool
-    const dk = (x0, x1, z0, z1) => { box(x0, x1, DH - 0.03, DH, z0, z1, deck, { cast: false }); for (let x = x0 + 0.14; x < x1 - 0.02; x += 0.14) box(x - 0.004, x + 0.004, DH, DH + 0.003, z0, z1, seamM, NOSH); };
-    dk(X0, PX0 - 0.1, Z0, Z1); dk(PX1 + 0.1, X1, Z0, Z1); dk(PX0 - 0.1, PX1 + 0.1, Z0, PZ0 - 0.1); dk(PX0 - 0.1, PX1 + 0.1, PZ1 + 0.1, Z1);
-    box(PX0 - 0.1, PX1 + 0.1, DH - 0.025, DH + 0.012, PZ0 - 0.1, PZ0, coping); box(PX0 - 0.1, PX1 + 0.1, DH - 0.025, DH + 0.012, PZ1, PZ1 + 0.1, coping);
-    box(PX0 - 0.1, PX0, DH - 0.025, DH + 0.012, PZ0, PZ1, coping); box(PX1, PX1 + 0.1, DH - 0.025, DH + 0.012, PZ0, PZ1, coping);
-    // tiled pool: walls, floor, entry steps, and a rippling water surface
+    box(X0 - 0.01, X1 + 0.01, DH - 0.14, DH - 0.06, Z1 - 0.01, Z1 + 0.01, band, NOSH); box(X0 - 0.01, X0 + 0.01, DH - 0.14, DH - 0.06, Z0, Z1, band, NOSH);
+    for (let k = 0; k < 3; k++) box(-1.6, X1 - 0.3, 0.08 + k * 0.1, 0.14 + k * 0.1, Z1 + 0.005, Z1 + 0.02, timber, NOSH);
+    // timber deck (planks in a texture), cream coping round the pool
+    const plankT = tex(256, 256, (c, w, h) => { c.fillStyle = "#b9794a"; c.fillRect(0, 0, w, h); const r = rng(21); for (let i = 0; i < 8; i++) { c.fillStyle = ["#bb7c4c", "#b4744a", "#c08352", "#b07045"][i % 4]; c.fillRect(i * 32 + 1, 0, 30, h); c.fillStyle = "#94592f"; c.fillRect(i * 32, 0, 2, h); c.fillRect(i * 32, Math.floor(r() * h), 32, 2); } });
+    plankT.tex.wrapS = plankT.tex.wrapT = T.RepeatWrapping;
+    const deck = (x0, x1, z0, z1) => { const tt = plankT.tex.clone(); tt.needsUpdate = true; tt.repeat.set((x1 - x0) / 1.28, (z1 - z0) / 2.2); roomTex.push(tt); box(x0, x1, DH - 0.03, DH, z0, z1, new T.MeshStandardMaterial({ map: tt, roughness: 0.7 }), { cast: false }); };
+    deck(X0, PX0 - 0.12, Z0, Z1); deck(PX1 + 0.12, X1, Z0, Z1); deck(PX0 - 0.12, PX1 + 0.12, Z0, PZ0 - 0.12); deck(PX0 - 0.12, PX1 + 0.12, PZ1 + 0.12, Z1);
+    box(PX0 - 0.12, PX1 + 0.12, DH - 0.025, DH + 0.012, PZ0 - 0.12, PZ0, coping); box(PX0 - 0.12, PX1 + 0.12, DH - 0.025, DH + 0.012, PZ1, PZ1 + 0.12, coping);
+    box(PX0 - 0.12, PX0, DH - 0.025, DH + 0.012, PZ0, PZ1, coping); box(PX1, PX1 + 0.12, DH - 0.025, DH + 0.012, PZ0, PZ1, coping);
+    // tiled walls, a floor with lane lines, lane ropes, and a rippling water surface
     const tileT = tex(128, 128, (c, w, h) => { c.fillStyle = "#2fa9c9"; c.fillRect(0, 0, w, h); for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { c.fillStyle = (i + j) % 3 ? "#5cc6df" : "#7fd6ea"; c.fillRect(i * 16 + 1, j * 16 + 1, 14, 14); } });
     tileT.tex.wrapS = tileT.tex.wrapT = T.RepeatWrapping;
-    const wallM = (rx, ry) => { const tt = tileT.tex.clone(); tt.needsUpdate = true; tt.repeat.set(rx, ry); roomTex.push(tt); return mat("#ffffff", { roughness: 0.3, map: tt }); };
+    const wallM = (rx, ry) => { const tt = tileT.tex.clone(); tt.needsUpdate = true; tt.repeat.set(rx, ry); roomTex.push(tt); return new T.MeshStandardMaterial({ map: tt, roughness: 0.3 }); };
     const wl = (x, z, w, d, rx) => mesh(G.box(w, DH - 0.06, d), wallM(rx, 2), x, (DH - 0.06) / 2 + 0.02, z, g, { cast: false });
-    wl(PX0 + 0.01, (PZ0 + PZ1) / 2, 0.02, PZ1 - PZ0, 14); wl(PX1 - 0.01, (PZ0 + PZ1) / 2, 0.02, PZ1 - PZ0, 14); wl((PX0 + PX1) / 2, PZ0 + 0.01, PX1 - PX0, 0.02, 5); wl((PX0 + PX1) / 2, PZ1 - 0.01, PX1 - PX0, 0.02, 5);
-    mesh(G.box(PX1 - PX0, 0.02, PZ1 - PZ0), wallM(5, 14), (PX0 + PX1) / 2, 0.02, (PZ0 + PZ1) / 2, g, { cast: false });
-    for (let k = 0; k < 3; k++) mesh(G.box(PX1 - PX0 - 0.02, 0.36 - k * 0.12, 0.2), wallM(5, 1), (PX0 + PX1) / 2, (0.36 - k * 0.12) / 2 + 0.02, PZ0 + 0.1 + k * 0.2, g, NOSH);
+    wl(PX0 + 0.01, (PZ0 + PZ1) / 2, 0.02, PL, PL / 0.3); wl(PX1 - 0.01, (PZ0 + PZ1) / 2, 0.02, PL, PL / 0.3); wl((PX0 + PX1) / 2, PZ0 + 0.01, PW, 0.02, PW / 0.3); wl((PX0 + PX1) / 2, PZ1 - 0.01, PW, 0.02, PW / 0.3);
+    const laneT = tex(140, 512, (c, w, h) => { c.fillStyle = "#47b8d6"; c.fillRect(0, 0, w, h); c.fillStyle = "rgba(255,255,255,.22)"; for (let x = 0; x < w; x += 7) c.fillRect(x, 0, 1, h); for (let y = 0; y < h; y += 7) c.fillRect(0, y, w, 1); c.fillStyle = "#14467e"; for (let k = 0; k < 4; k++) { const cx = (k + 0.5) * w / 4; c.fillRect(cx - 3, h * 0.05, 6, h * 0.9); c.fillRect(cx - 11, h * 0.05, 22, 6); c.fillRect(cx - 11, h * 0.95 - 6, 22, 6); } });
+    mesh(G.box(PW, 0.02, PL), new T.MeshStandardMaterial({ map: laneT.tex, roughness: 0.3 }), (PX0 + PX1) / 2, 0.02, (PZ0 + PZ1) / 2, g, { cast: false });
+    const ropeT = tex(16, 64, (c, w, h) => { ["#e8473f", "#ffffff", "#2f6fd6", "#ffffff"].forEach((col, i) => { c.fillStyle = col; c.fillRect(0, i * h / 4, w, h / 4); }); });
+    ropeT.tex.wrapS = ropeT.tex.wrapT = T.RepeatWrapping; ropeT.tex.repeat.set(1, PL / 0.5);
+    const ropeM = new T.MeshStandardMaterial({ map: ropeT.tex, roughness: 0.5 });
+    for (let k = 1; k < 4; k++) { const rp = mesh(G.cyl(0.035, 0.035, PL - 0.1, 8), ropeM, PX0 + k * PW / 4, DH - 0.055, (PZ0 + PZ1) / 2, g, NOSH); rp.rotation.x = Math.PI / 2; }
+    for (let k = 0; k < 4; k++) [PX0 + 0.02, PX1 - 0.02].forEach((x) => mesh(G.box(0.02, 0.1, 0.22), glow("#c9f6ff"), x, 0.22, PZ0 + 1.8 + k * (PL - 3.6) / 3, g, NOSH));
     const ripT = tex(256, 256, (c, w, h) => { c.fillStyle = "#5fd2ee"; c.fillRect(0, 0, w, h); const r = rng(77); c.strokeStyle = "rgba(255,255,255,.55)"; c.lineWidth = 3; for (let i = 0; i < 34; i++) { const x = r() * w, y = r() * h, rr = 14 + r() * 22; c.beginPath(); for (let a = 0; a <= 6.4; a += 0.5) { const q = rr * (0.75 + 0.35 * Math.sin(a * 3 + i)); a ? c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q) : c.moveTo(x + q, y); } c.stroke(); } });
-    ripT.tex.wrapS = ripT.tex.wrapT = T.RepeatWrapping; ripT.tex.repeat.set(1.2, 3.4);
-    const water = mesh(G.plane(PX1 - PX0, PZ1 - PZ0), new T.MeshStandardMaterial({ color: 0xffffff, map: ripT.tex, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.8 }), (PX0 + PX1) / 2, DH - 0.06, (PZ0 + PZ1) / 2, g, NOSH); water.rotation.x = -Math.PI / 2;
-    // chrome ladder by the front corner
+    ripT.tex.wrapS = ripT.tex.wrapT = T.RepeatWrapping; ripT.tex.repeat.set(PW / 1.4, PL / 1.4);
+    const water = mesh(G.plane(PW, PL), new T.MeshStandardMaterial({ color: 0xffffff, map: ripT.tex, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.58 }), (PX0 + PX1) / 2, DH - 0.06, (PZ0 + PZ1) / 2, g, NOSH); water.rotation.x = -Math.PI / 2;
+    // chrome ladders at the shallow end, starting blocks at the far end
     const chrome = GL.chrome;
-    [-0.13, 0.13].forEach((dz) => { const r1 = mesh(G.cyl(0.014, 0.014, 0.55, 8), chrome, PX1 - 0.05, DH - 0.12, 0.95 + dz, g, NOSH); const top = mesh(G.torus(0.09, 0.014, 6, 12, Math.PI), chrome, PX1 + 0.04, DH + 0.15, 0.95 + dz, g, NOSH); top.rotation.set(0, Math.PI / 2, Math.PI / 2); mesh(G.cyl(0.014, 0.014, 0.17, 8), chrome, PX1 + 0.13, DH + 0.08, 0.95 + dz, g, NOSH); });
-    for (let k = 0; k < 3; k++) mesh(G.box(0.05, 0.012, 0.26), chrome, PX1 - 0.05, DH - 0.4 + k * 0.13, 0.95, g, NOSH);
-    // wooden steps up to the deck, with little step lights
-    for (let k = 0; k < 3; k++) { const y1 = DH - 0.02 - k * 0.18; box(-0.9, -0.1, 0, y1, Z1 + k * 0.165, Z1 + (k + 1) * 0.165, deck); box(-0.88, -0.12, y1 - 0.02, y1 - 0.005, Z1 + (k + 1) * 0.165 - 0.004, Z1 + (k + 1) * 0.165 + 0.004, seamM, NOSH); [-0.7, -0.3].forEach((lx) => mesh(G.box(0.05, 0.025, 0.006), glow("#ffcf86"), lx, y1 - 0.08, Z1 + (k + 1) * 0.165 + 0.004, g, NOSH)); }
+    [PX0 + 0.55, PX1 - 0.55].forEach((lx) => {
+      const l = new T.Group(); l.position.set(lx, 0, PZ1); l.rotation.y = -Math.PI / 2; g.add(l);
+      [-0.13, 0.13].forEach((dz) => { mesh(G.cyl(0.014, 0.014, 0.55, 8), chrome, -0.05, DH - 0.12, dz, l, NOSH); const top = mesh(G.torus(0.09, 0.014, 6, 12, Math.PI), chrome, 0.04, DH + 0.15, dz, l, NOSH); top.rotation.set(0, Math.PI / 2, Math.PI / 2); mesh(G.cyl(0.014, 0.014, 0.17, 8), chrome, 0.13, DH + 0.08, dz, l, NOSH); });
+      for (let k = 0; k < 3; k++) mesh(G.box(0.05, 0.012, 0.26), chrome, -0.05, DH - 0.4 + k * 0.13, 0, l, NOSH);
+    });
+    for (let k = 0; k < 4; k++) { const x = PX0 + (k + 0.5) * PW / 4; box(x - 0.2, x + 0.2, DH, DH + 0.3, PZ0 - 0.62, PZ0 - 0.14, mat("#f6f7fc", { roughness: 0.5 })); const t2 = mesh(G.box(0.42, 0.04, 0.5), mat(["#e8473f", "#2f6fd6", "#ffc61a", "#22c55e"][k], { roughness: 0.5 }), x, DH + 0.33, PZ0 - 0.38, g, NOSH); t2.rotation.x = 0.12; }
+    // steps up from the terrace at the front, with little step lights
+    for (let k = 0; k < 2; k++) { const y1 = DH - 0.19 - k * 0.18, za = Z1 + k * 0.35, zb = za + 0.35; box(X0 + 0.1, X0 + 1.9, 0, y1, za, zb, deckC); box(X0 + 0.12, X0 + 1.88, y1 - 0.02, y1 - 0.005, zb - 0.004, zb + 0.004, seamM, NOSH); [X0 + 0.5, X0 + 1.5].forEach((lx) => mesh(G.box(0.05, 0.025, 0.006), glow("#ffcf86"), lx, y1 - 0.08, zb + 0.004, g, NOSH)); }
     // glass balustrade along the back and the right side
     const glass = new T.MeshStandardMaterial({ color: 0xcfeefc, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.35 });
-    const rail = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 0.8)), ry = Math.atan2(x1 - x0, z1 - z0); for (let i = 0; i <= n; i++) { const x = lerp(x0, x1, i / n), z = lerp(z0, z1, i / n); mesh(G.cyl(0.02, 0.02, 0.62, 8), chrome, x, DH + 0.31, z, g, NOSH); } const pnl = mesh(G.box(0.012, 0.5, L), glass, (x0 + x1) / 2, DH + 0.3, (z0 + z1) / 2, g, NOSH); pnl.rotation.y = ry; const top = mesh(G.box(0.03, 0.03, L), chrome, (x0 + x1) / 2, DH + 0.62, (z0 + z1) / 2, g, NOSH); top.rotation.y = ry; };
-    rail(-0.4, Z0 + 0.04, X1 - 0.04, Z0 + 0.04); rail(X1 - 0.04, Z0 + 0.04, X1 - 0.04, 1.25);
-    // planters with tropical plants and trailing ivy
-    const tropical = (px, pz, w, d, seed) => {
+    const rail = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 1.6)), ry = Math.atan2(x1 - x0, z1 - z0); for (let i = 0; i <= n; i++) mesh(G.cyl(0.02, 0.02, 0.62, 8), chrome, lerp(x0, x1, i / n), DH + 0.31, lerp(z0, z1, i / n), g, NOSH); const pnl = mesh(G.box(0.012, 0.5, L), glass, (x0 + x1) / 2, DH + 0.3, (z0 + z1) / 2, g, NOSH); pnl.rotation.y = ry; const top = mesh(G.box(0.03, 0.03, L), chrome, (x0 + x1) / 2, DH + 0.62, (z0 + z1) / 2, g, NOSH); top.rotation.y = ry; };
+    rail(X0 + 0.04, Z0 + 0.04, X1 - 0.04, Z0 + 0.04); rail(X1 - 0.04, Z0 + 0.04, X1 - 0.04, Z1 - 0.04);
+    // planters with tropical plants
+    const planter = (px, pz, w, d, seed) => {
       const pl = new T.Group(); pl.position.set(px, DH, pz); g.add(pl);
-      mesh(G.rbox(w, 0.3, d, 0.03), mat("#efe6d4", { roughness: 0.6 }), 0, 0.15, 0, pl); mesh(G.box(w - 0.05, 0.02, d - 0.05), M.soil, 0, 0.3, 0, pl, NOSH);
-      const r = rng(seed); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + r(), len = 0.3 + r() * 0.25; const st = new T.Group(); st.position.set((r() - 0.5) * w * 0.5, 0.3, (r() - 0.5) * d * 0.5); st.rotation.y = a; pl.add(st); const arm = new T.Group(); arm.rotation.z = -0.35 - r() * 0.5; st.add(arm); const lf = mesh(G.sphere(0.16, 10, 8), i % 3 ? FLW.leafM : FLW.leafD, 0, len, 0, arm); lf.scale.set(0.32, 1.25, 0.1); }
-      if (seed % 2) { mesh(G.cone(0.05, 0.16, 6), mat("#d9474f", { roughness: 0.6 }), 0, 0.42, 0, pl, NOSH); }
-      for (let i = 0; i < 8; i++) mesh(G.sphere(0.02, 6, 4), FLW.white, (r() - 0.5) * w * 0.8, 0.33, (r() - 0.5) * d * 0.8, pl, NOSH);
-      for (let i = 0; i < Math.round(w * 6); i++) for (let j = 0; j < 4; j++) { const lf2 = mesh(G.sphere(0.028, 6, 4), j % 2 ? FLW.ivy : FLW.ivyL, -w / 2 + 0.05 + i * (w - 0.1) / Math.max(1, Math.round(w * 6) - 1), 0.28 - j * 0.07, d / 2 + 0.02, pl, NOSH); lf2.scale.set(1, 1, 0.35); }
+      mesh(G.rbox(w, 0.34, d, 0.03), mat("#efe6d4", { roughness: 0.6 }), 0, 0.17, 0, pl); mesh(G.box(w - 0.05, 0.02, d - 0.05), M.soil, 0, 0.34, 0, pl, NOSH);
+      const r = rng(seed), n = Math.max(4, Math.round(w * d * 9));
+      for (let i = 0; i < n; i++) { const st = new T.Group(); st.position.set((r() - 0.5) * w * 0.7, 0.34, (r() - 0.5) * d * 0.6); st.rotation.y = r() * 6.3; pl.add(st); const arm = new T.Group(); arm.rotation.z = -0.35 - r() * 0.5; st.add(arm); const lf = mesh(G.sphere(0.16, 10, 8), i % 3 ? FLW.leafM : FLW.leafD, 0, 0.3 + r() * 0.25, 0, arm); lf.scale.set(0.32, 1.25, 0.1); }
+      for (let i = 0; i < 3; i++) mesh(G.sphere(0.03, 6, 4), i % 2 ? FLW.white : mat("#e9846a"), (r() - 0.5) * w * 0.7, 0.42 + r() * 0.15, (r() - 0.5) * d * 0.6, pl, NOSH);
     };
-    tropical(-0.82, -2.27, 0.66, 0.3, 3); tropical(-1.08, 1.68, 0.3, 0.46, 4); tropical(1.02, 1.7, 0.38, 0.38, 5);
-    // two sun loungers with cushions and rolled towels, a side table, and the striped umbrella
-    const lounger = (lz) => {
-      const L2 = new T.Group(); L2.position.set(0.78, DH, lz); g.add(L2);
+    planter(-2.2, Z0 + 0.4, 1.6, 0.45, 3); planter(0.4, Z0 + 0.4, 1.6, 0.45, 4); planter(X1 - 0.6, Z0 + 0.4, 0.9, 0.45, 5);
+    planter(-0.6, Z1 - 0.35, 1.3, 0.45, 6); planter(1.5, Z1 - 0.35, 1.3, 0.45, 7); planter(X1 - 0.55, Z1 - 0.35, 0.8, 0.45, 8);
+    // a life ring on its post by the shallow end
+    { const lr = new T.Group(); lr.position.set(PX0 - 0.6, DH, PZ1 - 1.2); g.add(lr); mesh(G.cyl(0.025, 0.025, 1.0, 8), GL.chrome, 0, 0.5, 0, lr, NOSH); const ring = mesh(G.torus(0.17, 0.05, 8, 18), mat("#f2662a", { roughness: 0.6 }), 0, 0.72, 0.06, lr, NOSH); [0, 1, 2, 3].forEach((k) => { const b2 = mesh(G.box(0.07, 0.11, 0.06), mat("#ffffff"), Math.cos(k * Math.PI / 2) * 0.17, 0.72 + Math.sin(k * Math.PI / 2) * 0.17, 0.06, lr, NOSH); b2.rotation.z = k * Math.PI / 2; }); ring.rotation.y = 0; }
+    // sun loungers with cushions and rolled towels down the right side, side tables and striped umbrellas
+    const lounger = (lx, lz) => {
+      const L2 = new T.Group(); L2.position.set(lx, DH, lz); g.add(L2);
       const wood = mat("#a8683a", { roughness: 0.6 }), cush = mat("#f1e7d6", { roughness: 0.95 });
       [[-0.2, 0.45], [0.2, 0.45], [-0.2, -0.45], [0.2, -0.45]].forEach(([x, z]) => mesh(G.box(0.05, 0.2, 0.05), wood, x, 0.1, z, L2, NOSH));
       mesh(G.rbox(0.46, 0.05, 1.05, 0.02), wood, 0, 0.21, 0.02, L2);
@@ -8952,47 +9031,168 @@ const SCENE = (() => {
       const towel = new T.Group(); towel.position.set(0, 0.34, 0.42); L2.add(towel); const tw = mesh(G.cyl(0.05, 0.05, 0.26, 12), mat("#fbf4e6", { roughness: 0.9 }), 0, 0, 0, towel, NOSH); tw.rotation.z = Math.PI / 2; [-0.06, 0.06].forEach((x) => { const st2 = mesh(G.cyl(0.052, 0.052, 0.035, 12), mat("#f2b33d", { roughness: 0.9 }), x, 0, 0, towel, NOSH); st2.rotation.z = Math.PI / 2; });
       return { L2, towel };
     };
-    const l1 = lounger(-1.45), l2 = lounger(-0.05);
-    const tb = new T.Group(); tb.position.set(1.08, DH, -0.75); g.add(tb);
-    mesh(G.cyl(0.13, 0.13, 0.03, 16), GL.oak, 0, 0.36, 0, tb); mesh(G.cyl(0.025, 0.04, 0.34, 8), GL.oak, 0, 0.17, 0, tb, NOSH);
-    mesh(G.cyl(0.03, 0.025, 0.09, 10), new T.MeshStandardMaterial({ color: 0xf6d36b, roughness: 0.1, transparent: true, opacity: 0.85 }), -0.04, 0.42, 0.02, tb, NOSH); mesh(G.sphere(0.014, 6, 4), mat("#7fc35a"), -0.03, 0.47, 0.02, tb, NOSH);
-    mesh(G.cyl(0.028, 0.024, 0.06, 10), mat("#c8693f", { roughness: 0.8 }), 0.05, 0.405, -0.03, tb, NOSH); mesh(G.sphere(0.04, 8, 6), FLW.leafM, 0.05, 0.45, -0.03, tb, NOSH);
+    const LX = PX1 + 1.25, LZ = [-6.8, -4.2, -1.6, 1.0, 3.6], lgs = LZ.map((lz) => lounger(LX, lz));
     const umbT = tex(256, 32, (c, w, h) => { for (let i = 0; i < 8; i++) { c.fillStyle = i % 2 ? "#f3e6d2" : "#e8765e"; c.fillRect(i * w / 8, 0, w / 8 + 1, h); } });
-    const um = new T.Group(); um.position.set(1.12, DH, -0.75); g.add(um);
-    mesh(G.cyl(0.02, 0.02, 1.95, 8), mat("#8a5228", { roughness: 0.6 }), 0, 0.98, 0, um, NOSH);
-    mesh(G.cyl(0.12, 0.14, 0.04, 14), mat("#5a3a22"), 0, 0.02, 0, um, NOSH);
-    const can2 = mesh(G.cone(0.8, 0.32, 16, 1, true), mat("#ffffff", { roughness: 0.85, map: umbT.tex, side: 2 }), -0.1, 1.86, 0, um); can2.rotation.z = 0.12;
-    mesh(G.sphere(0.03, 8, 6), mat("#8a5228"), -0.12, 2.04, 0, um, NOSH);
+    const umbM = mat("#ffffff", { roughness: 0.85, map: umbT.tex, side: 2 }), pole = mat("#8a5228", { roughness: 0.6 });
+    [-5.5, -0.3, 4.9].forEach((uz) => { const um = new T.Group(); um.position.set(LX + 0.7, DH, uz); g.add(um); mesh(G.cyl(0.02, 0.02, 1.95, 8), pole, 0, 0.98, 0, um, NOSH); mesh(G.cyl(0.12, 0.14, 0.04, 14), mat("#5a3a22"), 0, 0.02, 0, um, NOSH); const can2 = mesh(G.cone(0.8, 0.32, 16, 1, true), umbM, -0.1, 1.86, 0, um); can2.rotation.z = 0.12; mesh(G.sphere(0.03, 8, 6), pole, -0.12, 2.04, 0, um, NOSH); });
+    [-2.9, 2.3].forEach((tz) => { const tb = new T.Group(); tb.position.set(LX + 0.7, DH, tz); g.add(tb); mesh(G.cyl(0.13, 0.13, 0.03, 16), GL.oak, 0, 0.36, 0, tb); mesh(G.cyl(0.025, 0.04, 0.34, 8), GL.oak, 0, 0.17, 0, tb, NOSH); mesh(G.cyl(0.03, 0.025, 0.09, 10), new T.MeshStandardMaterial({ color: 0xf6d36b, roughness: 0.1, transparent: true, opacity: 0.85 }), -0.04, 0.42, 0.02, tb, NOSH); mesh(G.sphere(0.04, 8, 6), FLW.leafM, 0.05, 0.42, -0.03, tb, NOSH); });
     // gentle ripples on the water
     ANIM(g, (dt) => { ripT.tex.offset.x = (ripT.tex.offset.x + dt * 0.02) % 1; ripT.tex.offset.y = (ripT.tex.offset.y + dt * 0.012) % 1; });
-    // staff: up the steps, a swim (in by the ladder, laps up and down), or a lie-down on a lounger
-    const UP = [[-0.5, 2.75, 0], [-0.5, 1.75, DH], [0.45, 1.7, DH]];
-    SPOT(g, { x: -0.2, z: 0.95, y: -0.72, ry: Math.PI, pose: "swim", lap: [[-0.2, 0.95], [-0.4, -1.35]], path: UP.concat([[PX1 + 0.18, 1.05, DH]]), ax: PX1 + 0.18, az: 1.05, dur: [16, 28], weight: 1.3 });
-    SPOT(g, { x: -0.6, z: 0.85, y: -0.72, ry: Math.PI, pose: "swim", lap: [[-0.6, 0.85], [-0.75, -1.3]], path: UP.concat([[PX1 + 0.18, 0.75, DH]]), ax: PX1 + 0.18, az: 0.75, dur: [16, 28], weight: 1.0 });
-    [[l1, -1.45], [l2, -0.05]].forEach(([L, lz]) => SPOT(g, { x: 0.78, z: lz - 0.1, y: DH, ry: 0, pose: "recline", hide: L.towel, path: UP.concat([[0.45, lz + 0.35, DH]]), dur: [16, 30], weight: 0.9 }));
+    // staff: in from the office along the front, up the steps, then lengths of the pool or a lie-down on a lounger
+    const UP = [[X0 - 0.35, hd - 0.85, 0], [X0 + 1.0, hd - 0.85, 0], [X0 + 1.0, Z1 - 0.5, DH]];
+    for (let k = 0; k < 4; k++) { const lx = PX0 + (k + 0.5) * PW / 4; SPOT(g, { x: lx, z: PZ1 - 0.7, y: DH - 1.27, ry: Math.PI, pose: "swim", lap: [[lx, PZ1 - 0.7], [lx, PZ0 + 0.8]], path: UP.concat([[lx, PZ1 + 0.45, DH]]), ax: lx, az: PZ1 + 0.45, dur: [40, 75], weight: 1.2 }); }
+    lgs.forEach((L, i) => SPOT(g, { x: LX, z: LZ[i] - 0.1, y: DH, ry: 0, pose: "recline", hide: L.towel, path: UP.concat([[PX1 + 0.4, Z1 - 1.4, DH], [PX1 + 0.4, LZ[i] + 0.35, DH]]), dur: [20, 40], weight: 0.8 }));
   };
 
   function wallPoster(g, x, y, z, ry, [bg, fg, a, b, c]) { const t = tex(300, 400, (ctx, w, h) => { ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); ctx.fillStyle = fg; ctx.font = "800 60px 'Baloo 2', Nunito, sans-serif"; ctx.textAlign = "center"; ctx.fillText(a, w / 2, 130); ctx.fillText(b, w / 2, 210); ctx.font = "800 44px 'Baloo 2', Nunito, sans-serif"; ctx.fillText(c, w / 2, 290); }); const pg = new T.Group(); pg.position.set(x, y, z); pg.rotation.y = ry; g.add(pg); mesh(G.plane(0.9, 1.2), basic("#ffffff", { map: t.tex }), 0, 0, 0, pg, NOSH); }
   /* a car for every staff member: a car park along the open right side */
+  /* ---------- cars: the staff car park, its driveways and the traffic on the street ---------- */
+  const KEEP_LEFT = true; // which side of the road the traffic keeps to
+  const CAR_COLS = ["#ef4444", "#3b82f6", "#ffc61a", "#22c55e", "#ffffff", "#8b5cf6", "#f2662a", "#14173d", "#ec4899", "#22c3a6"];
+  function buildCar(col, parent, sh) {
+    const c = new T.Group(); parent.add(c); const o = sh ? {} : NOSH;
+    mesh(G.rbox(1.0, 0.36, 2.0, 0.14), mat(col, { roughness: 0.25, metalness: 0.3 }), 0, 0.36, 0, c, o);
+    mesh(G.rbox(0.86, 0.34, 1.05, 0.14), mat("#bfe6ff", { roughness: 0.05, metalness: 0.4 }), 0, 0.66, -0.1, c, o);
+    [[-0.46, 0.65], [0.46, 0.65], [-0.46, -0.65], [0.46, -0.65]].forEach(([wx, wz]) => { const w = mesh(G.cyl(0.18, 0.18, 0.14, 16), M.darker, wx, 0.18, wz, c, NOSH); w.rotation.z = Math.PI / 2; });
+    [-0.3, 0.3].forEach((hx) => { mesh(G.box(0.18, 0.08, 0.02), basic("#fff7c2"), hx, 0.4, 1.0, c, NOSH); mesh(G.box(0.18, 0.07, 0.02), basic("#ff6b6b"), hx, 0.42, -1.0, c, NOSH); });
+    return c;
+  }
+  // a straight lane along a road from A to B, on the side the traffic keeps to
+  function laneRoute(ax, az, bx, bz, off) {
+    const L = Math.hypot(bx - ax, bz - az) || 1, hx = (bx - ax) / L, hz = (bz - az) / L, sd = (KEEP_LEFT ? -1 : 1) * off;
+    return [[ax - hz * sd, az + hx * sd], [bx - hz * sd, bz + hx * sd]];
+  }
+  const laneOff = (hx, hz, off) => { const sd = (KEEP_LEFT ? -1 : 1) * off; return [-hz * sd, hx * sd]; };
+  // round each corner of a route so cars turn smoothly
+  function filletRoute(pts, r = 1.4) {
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i - 1], [px, pz] = pts[i], [cx2, cz] = pts[i + 1];
+      const l1 = Math.hypot(px - ax, pz - az) || 1, l2 = Math.hypot(cx2 - px, cz - pz) || 1, rr = Math.min(r, l1 / 2, l2 / 2);
+      const a = [px - (px - ax) / l1 * rr, pz - (pz - az) / l1 * rr], b = [px + (cx2 - px) / l2 * rr, pz + (cz - pz) / l2 * rr];
+      for (let k = 0; k <= 6; k++) { const t = k / 6, u = 1 - t; out.push([u * u * a[0] + 2 * u * t * px + t * t * b[0], u * u * a[1] + 2 * u * t * pz + t * t * b[1]]); }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+  // cars follow their routes (jumping back to the start far off screen), keep their distance, and give way at a crossing
+  function makeTraffic(parent, y, sh) {
+    const cars = [], zones = [];
+    function place(c) {
+      if (c.s < c.cum[c.seg]) c.seg = 0;
+      while (c.seg < c.P.length - 2 && c.cum[c.seg + 1] < c.s) c.seg++;
+      const a = c.P[c.seg], b = c.P[c.seg + 1], len = c.cum[c.seg + 1] - c.cum[c.seg] || 1, k = clamp((c.s - c.cum[c.seg]) / len, 0, 1);
+      c.x = lerp(a[0], b[0], k); c.z = lerp(a[1], b[1], k); c.hx = (b[0] - a[0]) / len; c.hz = (b[1] - a[1]) / len;
+      c.g.position.set(c.x, y, c.z); c.g.rotation.y = Math.atan2(c.hx, c.hz);
+    }
+    function add(pts, o = {}) {
+      const P = filletRoute(pts, o.r), cum = [0];
+      for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+      const L = cum[cum.length - 1], c = { g: buildCar(o.col || CAR_COLS[cars.length % CAR_COLS.length], parent, sh), P, cum, L, s: (o.s0 || 0) % L, v: o.v || 3, seg: 0, wait: 0, push: 0, x: 0, z: 0, hx: 0, hz: 1 };
+      place(c); cars.push(c); return c;
+    }
+    function blocked(c) {
+      for (const o of cars) { if (o === c) continue; const dx = o.x - c.x, dz = o.z - c.z, f = dx * c.hx + dz * c.hz; if (f > 0.2 && f < 2.8 && Math.abs(dx * c.hz - dz * c.hx) < 0.95) return true; }
+      for (const zn of zones) {
+        if (Math.abs(c.hz) < 0.7) continue; // cars driving along x have right of way
+        const nx = c.x + c.hx * 2.6, nz = c.z + c.hz * 2.6, inNow = c.x > zn.x0 && c.x < zn.x1 && c.z > zn.z0 && c.z < zn.z1;
+        if (!inNow && nx > zn.x0 && nx < zn.x1 && nz > zn.z0 && nz < zn.z1 && cars.some((o) => Math.abs(o.hx) > 0.7 && o.x > zn.x0 - 3.5 && o.x < zn.x1 + 3.5 && o.z > zn.z0 && o.z < zn.z1)) return true;
+      }
+      return false;
+    }
+    function tick(dt) {
+      for (const c of cars) {
+        if (c.push > 0) c.push -= dt;
+        else if (blocked(c)) { c.wait += dt; if (c.wait > 6) { c.push = 1.2; c.wait = 0; } continue; }
+        c.wait = 0; c.s += c.v * dt;
+        if (c.s >= c.L) { c.s -= c.L; c.seg = 0; }
+        place(c);
+      }
+    }
+    return { cars, zones, add, tick };
+  }
   function buildCars() {
     if (!room || !layout) return;
     if (carGroup) { scene.remove(carGroup); carGroup = null; }
     const st = getState(); if (!st || !st.office.perks.includes("cars")) return;
     carGroup = new T.Group(); scene.add(carGroup);
-    const { D, xMax } = layout, n = st.staff.length;
-    const x0 = xMax + 0.8;
-    mesh(G.box(5.4, 0.04, D + 0.4), mat("#5b6075", { roughness: 0.95 }), x0 + 2.7, -0.02, 0, carGroup, { cast: false });
-    const perRow = Math.floor((D - 0.6) / 1.5), cols2 = ["#ef4444", "#3b82f6", "#ffc61a", "#22c55e", "#ffffff", "#8b5cf6", "#f2662a", "#14173d", "#ec4899", "#22c3a6"];
+    const { D, W, xMax, level } = layout, n = st.staff.length, tower = level >= 4, TG = tower ? towerGeo() : null;
+    // the lot: a row of bays each side of a one-way aisle, with a cross aisle at the back
+    const x0 = tower ? TG.bx + TG.bw / 2 + 1.6 : xMax + 0.8, y = tower ? TG.gy + 0.02 : 0;
+    const z0 = tower ? -TG.bd / 2 + 0.4 : -D / 2 - 0.2, z1 = tower ? TG.bd / 2 + 1.8 : D / 2 - 0.1, ax = x0 + 3.5;
+    const asph = mat("#5b6075", { roughness: 0.95 }), line = basic("#f4f4f0"), arrowM = basic("#e9ebf2");
+    const slab = (xa, xb, za, zb, yy = 0) => mesh(G.box(xb - xa, 0.04, zb - za), asph, (xa + xb) / 2, y - 0.02 + yy, (za + zb) / 2, carGroup, { cast: false });
+    slab(x0, x0 + 7, z0, z1);
+    const bay0 = z0 + 2.8, perRow = Math.floor((z1 - 0.4 - bay0) / 1.45);
+    for (let j = 0; j <= perRow; j++) { const z = bay0 + j * 1.45 - 0.1; mesh(G.box(2.1, 0.005, 0.06), line, x0 + 1.15, y + 0.005, z, carGroup, NOSH); mesh(G.box(2.1, 0.005, 0.06), line, x0 + 5.85, y + 0.005, z, carGroup, NOSH); }
     for (let i = 0; i < Math.min(n, perRow * 2); i++) {
-      const row = i < perRow ? 0 : 1, j = i % perRow, x = x0 + (row ? 4.0 : 1.4), z = -D / 2 + 0.9 + j * 1.5;
-      mesh(G.box(0.06, 0.005, 1.2), basic("#ffffff"), x0 + (row ? 5.25 : 0.15), 0.005, z + 0.75, carGroup, NOSH);
-      const c = new T.Group(); c.position.set(x, 0, z); c.rotation.y = row ? -Math.PI / 2 : Math.PI / 2; carGroup.add(c);
-      const col = cols2[i % cols2.length];
-      mesh(G.rbox(1.0, 0.36, 2.0, 0.14), mat(col, { roughness: 0.25, metalness: 0.3 }), 0, 0.36, 0, c);
-      mesh(G.rbox(0.86, 0.34, 1.05, 0.14), mat("#bfe6ff", { roughness: 0.05, metalness: 0.4 }), 0, 0.66, -0.1, c);
-      [[-0.46, 0.65], [0.46, 0.65], [-0.46, -0.65], [0.46, -0.65]].forEach(([wx, wz]) => { const w = mesh(G.cyl(0.18, 0.18, 0.14, 16), M.darker, wx, 0.18, wz, c, NOSH); w.rotation.z = Math.PI / 2; });
-      [-0.3, 0.3].forEach((hx) => mesh(G.box(0.18, 0.08, 0.02), basic("#fff7c2"), hx, 0.4, 1.0, c, NOSH));
+      const row = i % 2, j = Math.floor(i / 2), c = buildCar(CAR_COLS[i % CAR_COLS.length], carGroup, !tower);
+      c.position.set(x0 + (row ? 5.8 : 1.2), y, bay0 + j * 1.45 + 0.625); c.rotation.y = row ? Math.PI / 2 : -Math.PI / 2;
     }
+    // one-way arrows down the aisle
+    const arrow = (x, z, ry) => { const a = new T.Group(); a.position.set(x, y + 0.006, z); a.rotation.y = ry; carGroup.add(a); mesh(G.box(0.16, 0.004, 0.8), arrowM, 0, 0, -0.25, a, NOSH); mesh(G.circle(0.34, 3), arrowM, 0, 0.002, 0.25, a, NOSH).rotation.set(-Math.PI / 2, 0, -Math.PI / 2); };
+    const tr = makeTraffic(carGroup, y + 0.02, !tower);
+    if (tower) {
+      // in from the side street at the back, down the aisle, out onto the front street
+      const { px1, sxR, szF } = TG, zd = z0 + 1.2;
+      slab(x0 + 7, px1 + 0.1, zd - 1.2, zd + 1.2, 0.004);
+      slab(ax - 1.2, ax + 1.2, z1 - 0.1, szF - 2.4, 0.004);
+      for (let k = 0; k < 4; k++) arrow(ax, bay0 + 2 + k * 5.5, 0);
+      arrow(x0 + 6, zd, -Math.PI / 2);
+      const [ox, oz] = laneOff(0, 1, 1.25), [fx, fz] = laneOff(1, 0, 1.25);
+      tr.add([[sxR + ox, -TG.bd / 2 - 45], [sxR + ox, zd], [ax, zd], [ax, szF + fz], [px1 + 50, szF + fz]], { col: "#ffc61a", v: 2.6, s0: 30, r: 1.3 }).ext = true;
+      carGroup.userData.tick = tr.tick;
+      // the tower's own traffic shares the road, so the car park's car joins it (and leaves it when the car park is rebuilt)
+      const rt = room && room.userData.traffic;
+      if (rt) { for (let i = rt.cars.length - 1; i >= 0; i--) if (rt.cars[i].ext) rt.cars.splice(i, 1); tr.cars.forEach((c) => rt.cars.push(c)); carGroup.userData.tick = null; }
+    } else {
+      // the street in front: in at the aisle, round the back, out by the service lane
+      const zr = D / 2 + 1.9, xa = -W / 2 - 40, xb = x0 + 50;
+      mesh(G.box(xb - xa, 0.012, 2.2), mat("#5d616b", { roughness: 1 }), (xa + xb) / 2, 0.004, zr, carGroup, { cast: false });
+      mesh(G.box(xb - xa, 0.012, 0.8), mat("#dcd6ca", { roughness: 0.95 }), (xa + xb) / 2, 0.006, D / 2 + 0.4, carGroup, { cast: false });
+      for (let x = xa + 0.4; x < xb; x += 1.4) mesh(G.box(0.7, 0.004, 0.09), line, x + 0.35, 0.012, zr, carGroup, NOSH);
+      slab(x0 + 7, x0 + 9.4, z0, D / 2 + 0.8, 0.002);
+      slab(ax - 1.2, ax + 1.2, z1 - 0.1, D / 2 + 0.8, 0.004);
+      slab(x0 + 9.4 - 2.4, x0 + 9.4, D / 2 - 0.1, D / 2 + 0.8, 0.004);
+      for (let k = 0; k < 3; k++) arrow(ax, z1 - 3 - k * 6, Math.PI);
+      for (let k = 0; k < 3; k++) arrow(x0 + 8.2, z0 + 3 + k * 6, 0);
+      const [fx, fz] = laneOff(1, 0, 0.55);
+      tr.add(laneRoute(xa, zr, xb, zr, 0.55), { s0: 20, v: 2.4, col: "#3b82f6" });
+      tr.add(laneRoute(xb, zr, xa, zr, 0.55), { s0: 60, v: 2.2, col: "#ffffff" });
+      tr.add([[xa, zr + fz], [ax, zr + fz], [ax, z0 + 1.2], [x0 + 8.2, z0 + 1.2], [x0 + 8.2, zr + fz], [xb, zr + fz]], { col: "#ffc61a", v: 2.2, s0: 25, r: 1.1 });
+      carGroup.userData.tick = tr.tick;
+    }
+  }
+  // the Tower's roof terrace: paving, a glass balustrade and a little roof garden (the pool takes it over)
+  function buildTerrace(TR, pool) {
+    if (!TR) return;
+    const { D } = layout, g = new T.Group(); g.position.set(TR.cx, 0, 0); room.add(g);
+    const hw = TR.w / 2, hd = TR.d / 2;
+    mesh(G.rbox(TR.w, 0.5, TR.d, 0.06), mat("#c98f55", { roughness: 0.7 }), 0, -0.26, 0, g, NOSH);
+    mesh(G.rbox(TR.w + 0.12, 0.12, TR.d + 0.12, 0.05), mat("#e7c39a", { roughness: 0.7 }), 0, -0.53, 0, g, NOSH);
+    const pv = tex(256, 256, (c, w, h) => { c.fillStyle = "#d9d4ca"; c.fillRect(0, 0, w, h); const r = rng(11); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { c.fillStyle = ["#e4dfd5", "#dcd6cb", "#e9e4da"][Math.floor(r() * 3)]; c.fillRect(i * 64 + 2, j * 64 + 2, 60, 60); } });
+    pv.tex.wrapS = pv.tex.wrapT = T.RepeatWrapping; pv.tex.repeat.set(TR.w / 2.4, TR.d / 2.4);
+    mesh(G.plane(TR.w, TR.d), new T.MeshStandardMaterial({ map: pv.tex, roughness: 0.85 }), 0, 0.002, 0, g, { cast: false }).rotation.x = -Math.PI / 2;
+    const glass = new T.MeshStandardMaterial({ color: 0xcfeefc, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.32 }), chrome = mat("#d5dae3", { roughness: 0.18, metalness: 0.9 });
+    const rail = (xa, za, xb, zb) => { const L = Math.hypot(xb - xa, zb - za), n = Math.max(1, Math.round(L / 2)), ry = Math.atan2(xb - xa, zb - za); for (let i = 0; i <= n; i++) mesh(G.cyl(0.03, 0.03, 1.0, 8), chrome, lerp(xa, xb, i / n), 0.5, lerp(za, zb, i / n), g, NOSH); const p = mesh(G.box(0.02, 0.8, L), glass, (xa + xb) / 2, 0.48, (za + zb) / 2, g, NOSH); p.rotation.y = ry; const t = mesh(G.box(0.05, 0.05, L), chrome, (xa + xb) / 2, 1.0, (za + zb) / 2, g, NOSH); t.rotation.y = ry; };
+    rail(-hw - 0.1, hd - 0.06, hw - 0.06, hd - 0.06);
+    if (pool) { rail(hw - 0.06, 9.8, hw - 0.06, hd - 0.06); return; }
+    rail(hw - 0.06, -hd + 0.06, hw - 0.06, hd - 0.06); rail(-hw - 0.1, -hd + 0.06, hw - 0.06, -hd + 0.06);
+    // planters and benches along the glass, and a spot or two to look at the view
+    const wood = mat("#b8733d", { roughness: 0.6 }), box = mat("#efe6d4", { roughness: 0.6 });
+    for (let k = 0; k < 4; k++) {
+      const z = -D / 2 + 2.4 + k * (D - 4.8) / 3, pl = new T.Group(); pl.position.set(hw - 0.75, 0, z); g.add(pl);
+      mesh(G.rbox(0.8, 0.5, 2.0, 0.04), box, 0, 0.25, 0, pl); mesh(G.box(0.7, 0.02, 1.9), M.soil, 0, 0.5, 0, pl, NOSH);
+      for (let i = 0; i < 4; i++) { const b = mesh(G.sphere(0.3, 10, 8), M.leaf[(i + k) % 3], (i % 2 - 0.5) * 0.25, 0.68, -0.7 + i * 0.47, pl); b.scale.set(1, 0.8, 1.1); }
+    }
+    for (let k = 0; k < 3; k++) {
+      const z = -D / 2 + 5.0 + k * (D - 10) / 2, b = new T.Group(); b.position.set(hw - 2.2, 0, z); g.add(b);
+      [-0.6, 0.6].forEach((dz) => mesh(G.box(0.36, 0.38, 0.08), GL.dark, 0, 0.19, dz, b, NOSH));
+      for (let i = 0; i < 3; i++) mesh(G.box(0.12, 0.04, 1.5), wood, -0.13 + i * 0.13, 0.4, 0, b);
+      SPOT(g, { x: hw - 1.1, z: z + (k - 1) * 0.4, ry: Math.PI / 2, pose: "stand", dur: [8, 16], weight: 0.25 });
+    }
+    [[-hw + 0.8, hd - 0.9], [hw - 0.8, hd - 0.9]].forEach(([x, z], i) => { const t = buildLeafy(1.4, 80 + i, true); t.position.set(x, 0, z); g.add(t); });
+    registerSpots("terrace", g);
   }
   /* ---------- wall canvases ---------- */
   let companyRef = { name: "Your Studio", logo: null, logoText: "YS", logoColor: "#4b3ff0", months: [], cash: 0, rep: 10, staff: 0, goalPct: 0, goalText: "", stars: 1 };
@@ -9357,13 +9557,25 @@ const SCENE = (() => {
   function flyTo(pose, dur = 1.4) { if (dur < 0.1) { tween = null; camera.position.copy(pose.pos); controls.target.copy(pose.target); controls.update(); return; } tween = { from: camera.position.clone(), to: pose.pos.clone(), tf: controls.target.clone(), tt: pose.target.clone(), t: 0, dur }; controls.enabled = false; }
   function fitPose(asp, vfrac = 1, kind) {
     const L = layout, cars = !!(perkMeshes.cars && kind !== "preview");
-    const xMin = L.xMin, xMax = L.xMax + (cars ? 6 : 0), cxr = (xMin + xMax) / 2, wid = xMax - xMin;
+    const xMin = L.xMin, xMax = L.xMax + (L.terrace ? L.terrace.w + 0.3 : cars ? 10.2 : 0), cxr = (xMin + xMax) / 2, wid = xMax - xMin;
     const tf = Math.tan(13 * Math.PI / 180) * vfrac;
     const housing = !!(perkMeshes.housing && kind !== "preview"), dz = housing && L.level < 4 ? 8 : 0;
     const need = Math.max((wid + 1.5) / (2 * tf * asp), (L.D * 0.95 + 3 + dz) / (2 * tf));
     const dir = new T.Vector3(0.32, 0.72, 0.62).normalize();
     const target = new T.Vector3(cxr, 0.6, 0.4 + dz / 2);
-    return { pos: target.clone().addScaledVector(dir, need * 0.94 + 1), target };
+    // the formula above is tuned for the office; when the floor plan runs wider (the car park, the roof terrace),
+    // check the corners on screen and pull back and recentre until they fit side to side
+    let d = need * 0.94 + 1;
+    const fwd = dir.clone().negate(), right = new T.Vector3().crossVectors(fwd, new T.Vector3(0, 1, 0)).normalize(), tw = tf * asp * 0.98;
+    const pts = []; [xMin - 0.3, xMax + 0.3].forEach((x) => [-L.D / 2 - 0.3, L.D / 2 + 0.5 + dz].forEach((z) => [0, 1.2].forEach((y) => pts.push(new T.Vector3(x, y, z)))));
+    for (let it = 0; it < 6; it++) {
+      let lo = 1e9, hi = -1e9;
+      pts.forEach((p) => { const v = p.clone().sub(target), x = v.dot(right) / (d + v.dot(fwd)); lo = Math.min(lo, x); hi = Math.max(hi, x); });
+      if (lo >= -tw && hi <= tw) break;
+      target.addScaledVector(right, (lo + hi) / 2 * d);
+      d *= Math.max(1, (hi - lo) / (2 * tw)) * 1.01;
+    }
+    return { pos: target.clone().addScaledVector(dir, d), target };
   }
   function frameDims() { const W = innerWidth, H = innerHeight, f = frameRect || { left: 0, right: W, top: 0, bottom: H }; return { fw: Math.max(200, f.right - f.left), fh: Math.max(200, f.bottom - f.top), W, H, f }; }
   function homePose() { const { fw, fh, H } = frameDims(); return fitPose(fw / fh, fh / H); }
@@ -9529,6 +9741,8 @@ const SCENE = (() => {
     if (st && st.paused === false) syncPeople(st);
     people.forEach((rt) => { stepPerson(rt, dt); animate(rt, dt, elapsed); });
     perkTick(dt, elapsed);
+    if (room && room.userData.tick) for (const f of room.userData.tick) f(dt, elapsed);
+    if (carGroup && carGroup.userData.tick) carGroup.userData.tick(dt, elapsed);
     const sel = selectedId && people.get(selectedId);
     selRing.material.opacity = damp(selRing.material.opacity, sel ? 0.85 : 0, 6, dt);
     if (sel) { selRing.position.set(sel.g.position.x, 0.02, sel.g.position.z); selRing.scale.setScalar(1 + Math.sin(elapsed * 4) * 0.05); }
@@ -9557,7 +9771,7 @@ const SCENE = (() => {
   const guard = (fn) => (...a) => renderer ? fn(...a) : undefined;
   const pose0 = () => ({ pos: new T.Vector3(0, 10, 20), target: new T.Vector3() });
   return { init, perkShot: guard(perkShot), buildRoom: guard((l, c) => buildRoom(l, c)), addPerk: guard(addPerk), addItem: guard(addItem), setCompany: guard(setCompany), drawBoardNow: guard(drawBoardNow), drawSignNow: guard(drawSignNow), select: guard(select), unselect, sync: guard(sync), settle: guard(settle), flyTo: guard(flyTo), setActive, setFrame: guard(setFrame), snapshot: guard(snapshot), preview: guard(preview), backdrop: guard(backdrop), homePose: () => renderer ? homePose() : pose0(), boardPose: () => renderer ? boardPose() : pose0(), groundPose: () => renderer ? groundPose() : pose0(), introPose: () => renderer ? introPose() : pose0(), people, get selected() { return selectedId; },
-    _dbg: { tick(n, dt = 0.05) { for (let i = 0; i < n; i++) people.forEach((rt) => stepPerson(rt, dt)); }, spots: () => useSpots, perks: perkMeshes, items: itemMeshes, layout: () => layout, use(k, walk, hold = true) { const list = useSpots.filter((u) => u.k === k); const pool = [...people.values()].filter((rt) => rt.mode !== "leave" && !rt.use); list.forEach((u) => { const rt = pool.shift(); if (!rt || u.busy) return; if (rt.desk) { rt.desk.used = null; rt.desk = null; } rt.holdUse = hold; if (walk) startUse(rt, u); else { u.busy = rt.id; rt.use = u; arriveUse(rt); } }); return list.length; } }, speak(id, s = 2) { const rt = people.get(id); if (rt) rt.speaking = s; } };
+    _dbg: { tick(n, dt = 0.05) { for (let i = 0; i < n; i++) people.forEach((rt) => stepPerson(rt, dt)); }, spots: () => useSpots, perks: perkMeshes, items: itemMeshes, layout: () => layout, tower: () => (layout && layout.level >= 4 ? towerGeo() : null), traffic: (n, dt = 0.05) => { for (let i = 0; i < n; i++) { if (room && room.userData.tick) room.userData.tick.forEach((f) => f(dt)); if (carGroup && carGroup.userData.tick) carGroup.userData.tick(dt); } }, use(k, walk, hold = true) { const list = useSpots.filter((u) => u.k === k); const pool = [...people.values()].filter((rt) => rt.mode !== "leave" && !rt.use); list.forEach((u) => { const rt = pool.shift(); if (!rt || u.busy) return; if (rt.desk) { rt.desk.used = null; rt.desk = null; } rt.holdUse = hold; if (walk) startUse(rt, u); else { u.busy = rt.id; rt.use = u; arriveUse(rt); } }); return list.length; } }, speak(id, s = 2) { const rt = people.get(id); if (rt) rt.speaking = s; } };
 })();
 
 /* ===== UI controller: top bar, rail, pages, modals, wizard, game loop ===== */
