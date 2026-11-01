@@ -9701,6 +9701,9 @@ const SCENE = (() => {
   /* ---------- init / loop ---------- */
   function init(opts) {
     canvas = opts.canvas; labelsEl = opts.labels; onPick = opts.onPick || onPick; getState = opts.getState || getState;
+    // On Windows the graphics driver adds harmless precision notes (warning X4122) when it compiles the shadow shaders,
+    // and three.js prints them as warnings. Drop just those notes; real shader errors still go to console.error.
+    if (!console.__shipitQuiet) { const w0 = console.warn.bind(console); console.warn = (...a) => { if (typeof a[0] === "string" && a[0].indexOf("THREE.WebGLProgram: Program Info Log") === 0) return; w0(...a); }; console.__shipitQuiet = true; }
     renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.6));
     renderer.setSize(innerWidth, innerHeight, false);
