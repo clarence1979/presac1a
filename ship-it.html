@@ -10051,8 +10051,7 @@ const UI = (() => {
   function studioHTML() {
     const tips = A.tips();
     const tip = tipIdx > 0 && tips.length ? tips[(tipIdx - 1) % tips.length].t : coach();
-    return `<div class="hero"><span class="disp">Your studio,${spk()}<br><span class="sw">your story</span></span></div>
-    <div class="rcol">${missionHTML()}<div class="card avacard"><div class="av"><img src="${R.ava({ crop: "head" })}" alt="">${spk()}</div><div class="bub"><b>Ava, your co-pilot</b><p>${esc(tip)}</p>${tips.length ? `<div class="tipnav">${tipIdx ? `<button data-act="tipoff" title="Back to Ava's coaching">✕</button>` : ""}<button data-act="tipnext">${tipIdx ? `Tip ${((tipIdx - 1) % tips.length) + 1}/${tips.length} ›` : `${tips.length} tip${tips.length === 1 ? "" : "s"} ›`}</button></div>` : ""}</div></div></div>
+    return `<div class="rcol">${missionHTML()}<div class="card avacard"><div class="av"><img src="${R.ava({ crop: "head" })}" alt="">${spk()}</div><div class="bub"><b>Ava, your co-pilot</b><p>${esc(tip)}</p>${tips.length ? `<div class="tipnav">${tipIdx ? `<button data-act="tipoff" title="Back to Ava's coaching">✕</button>` : ""}<button data-act="tipnext">${tipIdx ? `Tip ${((tipIdx - 1) % tips.length) + 1}/${tips.length} ›` : `${tips.length} tip${tips.length === 1 ? "" : "s"} ›`}</button></div>` : ""}</div></div></div>
     ${goalsHTML()}`;
   }
   function avabar(text, tipT, tipS, tipIcon = "cash") { return `<div class="card avabar"><div class="av"><img src="${R.ava({ crop: "head" })}" alt="">${spk()}</div><div class="tx"><b>Ava, your co-pilot</b><p>${esc(text)}</p></div>${tipT ? `<div class="tip">${ic(tipIcon)}<div><b>${esc(tipT)}</b><small>${esc(tipS)}</small></div></div>` : ""}</div>`; }
