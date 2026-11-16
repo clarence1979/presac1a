@@ -18,6 +18,7 @@
     "check:street-pov": "node check.mjs",
     "check": "node tools/previs/check-sheet.mjs projects/midnight-courier-2",
     "test:editor": "node tools/tests/editor-save.mjs",
+    "test:web": "node tools/tests/web-generate.mjs",
     "test:replicate": "node tools/tests/replicate.mjs"
   },
   "dependencies": {

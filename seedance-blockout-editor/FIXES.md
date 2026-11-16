@@ -4,6 +4,28 @@ Tested against `sirioberati/seedance-blockout-editor` at commit `da359cd` (15 No
 
 Run the new regression test with `npm run test:editor`. It passes on this copy. On the original code it fails 9 of its 14 checks.
 
+## Round 3: Generate from the web address, with no helper
+
+**Generate works from the hosted link (`generate-web.js`).** When the helper cannot be reached, Generate and Generations open an in-page panel instead of being greyed out.
+- **Step 1, Replicate token.** Paste it once. With **Remember me** it is kept in this browser (localStorage); without it, it is forgotten when the tab closes (sessionStorage). Test, Change and Remove sit next to it. It only ever goes to Replicate.
+- **Step 2, Describe the video.** Type a line about the look, or use the chips. The prompt is written by the same writer the helper uses (`prompt-simple.js`, now shared), from the scenes, the notes and the project files, and can be edited.
+- **Step 3, Record the blockout.** The page records it itself: the project page runs in a frame in render mode, every frame is drawn with `renderAt` and encoded to H.264 MP4 with the browser's video encoder and `vendor/mp4-muxer.mjs` (MIT). It is the same 1280x720 at 24 fps as the helper's render, and kept under 5.7 MB. The recording shows live, with a progress bar and the time left.
+  - It is reused after a reload, but only while it still matches the camera, the look and the people. If the camera changed, the panel says so and asks for a new recording.
+- **Step 4, Send.** Pick 480p, 720p or 1080p and sound on or off. The blockout and the request go to Seedance 2.5 on your Replicate account through the relay.
+  - Progress shows under the picture: upload, start, Seedance making it (with its status and the time so far), bring it back.
+  - **Stop it** cancels the job.
+  - If the page is closed or reloaded while Seedance works, the job is picked up again when Generate is reopened.
+- **Your videos.** The finished video is fetched back at once (Replicate deletes it after an hour) and kept in this browser, with its prompt. Download or Delete (Delete asks first).
+- **Greyed out until ready.** Send stays greyed until there is a token, a recording and a prompt, and the take is 4 to 30 s. A click on it says what is missing. Wrong or refused tokens, missing credit and failed jobs are explained in plain words, with whether anything was charged.
+- **The rest of the editor.** Settings shows the browser's token in web mode. The ? help for Generate, Generations and Settings describes the web mode. The editor stops drawing its own views while the panel covers it (`ED_PAUSE`), which leaves more of the computer for the recording.
+
+**The relay (`relay/worker.js`, deployed as seedance-relay.clarence17.workers.dev).** Replicate's API does not answer web pages directly, so the page talks to it through this small Cloudflare Worker.
+- It answers only the editor's own pages (materials.teachingtools.dev, *.teachingtools.dev, clarence1979.github.io and localhost). Other sites get 403.
+- It passes on only five calls: account (test), files (upload), Seedance 2.5 predictions (start), prediction status, and cancel. It also fetches Replicate download links back.
+- It forwards the visitor's own token and stores nothing. Request logging is switched off.
+
+`npm run test:web` checks the relay and the whole page flow against stand-ins (29 checks, no real call, no cost).
+
 ## Round 2: a clearer layout, ? help everywhere, and Replicate
 
 **Layout (`ui-guide.js`, mounted by `editor.js`).** The top bar is now two tidy rows.

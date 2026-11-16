@@ -26,6 +26,10 @@ const H = {
   panel: { t: 'Side panel', w: 'Shows or hides the panel on the right. It holds the settings of what you selected: position, aim, lens, focus, speed and layers.', k: ['I'] },
   tein: { t: 'Settings and API keys', w: 'Where you connect the service that makes the videos, and a few editor settings. Seedance runs through Tein or through Replicate: paste a Tein key or a Replicate token (r8_…).', s: ['Replicate: paste the token and tick Remember me to keep it on this computer.', 'Without Remember me it is forgotten when the helper stops.'], n: 'Keys are kept by the helper on your computer, never in the project or the page.', helper: true },
   generate: { t: 'Generate with Seedance', w: 'Turns your blockout into a real-looking video.', s: ['Describe the video and the look you want.', 'A prompt is written for you. Check it and change it if you like.', 'Choose Tein or Replicate to make it, then send. Nothing is charged until you press Send.'], helper: true },
+  // the same three when the page runs from a web address (no helper): Generate works in the page through Replicate
+  generateWeb: { t: 'Generate with Seedance', w: 'Turns your blockout into a real-looking video with Seedance 2.5, through your own Replicate account. It all happens in this page.', s: ['Paste your Replicate token once. Tick Remember me only on your own computer.', 'Describe the look and check the prompt.', 'Record the blockout, then Send. Replicate bills your account; nothing is charged before you press Send.'], n: 'The finished videos are kept in this browser under Your videos. Download the ones you want to keep.' },
+  gensWeb: { t: 'Your videos', w: 'The videos you made from this browser, with their prompts. They are kept in this browser only: download the ones you want to keep.' },
+  teinWeb: { t: 'Settings', w: 'Your Replicate token for this browser, and a few editor settings.', n: 'From a web address, Tein and the Claude helpers need the helper program on your computer. Seedance runs through your Replicate account instead.' },
   // views
   view3d: { t: '3D view', w: 'A free camera on the whole set. The blue line is the camera\'s path and the red cone is what the camera sees.', s: ['Drag to orbit, right-drag to pan, scroll to zoom.', 'Click a key marker to jump to it.', '⋯ opens this view\'s menu.'] },
   final: { t: 'Final shot', w: 'Exactly what the camera sees. This becomes your video.', s: ['Drag to look around, scroll to move in or out.', 'That changes the camera at the playhead (and writes a key when Animate or Auto-key is on).'] },
@@ -68,6 +72,7 @@ const TARGETS = [
   T('#lBase', 'trBase', 'in'), T('#lCut', 'trShots', 'in'), T('#lEdit', 'trKeys', 'in'), T(() => labText('Camera pace'), 'trPace', 'in'), T(() => labText('Speed'), 'trSpeed', 'in'),
   T(() => labText('Tracking'), 'trTrack', 'in'), T('#lNotes', 'trNotes', 'in'), T('#tracks .lab.g', 'trGraph', 'in'),
 ];
+const WEB_OK = ['#bDraftTop', '#bDraft', '#bGens'];   // these work without the helper when the page can generate by itself (generate-web.js)
 const NEEDS_HELPER = ['#bDraftTop', '#bDraft', '#bGens', '#bFix', '#amenu [data-k=review]', '#amenu [data-k=write]', '#amenu [data-k=preview]', '#amenu [data-k=frames]', '#amenu [data-k=history]'];
 const tagOf = (id) => { const v = document.getElementById(id); return v && v.querySelector('.tag'); };
 const lab = (q) => { const i = document.querySelector(q); return i && i.closest('label'); };
@@ -130,7 +135,8 @@ export function mountGuide() {
   const helperNote = () => hosted
     ? 'This copy runs from a web address, so it cannot reach the helper program that makes videos, keeps your keys and runs Claude. To use it: download the editor, run <b>npm install</b> then <b>npm start</b>, and open http://localhost:5811.'
     : 'The helper program is not running. In the editor\'s folder run <b>npm start</b>; this unlocks by itself within a few seconds.';
-  const fill = (key, off) => { const h = H[key] || { t: key, w: '' };
+  const webMode = () => helperUp === false && !!window.WEBGEN;
+  const fill = (key, off) => { if (webMode() && H[key + 'Web']) key = key + 'Web'; const h = H[key] || { t: key, w: '' };
     pop.innerHTML = `<span class="ugarr"></span><div class="ugh"><b id="ugT">${esc(off ? h.t + ': not available here' : h.t)}</b><button class="ugx" aria-label="Close">×</button></div>
       ${off ? `<p>${helperNote()}</p><p style="color:#9b9ca6">What it does: ${esc(h.w)}</p>` : `<p>${esc(h.w)}</p>${h.s ? `<ol>${h.s.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}${h.n ? `<p style="color:#9b9ca6">${esc(h.n)}</p>` : ''}`}
       ${h.k && !off ? `<div class="ugk">${h.k.map((x) => `<kbd>${esc(x)}</kbd>`).join('')}</div>` : ''}
@@ -220,7 +226,11 @@ export function mountGuide() {
   document.addEventListener('click', (e) => { if (!e.target.closest('.ddt')) return; requestAnimationFrame(() => { for (const p of document.querySelectorAll('.pop.open')) fitPop(p); }); }, true);   // capture: the menu buttons stop the click from bubbling
 
   // ---------- controls that need the helper: greyed out while it cannot be reached, and a click says why
-  const gate = () => { for (const q of NEEDS_HELPER) for (const e of document.querySelectorAll(q)) { e.classList.toggle('ug-off', helperUp === false); if (helperUp === false) e.setAttribute('aria-disabled', 'true'); else e.removeAttribute('aria-disabled'); } };
+  const gate = () => { for (const q of NEEDS_HELPER) for (const e of document.querySelectorAll(q)) { const off = helperUp === false && !(window.WEBGEN && WEB_OK.includes(q)); e.classList.toggle('ug-off', off); if (off) e.setAttribute('aria-disabled', 'true'); else e.removeAttribute('aria-disabled'); } };
+  // from a web address, Generate and Generations open the page's own Generate (generate-web.js) instead of the helper's
+  document.addEventListener('click', (e) => { if (!webMode() || e.target.closest('.ugq')) return; const b = e.target.closest('#bDraftTop,#bDraft,#bGens'); if (!b) return;
+    e.preventDefault(); e.stopImmediatePropagation(); window.WEBGEN.open(b.id === 'bGens' ? 'videos' : 'new'); }, true);
+  window.addEventListener('webgen-ready', () => gate());
   document.addEventListener('click', (e) => { const off = e.target.closest('.ug-off'); if (!off) return; e.preventDefault(); e.stopImmediatePropagation();
     const key = off.id === 'bDraftTop' || off.id === 'bDraft' ? 'generate' : off.id === 'bGens' ? 'gens' : off.id === 'bFix' ? 'fix' : 'assist';
     open(off, key, true); }, true);
