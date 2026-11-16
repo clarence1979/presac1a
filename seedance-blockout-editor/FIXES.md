@@ -4,6 +4,35 @@ Tested against `sirioberati/seedance-blockout-editor` at commit `da359cd` (15 No
 
 Run the new regression test with `npm run test:editor`. It passes on this copy. On the original code it fails 9 of its 14 checks.
 
+## Round 2: a clearer layout, ? help everywhere, and Replicate
+
+**Layout (`ui-guide.js`, mounted by `editor.js`).** The top bar is now two tidy rows.
+- Row 1 holds the project and the things you do with it: Back, Undo/Redo, Generations, File, Panel, Help, Settings, Generate.
+- Row 2 holds the tools, grouped under small names: Camera (Tool, Set key, Animate, Keys, Moves, Track subject), Shot (Split here, Zoom in, Reset zoom) and Screen (Layout, View). The group names hide on screens narrower than 1360 px so everything still fits in two rows at 1280 px.
+- Icon-only menus now have words: Tool, Keys, View, File, Generations, Panel.
+- The side panel tabs show their names (Camera, Scenes, Speed, Layers) under the icons.
+- Plainer names: "3D view" (was "Editor: 3D"), "Plan (from above)" (was "Editor: Plan"), "Your keys" (was the "Camera" track), "Zoom in" (was "Zoom into frame").
+- A Help ▾ menu holds the ? marks switch, the keyboard shortcuts and the tour.
+- Fixed: the View menu opened off the right edge of the screen. Menus now open to the left when they would not fit.
+- Fixed: the Tein button stretched to fill empty space (the editor treats any styled span as a spacer).
+
+**? marks.** A small ? sits on the corner of every main control: 20 in the top bar, the three views, the four panel tabs, the play controls, Speed / timing, + Note, Assist, Fix notes, Fit 30 s, timeline zoom, the timeline mode, and every track. The panel's own "i" marks became ? marks too.
+- Clicking a ? opens a pop-up below the control (never over it). It says what the control is, how to use it in a few steps, and its keyboard shortcut. Clicking the ? does not use the control.
+- Esc closes the pop-up and puts focus back on the ?. The marks work with Tab, Enter and Space.
+- The marks can be switched off under Help ▾. The choice is kept in this browser.
+
+**Greyed out when they cannot work.** Generate, Generations, Fix notes and the Claude helpers in Assist need the helper program. When it cannot be reached they are greyed out, and a click explains why and what to do. On the hosted copy that means: download it and run `npm start`. They come back by themselves when the helper starts. Autosave also says plainly that the hosted copy keeps your changes in the browser.
+
+**Replicate.** Seedance 2.5 can now be made through `bytedance/seedance-2.5` on Replicate, as well as through Tein.
+- Settings → Replicate account: paste a token (`r8_…`) and tick **Remember me on this computer** to keep it (macOS Keychain, or a private file with mode 600). Unticked, the helper forgets it when it stops. Test, Replace and Remove are there too. The page only ever sees the last four characters.
+- Generate → Check it and send has a **Make it with Tein / Make it with Replicate** choice. With Replicate:
+  - The video comes back at 720p, final. There is no draft or Finalize step for a Replicate video.
+  - Replicate charges your account at its own price.
+  - The editor's @Video1 / @image1 / @audio1 tags become [Video1] / [Image1] / [Audio1] when sent.
+  - "Exactly what is sent" shows the Replicate request.
+- The helper uploads the blockout (and any reference pictures or sound) to Replicate's file store, starts the prediction, and polls it. It never pays twice for the same request.
+- `npm run test:replicate` checks the whole route against a local stand-in for Replicate: no real call, no cost.
+
 ## Data loss and lost edits (editor.js)
 
 1. **Undo after the first edit wiped the project on disk.** When a project opens, its `editor-project.json` arrives a moment after the editor has drawn the empty camera. The undo history kept that empty state as its starting point. So the first Ctrl+Z after any edit went back to "no project": all the cuts were gone, and speed and focus went back to their defaults. Autosave then wrote that empty state to `projects/<id>/editor-project.json`. On Midnight Courier 2 this removed all 19 cuts and 3,587 lines of the file. *Fix:* the undo history starts again once the file is loaded (`resetHistory()`).

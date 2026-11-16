@@ -29,6 +29,7 @@ export function mountTein(host, opt = {}) {
   .tn-p button,.tn-p select{height:32px;padding:0 12px;border:1px solid #3a3a43;border-radius:10px;background:transparent;color:#f4f4f6;font:600 13px 'Space Grotesk',sans-serif;cursor:pointer;transition:background .16s,border-color .16s} .tn-p button:hover,.tn-p select:hover{background:#ffffff14;border-color:#5a5a66}
   .tn-p button.blue{background:#2b55f0;border-color:#2b55f0;color:#fff} .tn-p button.blue:hover{background:#4a6ff5;border-color:#4a6ff5} .tn-p button.red{border-color:#f07574;color:#ff8d8b} .tn-p button.x{width:32px;padding:0}
   .tn-p input[type=password]{width:100%;height:36px;background:#000;color:#f4f4f6;border:1px solid #3a3a43;border-radius:10px;padding:0 12px;font:400 13px 'IBM Plex Mono',monospace;margin:4px 0 8px;outline:none} .tn-p input[type=password]:focus{border-color:#7b7c88}
+  .tn-p label.rm{display:flex;align-items:center;gap:9px;margin:0 0 4px;color:#f4f4f6;font-weight:500;cursor:pointer;user-select:none} .tn-p label.rm input{width:17px;height:17px;margin:0;accent-color:#2b55f0;cursor:pointer}
   .tn-p .st{border:1px solid #26262c;border-radius:10px;padding:8px 12px;margin:0 0 4px} .tn-p .st.ok{border-color:#2f6b47;color:#6fe09a} .tn-p .st.bad{border-color:#f07574;color:#ff8d8b}
   .tn-p .code{white-space:pre-wrap;word-break:break-all;background:#15151a;border:1px solid #26262c;border-radius:10px;padding:8px 10px;font:400 12px/1.45 'IBM Plex Mono',monospace;margin:4px 0 8px;max-height:120px;overflow:auto} .tn-p .m{color:#9b9ca6;font-size:13px}
   .tn-p .seg{display:flex;border:1px solid #3a3a43;border-radius:10px;overflow:hidden;margin:0 0 8px} .tn-p .seg button{flex:1;border:0;border-radius:0;height:32px} .tn-p .seg button.on{background:#f4f4f6;color:#050606} .tn-p .tagk{font:500 10.5px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#9b9ca6;border:1px solid #3a3a43;border-radius:6px;padding:2px 8px} .tn-p a.lk{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid #3a3a43;border-radius:10px;text-decoration:none;font:600 13px 'Space Grotesk',sans-serif} .tn-p a.lk:hover{background:#ffffff14;border-color:#5a5a66} .tn-p code{font:400 12.5px 'IBM Plex Mono',monospace;color:#f4f4f6}
@@ -38,12 +39,16 @@ export function mountTein(host, opt = {}) {
   const kp = mk('div', 'tn-p'), sp = mk('div', 'tn-p'); kp.id = 'tnKeyPanel'; sp.id = 'tnSetPanel'; document.body.append(kp, sp); host.append(gear);
   let key; /* undefined = not read yet, null = bridge down */ let open = null;
   const $ = (root, q) => root.querySelector(q);
-  const paint = () => { const on = key && key.set; btn.classList.toggle('blue', !on); btn.innerHTML = on ? `<u></u><span>Tein</span><span class="lb">••${esc(key.last4)}</span>` : `${MARK}<span class="lb">Connect Tein</span>`; gear.innerHTML = `${GEAR}<span class="lb">${on || key === null ? 'Settings' : 'Connect Tein'}</span><u class="${on ? '' : key === null ? 'down' : 'off'}"></u>`; gear.title = on ? `Settings. Tein is connected (API key ending in ${key.last4}).` : key === null ? 'Settings. The local helper is not running.' : 'Settings. Tein is not connected yet: paste your API key here.'; if (open === kp) keyStatus(); if (open === sp) setBody(); };
+  // a video can be made through Tein or through Replicate: the button reads "Settings" with a green dot when either key is saved, "Add API key" when neither is
+  let rkey; /* Replicate token status: undefined = not read yet, null = helper not running */
+  const paint = () => { const tOn = key && key.set, rOn = rkey && rkey.set, on = tOn || rOn; btn.classList.toggle('blue', !tOn); btn.innerHTML = tOn ? `<u></u><span>Tein</span><span class="lb">••${esc(key.last4)}</span>` : `${MARK}<span class="lb">Connect Tein</span>`; gear.innerHTML = `${GEAR}<span class="lb">${on || key === null ? 'Settings' : 'Add API key'}</span><u class="${on ? '' : key === null ? 'down' : 'off'}"></u>`; gear.title = on ? 'Settings. ' + [tOn ? `Tein is connected (key ending in ${key.last4})` : '', rOn ? `Replicate is connected (token ending in ${rkey.last4})` : ''].filter(Boolean).join('; ') + '.' : key === null ? 'Settings. The local helper is not running.' : 'Settings. No API key yet: add a Tein key or a Replicate token here.'; if (open === kp) keyStatus(); if (open === sp) setBody(); };
+  const readR = async () => { try { rkey = await api('/rkey/status'); } catch (e) { rkey = null; } window.dispatchEvent(new CustomEvent('replicate-key', { detail: rkey })); paint(); };
+  window.addEventListener('replicate-key', (e) => { if (e.detail !== rkey) { rkey = e.detail; paint(); } });
   const setKey = (k, quiet) => { key = k; paint(); if (!quiet) window.dispatchEvent(new CustomEvent('tein-key', { detail: k })); };
   const read = async (quiet) => { try { setKey(await api('/key/status'), quiet); } catch (e) { setKey(null, quiet); } };
   window.addEventListener('tein-key', (e) => { if (e.detail !== key) { key = e.detail; paint(); } });
   const place = (panel, anchor) => { const r = anchor.getBoundingClientRect(); panel.style.display = 'block'; const w = panel.offsetWidth; panel.style.top = Math.round(r.bottom + 8) + 'px'; panel.style.left = Math.round(Math.max(12, Math.min(innerWidth - w - 12, r.right - w))) + 'px'; };
-  const close = () => { if (!open) return; open.style.display = 'none'; for (const i of [$(kp, '#tnIn'), $(sp, '#tsIn')]) if (i) i.value = ''; open = null; };
+  const close = () => { if (!open) return; open.style.display = 'none'; for (const i of [$(kp, '#tnIn'), $(sp, '#tsIn'), $(sp, '#trIn')]) if (i) i.value = ''; open = null; };
   const show = (panel, anchor) => { const was = open; close(); if (was === panel) return; open = panel; place(panel, anchor); };
   document.addEventListener('pointerdown', (e) => { if (open && !open.contains(e.target) && !btn.contains(e.target) && !gear.contains(e.target)) close(); }, true);
   for (const p of [kp, sp]) for (const ev of ['keydown', 'keyup', 'pointerdown', 'wheel']) p.addEventListener(ev, (e) => { if (ev === 'keydown' && e.key === 'Escape') close(); e.stopPropagation(); });
@@ -62,8 +67,9 @@ export function mountTein(host, opt = {}) {
   const openKey = async () => { close(); confirmDel = false; editKey = true; open = sp; setBody(); place(sp, gear); const i = $(sp, '#tsIn'); if (i) i.focus(); };   // kept for callers: opens Settings on the key field
 
   // ---- Settings panel
-  let price = undefined, confirmDel = false, editKey = false, mcpTab = 'url';
+  let price = undefined, confirmDel = false, editKey = false, mcpTab = 'url', rEdit = false, rConfirm = false;
   const setBody = () => { const on = key && key.set, ED = window.ED, S = ED && ED.S, typed = $(sp, '#tsIn') ? $(sp, '#tsIn').value : '', hadFocus = document.activeElement && document.activeElement.id === 'tsIn', entry = key !== null && (!on || editKey);
+    const rOn = rkey && rkey.set, rTyped = $(sp, '#trIn') ? $(sp, '#trIn').value : '', rFocus = document.activeElement && document.activeElement.id === 'trIn', rRem = $(sp, '#trRem') ? $(sp, '#trRem').checked : false, rEntry = key !== null && rkey !== null && (!rOn || rEdit);
     sp.innerHTML = `<div class="hd">${backHtml('tsX', 'Close (Esc)')}<h3>Settings</h3></div>
       <h4 style="margin-top:0;border:0;padding:0">Tein account</h4>
       <div class="st ${on ? 'ok' : key === null ? 'bad' : ''}">${on ? `API key ••${esc(key.last4)}${key.test ? ' · test key, $0' : ''} · ${key.store === 'keychain' ? 'macOS Keychain' : 'private file'}` : key === null ? 'The local helper is not running.' : 'No API key saved.'}</div>
@@ -72,6 +78,15 @@ export function mountTein(host, opt = {}) {
       ${on && !editKey ? `<div class="r"><button id="tsTest">Test</button><button id="tsReplace">Replace key</button><button class="red" id="tsDel">${confirmDel ? 'Yes, remove the key' : 'Remove key'}</button>${confirmDel ? '<button id="tsKeep">Keep it</button>' : ''}</div>` : ''}
       <p class="m" id="tsMsg" style="margin-top:8px">${confirmDel ? 'This deletes the key from the Keychain on this Mac. The key itself stays valid on tein.ai until you revoke it there.' : ''}</p>
       <p>${on ? '' : 'Create an inference key with a spending limit: '}<a href="https://tein.ai/dashboard/keys" target="_blank" rel="noopener">${on ? 'Manage keys on tein.ai/dashboard/keys' : 'tein.ai/dashboard/keys'}</a></p>
+      <h4>Replicate account</h4>
+      <div class="st ${rOn ? 'ok' : rkey === null || key === null ? 'bad' : ''}">${rOn ? `API token ••${esc(rkey.last4)} · ${rkey.remembered ? (rkey.store === 'keychain' ? 'remembered in the macOS Keychain' : 'remembered in a private file on this computer') : 'not remembered: kept only until the helper stops'}` : rkey === null || key === null ? 'The local helper is not running.' : 'No Replicate token saved.'}</div>
+      ${rEntry ? `<p>Makes the video with Seedance 2.5 on your own Replicate account instead of Tein. Create a token at <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener">replicate.com/account/api-tokens</a> and paste it here. It goes to the helper on this computer only, never into the project or this page.</p>
+        <input id="trIn" type="password" autocomplete="off" spellcheck="false" placeholder="r8_…" aria-label="Replicate API token">
+        <label class="rm"><input type="checkbox" id="trRem"${rRem ? ' checked' : ''}> Remember me on this computer</label>
+        <p class="m" style="margin-top:0">Ticked: the token is kept (macOS Keychain, or a private file) until you remove it. Not ticked: it is forgotten when the helper stops.</p>
+        <div class="r"><button class="blue" id="trSave">Save token</button>${rOn ? '<button id="trCancel">Cancel</button>' : ''}</div>` : ''}
+      ${rOn && !rEdit ? `<div class="r"><button id="trTest">Test</button><button id="trReplace">Replace token</button><button class="red" id="trDel">${rConfirm ? 'Yes, remove the token' : 'Remove token'}</button>${rConfirm ? '<button id="trKeep">Keep it</button>' : ''}</div>` : ''}
+      <p class="m" id="trMsg" style="margin-top:8px">${rConfirm ? 'This deletes the token from this computer. It stays valid on replicate.com until you revoke it there.' : ''}</p>
       <h4>Claude chat (MCP)</h4><div class="r" style="margin-bottom:8px"><b style="font:600 15px 'Space Grotesk',sans-serif;flex:1">Connect Tein</b><span class="tagk">Remote HTTP</span></div>
       <div class="seg" role="tablist" aria-label="Connection method">${MCP_TABS.map(([id, label]) => `<button role="tab" data-mcp="${id}" aria-selected="${mcpTab === id}" class="${mcpTab === id ? 'on' : ''}">${label}</button>`).join('')}</div>
       <div class="code" id="tsSnip">${esc(SNIP[mcpTab])}</div><div class="r"><button id="tsCopy">${MCP_TABS.find((t) => t[0] === mcpTab)[2]}</button><a class="lk" href="https://tein.ai/dashboard/keys" target="_blank" rel="noopener">Get an API key ↗</a><span class="m" id="tsCopyOk"></span></div>
@@ -89,14 +104,26 @@ export function mountTein(host, opt = {}) {
     if (q('#tsSave')) q('#tsSave').onclick = async () => { const inp = q('#tsIn'), v = inp.value.trim(), m = q('#tsMsg'); if (!v) { m.textContent = 'Paste a key first.'; return; } if (!KEY_RE.test(v)) { m.textContent = 'A Tein API key starts with sk_live_ or sk_test_ and has 64 more characters.'; return; } inp.value = ''; editKey = false; try { setKey(await api('/key', 'POST', { key: v })); if (open === sp) $(sp, '#tsMsg').textContent = 'Saved.'; } catch (e) { $(sp, '#tsMsg').textContent = 'Could not save: ' + e.message; } };
     if (q('#tsDel')) q('#tsDel').onclick = async () => { if (!confirmDel) { confirmDel = true; return setBody(); } confirmDel = false; try { setKey(await api('/key', 'DELETE')); if (open === sp) $(sp, '#tsMsg').textContent = 'The key was removed from this Mac.'; } catch (e) { setBody(); $(sp, '#tsMsg').textContent = 'Could not remove: ' + e.message; } };
     if (q('#tsKeep')) q('#tsKeep').onclick = () => { confirmDel = false; setBody(); };
+    // ---- Replicate token: save (with or without Remember me), test, replace, remove
+    const rMsg = (t) => { const m = $(sp, '#trMsg'); if (m) m.textContent = t; };
+    if (q('#trIn')) { q('#trIn').value = rTyped; if (rFocus) q('#trIn').focus(); q('#trIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') q('#trSave').click(); }); }
+    if (q('#trSave')) q('#trSave').onclick = async () => { const inp = q('#trIn'), v = inp.value.trim(), remember = q('#trRem').checked; if (!v) return rMsg('Paste a token first.'); if (!/^r8_[A-Za-z0-9]{20,80}$/.test(v)) return rMsg('A Replicate API token starts with r8_ followed by letters and numbers.');
+      inp.value = ''; rEdit = false; try { rkey = await api('/rkey', 'POST', { key: v, remember }); window.dispatchEvent(new CustomEvent('replicate-key', { detail: rkey })); paint(); rMsg(remember ? 'Saved and remembered on this computer.' : 'Saved until the helper stops.'); } catch (e) { setBody(); rMsg('Could not save: ' + e.message); } };
+    if (q('#trCancel')) q('#trCancel').onclick = () => { rEdit = false; setBody(); };
+    if (q('#trReplace')) q('#trReplace').onclick = () => { rConfirm = false; rEdit = true; setBody(); q2('#trIn').focus(); };
+    if (q('#trTest')) q('#trTest').onclick = async () => { rMsg('Testing…'); try { const r = await api('/rkey/test', 'POST', {}); rMsg(r.off ? 'Not tested: the network is switched off in this helper. Nothing was charged.' : r.ok ? 'Connected' + (r.account ? ' as ' + r.account : '') + '. Nothing was charged.' : (r.reason || 'Not accepted') + ' Nothing was charged.'); } catch (e) { rMsg('Could not test: ' + e.message); } };
+    if (q('#trDel')) q('#trDel').onclick = async () => { if (!rConfirm) { rConfirm = true; return setBody(); } rConfirm = false; try { rkey = await api('/rkey', 'DELETE'); window.dispatchEvent(new CustomEvent('replicate-key', { detail: rkey })); paint(); rMsg('The token was removed from this computer.'); } catch (e) { setBody(); rMsg('Could not remove: ' + e.message); } };
+    if (q('#trKeep')) q('#trKeep').onclick = () => { rConfirm = false; setBody(); };
     q('#tsWelcome').onclick = () => { close(); if (window.WELCOME) window.WELCOME.open(); };
     q('#tsReset').onclick = () => { let n = 0; for (const k of Object.keys(localStorage)) if (k.startsWith('pov-editor-ui') || k === 'pov-editor-seen') { localStorage.removeItem(k); n++; } q('#tsResetOk').textContent = S ? 'Reset. Reloading…' : n ? 'Reset.' : 'Already at the defaults.'; if (S) setTimeout(() => location.reload(), 500); };
     if (S) { const mirror = (sel, src) => { if (!src) { sel.parentElement.style.display = 'none'; return; } sel.innerHTML = src.innerHTML; sel.value = src.value; sel.onchange = () => { src.value = sel.value; src.dispatchEvent(new Event('change', { bubbles: true })); }; };
       mirror(q('#tsLayout'), document.querySelector('#sLayout')); mirror(q('#tsDir'), document.querySelector('#vDir .vsty')); mirror(q('#tsTop'), document.querySelector('#vTop .vsty'));
       const tog = (id, src) => { q(id).onclick = () => { const b = document.querySelector(src); if (b) b.click(); setTimeout(setBody, 30); }; }; tog('#tsFollow', '#bFollow'); tog('#tsLink', '#bLink'); } };
-  gear.onclick = async () => { if (open === sp) return close(); close(); confirmDel = false; editKey = false; open = sp; setBody(); place(sp, gear); read();
+  gear.onclick = async () => { if (open === sp) return close(); close(); confirmDel = false; editKey = false; rEdit = false; rConfirm = false; open = sp; setBody(); place(sp, gear); read(); readR();
     if (price === undefined) { try { const p = await api('/pricing'), b = p && p.board; price = b && b.draft480 ? `Draft (480p) from $${Math.min(...Object.values(b.draft480)).toFixed(4)} per second${p.live ? ', read live' : ', from the saved price list'}.` : null; } catch (e) { price = null; } if (open === sp) setBody(); } };
   if (opt.compactBelow) { const fit = () => gear.classList.toggle('compact', innerWidth < opt.compactBelow); fit(); addEventListener('resize', fit); }
-  setKey(undefined, true); read(true);
-  mounted = { btn, gear, openKey, read, close, get key() { return key; } }; window.TEINUI = mounted; return mounted;
+  setKey(undefined, true); read(true); readR();
+  // opens Settings on the Replicate token field (the Generate flow calls this when Replicate is chosen and no token is saved yet)
+  const openReplicate = () => { close(); rConfirm = false; rEdit = true; open = sp; setBody(); place(sp, gear); readR(); const i = $(sp, '#trIn'); if (i) i.focus(); };
+  mounted = { btn, gear, openKey, openReplicate, read, readR, close, get key() { return key; }, get rkey() { return rkey; } }; window.TEINUI = mounted; return mounted;
 }

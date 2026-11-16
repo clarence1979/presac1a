@@ -17,7 +17,8 @@
     "test": "node tools/previs/check-sheet.mjs projects/midnight-courier-2",
     "check:street-pov": "node check.mjs",
     "check": "node tools/previs/check-sheet.mjs projects/midnight-courier-2",
-    "test:editor": "node tools/tests/editor-save.mjs"
+    "test:editor": "node tools/tests/editor-save.mjs",
+    "test:replicate": "node tools/tests/replicate.mjs"
   },
   "dependencies": {
     "puppeteer-core": "^23.0.0"
