@@ -1,0 +1,355 @@
+{
+ "intro": "Ready-made pieces for your story. Your agent builds your blockout from these flat placeholder props and camera moves, so a new 30-second story takes minutes, not an hour.",
+ "sections": [
+  {
+   "title": "Shot sheet presets",
+   "note": "21 presets for shot sheets (tools/previs). Each keeps the subject in frame. You can also save and reuse your own moves in the editor.",
+   "items": [
+    {
+     "id": "lockedWide",
+     "name": "Locked wide",
+     "text": "A fixed wide lens that sets the scene.",
+     "use": "Opening or establishing a place; any time the audience needs to see where everything is.",
+     "long": "A camera that does not move, placed back and to the side of where the subject is when the shot starts, wide enough to show the place around it. Push adds a slight creep in; look and mix lean the aim toward a second thing.",
+     "snippet": "{\"start\": 4, \"preset\": \"lockedWide\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "faceCloseProfile",
+     "name": "Face close, profile",
+     "text": "Right beside the face, a little lead room ahead of the eyes.",
+     "use": "An emotional beat while the subject moves: effort, fear, a decision.",
+     "long": "Rides right beside the face at head height, with a little lead room ahead of the eyes so the move reads as forward.",
+     "snippet": "{\"start\": 4, \"preset\": \"faceCloseProfile\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "faceCloseFront",
+     "name": "Face close, front",
+     "text": "On the line of travel, looking back at the face.",
+     "use": "A reaction: the face as something happens behind it.",
+     "long": "In front on the line of travel, backing up at the same speed and looking back at the face.",
+     "snippet": "{\"start\": 4, \"preset\": \"faceCloseFront\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "overShoulder",
+     "name": "Over the shoulder",
+     "text": "Close behind his back, the chase behind him.",
+     "use": "Showing what the subject is chasing or running from.",
+     "long": "Close behind the back, over one shoulder, looking down the road ahead; the subject stays big at one side of the frame.",
+     "snippet": "{\"start\": 4, \"preset\": \"overShoulder\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "lowChase",
+     "name": "Low chase",
+     "text": "Low behind the subject, speed from the ground.",
+     "use": "Speed and danger in a chase.",
+     "long": "Behind and to one side at wheel height, following; the ground rushing past sells the speed.",
+     "snippet": "{\"start\": 4, \"preset\": \"lowChase\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "craneHigh",
+     "name": "Crane high",
+     "text": "High wide shot with a slow push-in.",
+     "use": "A breather between action beats, or to show the layout of a chase.",
+     "long": "High behind the subject with a slow push-in and down, so the frame narrows onto it.",
+     "snippet": "{\"start\": 4, \"preset\": \"craneHigh\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "sideTracking",
+     "name": "Side tracking",
+     "text": "Alongside at wheel height.",
+     "use": "Clean, readable motion; races and side-by-side moments.",
+     "long": "Alongside at wheel height, matching speed, so the subject stays put while the world slides.",
+     "snippet": "{\"start\": 4, \"preset\": \"sideTracking\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "frontLowTracking",
+     "name": "Front low tracking",
+     "text": "Handlebar height, the subject comes at the lens.",
+     "use": "A hero coming at the audience.",
+     "long": "In front at handlebar height, backing up as the subject drives at the lens.",
+     "snippet": "{\"start\": 4, \"preset\": \"frontLowTracking\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "frontWide",
+     "name": "Front wide",
+     "text": "In front and wide, backing away as they come.",
+     "use": "Showing what is ahead and the subject at once.",
+     "long": "In front on the line of travel and wide, backing away and rising a little as they come.",
+     "snippet": "{\"start\": 4, \"preset\": \"frontWide\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "wormsEye",
+     "name": "Worm's-eye",
+     "text": "From the ground looking up, for leaps and slow motion.",
+     "use": "Leaps, jumps and slow-motion hero moments.",
+     "long": "From the ground looking up, so the subject passes over the lens against the sky.",
+     "snippet": "{\"start\": 4, \"preset\": \"wormsEye\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "topDown",
+     "name": "Top-down",
+     "text": "Straight overhead, the action as a diagram.",
+     "use": "Making a chase or a near-miss readable as a diagram.",
+     "long": "Straight overhead, optionally following; the action becomes shapes on a map.",
+     "snippet": "{\"start\": 4, \"preset\": \"topDown\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "wheelClose",
+     "name": "Wheel close",
+     "text": "On the wheel or handlebar, pure speed.",
+     "use": "Pure speed inserts between wider shots.",
+     "long": "Right on the wheel or the handlebar, very close and wide.",
+     "snippet": "{\"start\": 4, \"preset\": \"wheelClose\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "fpv",
+     "name": "First-person",
+     "text": "From the subject's own eyes, through tunnels and alleys.",
+     "use": "Tunnels, alleys and anything the audience should live through.",
+     "long": "From the subject's own eyes, moving with it.",
+     "snippet": "{\"start\": 4, \"preset\": \"fpv\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "aerialSpiral",
+     "name": "Aerial spiral",
+     "text": "Circling up and back to reveal the place.",
+     "use": "Revealing a place, or the start and end of a sequence.",
+     "long": "Circles up and back from the front while the radius and height grow.",
+     "snippet": "{\"start\": 4, \"preset\": \"aerialSpiral\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "aerialPullback",
+     "name": "Aerial pull-back",
+     "text": "A held, symmetric pull-back for the ending.",
+     "use": "The ending.",
+     "long": "A held, symmetric pull-back that rises and leaves the subject small in the place.",
+     "snippet": "{\"start\": 4, \"preset\": \"aerialPullback\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "quarterClose",
+     "name": "Quarter close",
+     "text": "A close three-quarter rear view.",
+     "use": "Following close with a little more context than a back view.",
+     "long": "A close three-quarter rear view that keeps the subject and its direction both readable.",
+     "snippet": "{\"start\": 4, \"preset\": \"quarterClose\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "orbit",
+     "name": "Orbit",
+     "text": "A bullet-time style circle around the subject.",
+     "use": "A frozen or slow-motion moment, bullet time.",
+     "long": "Circles the subject at a fixed radius and height through a set sweep.",
+     "snippet": "{\"start\": 4, \"preset\": \"orbit\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "snorricam",
+     "name": "Snorricam",
+     "text": "Fixed to the body, the world shakes behind.",
+     "use": "Panic, drunkenness, disorientation.",
+     "long": "Mounted on the body facing the subject, so it stays still while the world swings behind.",
+     "snippet": "{\"start\": 4, \"preset\": \"snorricam\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "crashZoom",
+     "name": "Crash zoom",
+     "text": "A fast punch-in on the moment.",
+     "use": "A punchline or a sudden discovery.",
+     "long": "A fixed camera whose lens punches in fast at one moment of the shot.",
+     "snippet": "{\"start\": 4, \"preset\": \"crashZoom\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "dollyZoom",
+     "name": "Dolly zoom",
+     "text": "Pull back while zooming in, the background warps.",
+     "use": "Realisation, vertigo, the world shifting.",
+     "long": "Pulls back while the lens zooms in, so the subject keeps its size and the background stretches.",
+     "snippet": "{\"start\": 4, \"preset\": \"dollyZoom\", \"subject\": \"Bike\"}"
+    },
+    {
+     "id": "heroLowArc",
+     "name": "Hero low arc",
+     "text": "A low arc round a hero, looking up.",
+     "use": "A hero moment as the subject passes.",
+     "long": "Low beside the subject, arcing round from the side to the front.",
+     "snippet": "{\"start\": 4, \"preset\": \"heroLowArc\", \"subject\": \"Bike\"}"
+    }
+   ]
+  },
+  {
+   "title": "Placeholder props",
+   "note": "Flat boxes and spheres. Colour carries identity to Seedance. Placed in a world file with PROPS.* (tools/previs/lib/props.js).",
+   "items": [
+    {
+     "id": "building",
+     "name": "Building",
+     "color": "#c9a46a",
+     "text": "A plain beige box.",
+     "use": "Blocks for any town or city; streets are rows of them.",
+     "long": "PROPS.building(x, z, w, h, d, hex) adds a beige box standing on the ground at x, z. PROPS.street(z0, z1) lines a whole road with them.",
+     "snippet": "PROPS.building(12, -40, 10, 18, 10);"
+    },
+    {
+     "id": "tree",
+     "name": "Tree",
+     "color": "#5a8a5a",
+     "text": "A trunk and a sphere.",
+     "use": "Parks, roadsides and anything that should read as nature.",
+     "long": "A brown trunk and a green sphere, scaled with s.",
+     "snippet": "PROPS.tree(-8, -20, 1.2);"
+    },
+    {
+     "id": "lamp",
+     "name": "Street lamp",
+     "color": "#d8d8d8",
+     "text": "A thin box with a light.",
+     "use": "Night streets: the light pools give the shot rhythm.",
+     "long": "A thin pole with a warm light; sx = which side of the road it leans to.",
+     "snippet": "PROPS.lamp(6, -30, -1);"
+    },
+    {
+     "id": "car",
+     "name": "Car",
+     "color": "#3a3a40",
+     "text": "A box with wheels, any colour.",
+     "use": "Traffic, parked cars, a taxi or a police car.",
+     "long": "A box body with four wheels. taxi and cop switch the roof sign.",
+     "snippet": "const car = PROPS.car('#b8bcc4'); car.position.set(4, 0, -60);"
+    },
+    {
+     "id": "bike",
+     "name": "Bike",
+     "color": "#e02a2a",
+     "text": "A red bike with a rider on it.",
+     "use": "The hero vehicle of a chase.",
+     "long": "A red bike with a rider pill and a package on the back.",
+     "snippet": "const bike = PROPS.bike('#e3121c', true);"
+    },
+    {
+     "id": "person",
+     "name": "Person (pill)",
+     "color": "#e8594a",
+     "text": "A capsule with a facing marker, no limbs.",
+     "use": "Any character: the facing mark tells Seedance where they look.",
+     "long": "A capsule with a facing marker, no limbs. Make people while the world is built, then move them in placeActors(t).",
+     "snippet": "const rider = PROPS.person(1.75); rider.position.set(0, 0, -10);"
+    },
+    {
+     "id": "bridgeLeaf",
+     "name": "Bridge",
+     "color": "#8a8f98",
+     "text": "Two leaves that rise.",
+     "use": "A drawbridge jump or a closing-gap moment.",
+     "long": "One leaf of a bascule bridge that can rise; two leaves make the bridge.",
+     "snippet": "const leaf = PROPS.bridgeLeaf(0, -120, 13, 14, -1);"
+    },
+    {
+     "id": "tunnel",
+     "name": "Tunnel",
+     "color": "#1a1a22",
+     "text": "A dark shell with light strips.",
+     "use": "A chase through the dark with light strips flashing past.",
+     "long": "A dark shell along z with light strips on the ceiling.",
+     "snippet": "PROPS.tunnel(0, -200, -320);"
+    },
+    {
+     "id": "ramp",
+     "name": "Ramp and helipad",
+     "color": "#6a7080",
+     "text": "A tilted box and a flat disc.",
+     "use": "Jumps and landings on roofs.",
+     "long": "A tilted box (ramp) and a flat disc (helipad).",
+     "snippet": "PROPS.ramp(0, -60, 48, 12); PROPS.helipad(0, 30, -140);"
+    },
+    {
+     "id": "clockTower",
+     "name": "Clock tower",
+     "color": "#9a9a9a",
+     "text": "A tall box with a dial and moving hands.",
+     "use": "A deadline everyone can read.",
+     "long": "A tall box with a dial and moving hands.",
+     "snippet": "const tower = PROPS.clockTower(40, -380);"
+    },
+    {
+     "id": "particles-smoke",
+     "name": "Smoke",
+     "color": "#f4f4f6",
+     "text": "White spheres that Seedance turns into smoke.",
+     "use": "Crashes, exhausts, explosions.",
+     "long": "White spheres in one instanced mesh; move them every frame with set(i, position, radius). Seedance turns them into smoke.",
+     "snippet": "const smoke = PROPS.particles(40, 'smoke');"
+    },
+    {
+     "id": "particles-splash",
+     "name": "Water",
+     "color": "#7fd0f0",
+     "text": "Light-blue spheres for a splash.",
+     "use": "Splashes and puddles.",
+     "long": "Light-blue spheres that Seedance reads as water.",
+     "snippet": "const splash = PROPS.particles(30, 'splash');"
+    },
+    {
+     "id": "particles-fruit",
+     "name": "Fruit",
+     "color": "#f09a3a",
+     "text": "Orange spheres for flying fruit.",
+     "use": "A stall knocked over, anything that should fly apart.",
+     "long": "Orange spheres that Seedance reads as fruit.",
+     "snippet": "const fruit = PROPS.particles(24, 'fruit');"
+    },
+    {
+     "id": "farm",
+     "name": "Farm set",
+     "color": "#a33a2a",
+     "text": "Barn, silo, hay bales, fence and a news van.",
+     "use": "Rural stories: the aliens farm.",
+     "long": "Barn, silo, hay bales and a fence.",
+     "snippet": "PROPS.barn(-20, -40); PROPS.silo(-34, -46); PROPS.hay(-8, -30); PROPS.fence(-40, -20, 20, -20);"
+    }
+   ]
+  },
+  {
+   "title": "Stories to start from",
+   "note": "Built with these pieces.",
+   "items": [
+    {
+     "id": "street-pov",
+     "name": "Street POV",
+     "text": "One take: an eagle, a skater and a donut, from a waterfall to the harbour.",
+     "use": "Learning the editor on a one-take move.",
+     "long": "One take: an eagle, a skater and a donut, from a waterfall to the harbour. Open it in the editor from Recent projects, or with the link below.",
+     "snippet": "index.html?editor=1&project=street-pov"
+    },
+    {
+     "id": "someone-talking-about-aliens",
+     "name": "Any second now",
+     "text": "A news crew at dusk, a farmer and a UFO. Five shots, four hard cuts.",
+     "use": "A dialogue scene with hard cuts.",
+     "long": "A news crew at dusk, a farmer and a UFO. Five shots, four hard cuts. Open it in the editor from Recent projects, or with the link below.",
+     "snippet": "projects/someone-talking-about-aliens/index.html?editor=1&project=someone-talking-about-aliens"
+    },
+    {
+     "id": "midnight-courier",
+     "name": "Midnight Courier",
+     "text": "A courier on a red bike races an SUV over a drawbridge. 11 shots, 10 hard cuts.",
+     "use": "A chase with cuts, slow motion, tracking and focus pulls.",
+     "long": "A courier on a red bike races an SUV over a drawbridge. 11 shots, 10 hard cuts. Open it in the editor from Recent projects, or with the link below.",
+     "snippet": "projects/midnight-courier/index.html?editor=1&project=midnight-courier"
+    },
+    {
+     "id": "midnight-courier-2",
+     "name": "Midnight Courier 2",
+     "text": "The same chase, re-cut: 20 shots, 19 hard cuts, slow-motion jump, face close-ups, a pulling-out finish.",
+     "use": "Notes, Fix and Assist on a finished chase: try Review my shots.",
+     "long": "The same chase, re-cut: 20 shots, 19 hard cuts, slow-motion jump, face close-ups, a pulling-out finish. Open it in the editor from Recent projects, or with the link below.",
+     "snippet": "projects/midnight-courier-2/index.html?editor=1&project=midnight-courier-2"
+    }
+   ]
+  }
+ ],
+ "footer": "Write a shot sheet in `tools/previs/` and run one command to build a story. Start with `tools/previs/README.md`.",
+ "paths": {
+  "title": "Camera paths",
+  "note": "Copy one, or add it to your moves and apply it to any shot in the editor (M).",
+  "index": "library/moves/index.json"
+ }
+}

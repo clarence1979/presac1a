@@ -1,0 +1,49 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "push-in",
+ "name": "Push-in",
+ "len": 3,
+ "unit": "subj",
+ "text": "A slow dolly toward the subject, about a third of the way in.",
+ "watch": "Watch the red person grow: the camera glides straight toward them.",
+ "tags": [
+  "dolly",
+  "build"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "inout"
+  },
+  {
+   "t": 3,
+   "p": [
+    0,
+    0,
+    0.35
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0
+  }
+ ]
+}

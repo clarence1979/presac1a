@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Street POV Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Caveat:wght@600;700&display=swap">
+<style>
+  :root { --ink: #F4F4F1; --ink2: #9A9A9A; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #wrap { position: fixed; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #000; }
+  #stage { position: relative; width: 1080px; height: 1920px; background: #000; transform-origin: 50% 50%; flex: none; overflow: hidden; }
+  body.editing #wrap { align-items: flex-start; padding-top: 6px; } body.editing #stage { transform-origin: 50% 0; outline: 1px solid #333; }
+  #ed { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; border: 0; pointer-events: none; background: #000; }
+  #ov { position: absolute; inset: 0; pointer-events: none; }
+  .lab { position: absolute; transform: translateY(-100%); font: 600 26px/1 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+  .lab.hero { font: 600 50px/1 'Space Grotesk', system-ui, sans-serif; letter-spacing: -.01em; }
+  .lab small { font: 600 24px/1 'IBM Plex Mono', monospace; color: var(--ink2); margin-left: 12px; letter-spacing: .08em; }
+  #title { position: absolute; display: flex; flex-direction: column; justify-content: center; gap: 14px; color: var(--ink); box-sizing: border-box; }
+  #tTxt { font-family: 'Space Grotesk', system-ui, sans-serif; letter-spacing: -.04em; line-height: 1.02; outline: none; overflow-wrap: break-word; max-width: 100%; }
+  #tSub { font: 500 38px/1.2 'Space Grotesk', system-ui, sans-serif; color: var(--ink2); letter-spacing: -.01em; outline: none; }
+  #title.marker #tTxt { font-family: 'Caveat', cursive; letter-spacing: 0; color: #F7D74A; line-height: .98; }
+  #title.marker #tSub { font-family: 'Caveat', cursive; color: #5BD3E6; letter-spacing: 0; }
+  #logo { position: absolute; display: block; height: auto; }
+  #cur { position: absolute; left: 0; top: 0; width: 69px; height: 96px; margin: -4.5px 0 0 -6.75px; filter: drop-shadow(0 4px 7px rgba(0,0,0,.6)); transform-origin: 6.75px 4.5px; will-change: transform; z-index: 9; }
+  .rip { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 4px solid #F7D74A; box-sizing: border-box; z-index: 8; }
+  .rip.g { border-color: #3DDC84; width: 70px; height: 70px; margin: -35px 0 0 -35px; }
+  #pen { position: absolute; left: 0; top: 0; width: 66px; height: 66px; margin: -63px 0 0 -3px; filter: drop-shadow(0 4px 7px rgba(0,0,0,.6)); transform-origin: 3px 63px; will-change: transform; z-index: 9; }
+  #dovl { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8; overflow: visible; }
+  .rip.s { width: 56px; height: 56px; margin: -28px 0 0 -28px; border-width: 3px; }
+  #povl { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8; overflow: visible; }
+  #whl { position: absolute; left: 0; top: 0; width: 26px; height: 38px; opacity: 0; z-index: 9; filter: drop-shadow(0 3px 5px rgba(0,0,0,.6)); }
+  #act { position: absolute; left: 0; top: 0; padding: 4px 17px 5px; border-radius: 11px; background: rgba(0,0,0,.8); border: 2.2px solid #2b55f0; color: #fff; font: 400 26px/1.3 system-ui, -apple-system, sans-serif; white-space: nowrap; opacity: 0; z-index: 10; }   /* the editor's gizmo tooltip at 2.2x */
+  #act.done { color: #ffd34d; }
+  #hnd { position: absolute; left: 0; top: 0; width: 92px; height: 92px; margin: -26px 0 0 -46px; filter: drop-shadow(0 4px 7px rgba(0,0,0,.6)); transform-origin: 46px 26px; will-change: transform; z-index: 9; opacity: 0; }
+  #hnd .open { display: block; } #hnd .fist { display: none; } #hnd.grab .open { display: none; } #hnd.grab .fist { display: block; }
+  #kk { position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 9px; background: #1b1d22; border: 2.5px solid #F7D74A; box-shadow: 0 4px 0 #6b5a12, 0 6px 10px rgba(0,0,0,.6); color: #fff; font: 600 26px/40px 'IBM Plex Mono', ui-monospace, monospace; text-align: center; opacity: 0; z-index: 10; box-sizing: border-box; }
+  #kk.dn { box-shadow: 0 1px 0 #6b5a12, 0 2px 4px rgba(0,0,0,.6); margin-top: 3px; background: #2a2c33; }
+  #hint { position: fixed; left: 12px; bottom: 10px; font: 12px system-ui; color: #777; }
+  body.editing #hint { display: none; }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <iframe id="ed" title="Blockout editor"></iframe>
+  <div id="ov">
+    <div id="title"><div id="tTxt"></div><div id="tSub"></div></div>
+    <img id="logo" src="../brand/tein-logo-dark.svg" alt="Tein">
+    <div id="labs"></div>
+    <svg id="povl"></svg>
+    <svg id="dovl"></svg>
+    <div id="rips"></div>
+    <div id="act"></div>
+    <svg id="cur" viewBox="0 0 30 42"><path d="M3 2 L3 31 L10 24.4 L14.6 35.4 L19.4 33.3 L14.9 22.7 L24.6 22.7 Z" fill="none" stroke="rgba(0,0,0,.85)" stroke-width="4" stroke-linejoin="round"/><path d="M3 2 L3 31 L10 24.4 L14.6 35.4 L19.4 33.3 L14.9 22.7 L24.6 22.7 Z" fill="#F7D74A" stroke="#1a1a1a" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg id="hnd" viewBox="0 0 32 32"><g class="open"><path d="M10.5 15 V7.5 a1.9 1.9 0 0 1 3.8 0 V14 V5.5 a1.9 1.9 0 0 1 3.8 0 V14 V6.8 a1.9 1.9 0 0 1 3.8 0 V15 V9.8 a1.9 1.9 0 0 1 3.8 0 V19.5 c0 6 -3.6 10 -9 10 c-4 0 -6.3 -2 -8.2 -5.3 l-3.4 -5.6 a1.9 1.9 0 0 1 3.1 -2.2 Z" fill="none" stroke="rgba(0,0,0,.85)" stroke-width="3.6" stroke-linejoin="round"/><path d="M10.5 15 V7.5 a1.9 1.9 0 0 1 3.8 0 V14 V5.5 a1.9 1.9 0 0 1 3.8 0 V14 V6.8 a1.9 1.9 0 0 1 3.8 0 V15 V9.8 a1.9 1.9 0 0 1 3.8 0 V19.5 c0 6 -3.6 10 -9 10 c-4 0 -6.3 -2 -8.2 -5.3 l-3.4 -5.6 a1.9 1.9 0 0 1 3.1 -2.2 Z" fill="#F7D74A" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/></g><g class="fist"><path d="M8.5 15.5 V12.8 a1.9 1.9 0 0 1 3.8 0 V14 V11.6 a1.9 1.9 0 0 1 3.8 0 V14 V11.8 a1.9 1.9 0 0 1 3.8 0 V14.5 V12.8 a1.9 1.9 0 0 1 3.8 0 V19.5 c0 5.5 -3.4 9 -8.6 9 c-4 0 -6.3 -2 -7.6 -5 l-1.6 -4.2 a1.9 1.9 0 0 1 2.6 -2.4 Z" fill="none" stroke="rgba(0,0,0,.85)" stroke-width="3.6" stroke-linejoin="round"/><path d="M8.5 15.5 V12.8 a1.9 1.9 0 0 1 3.8 0 V14 V11.6 a1.9 1.9 0 0 1 3.8 0 V14 V11.8 a1.9 1.9 0 0 1 3.8 0 V14.5 V12.8 a1.9 1.9 0 0 1 3.8 0 V19.5 c0 5.5 -3.4 9 -8.6 9 c-4 0 -6.3 -2 -7.6 -5 l-1.6 -4.2 a1.9 1.9 0 0 1 2.6 -2.4 Z" fill="#F7D74A" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/></g></svg>
+    <div id="kk">K</div>
+    <svg id="pen" viewBox="0 0 32 32"><path d="M2 30 L5 19 L22 2 L30 10 L13 27 Z" fill="none" stroke="rgba(0,0,0,.85)" stroke-width="4" stroke-linejoin="round"/><path d="M2 30 L5 19 L22 2 L30 10 L13 27 Z" fill="#3DDC84" stroke="#0d1f15" stroke-width="2" stroke-linejoin="round"/><path d="M2 30 L9.5 22.5" stroke="#0d1f15" stroke-width="1.8"/><circle cx="10.6" cy="21.4" r="2.1" fill="#0d1f15"/><path d="M18 6 L26 14" stroke="#0d1f15" stroke-width="1.6"/></svg>
+    <svg id="whl" viewBox="0 0 26 38"><rect x="2" y="2" width="22" height="34" rx="11" fill="#111" stroke="#F7D74A" stroke-width="2.5"/><line x1="13" y1="2" x2="13" y2="15" stroke="#F7D74A" stroke-width="1.5"/><rect class="wt" x="11" y="7" width="4" height="7" rx="2" fill="#F7D74A"/></svg>
+  </div>
+</div></div>
+<div id="hint">Click or Space: play / pause · R: restart · L: layout mode</div>
+<script type="module" src="demo.js?v=kd2"></script>
+<script type="module" src="layout-mode.js?v=snap1"></script>
+</body>
+</html>

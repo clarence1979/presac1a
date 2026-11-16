@@ -1,0 +1,49 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "crane-up",
+ "name": "Crane up",
+ "len": 3.5,
+ "unit": "subj",
+ "text": "Rises straight up and tilts down to keep the subject: shows the place.",
+ "watch": "Watch the camera lift straight up and tilt down to keep the red person in frame.",
+ "tags": [
+  "crane",
+  "reveal"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "inout"
+  },
+  {
+   "t": 3.5,
+   "p": [
+    0,
+    0.45,
+    0.08
+   ],
+   "q": [
+    -0.2255,
+    0,
+    0,
+    0.97424
+   ],
+   "df": 0,
+   "dr": 0
+  }
+ ]
+}

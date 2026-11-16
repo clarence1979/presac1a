@@ -1,0 +1,275 @@
+{
+ "id": "midnight-courier-2",
+ "name": "Midnight Courier 2",
+ "world": "midnight-courier",
+ "length": 30,
+ "logline": "A courier on a red scooter has 30 seconds to deliver a bag of cash before the clock strikes twelve, with a black SUV on his tail. Sixteen shots.",
+ "speed": [
+  {
+   "t": 15.43,
+   "dur": 4.5,
+   "speed": 0.5,
+   "in": 0.35,
+   "out": 0.35
+  }
+ ],
+ "thumb": 15.8,
+ "shots": [
+  {
+   "start": 0.0,
+   "preset": "lockedWide",
+   "subject": "Bike",
+   "look": "Clock tower",
+   "name": "Alley, locked wide: the courier waits, the clock reads 11:59",
+   "params": {
+    "back": 5.6,
+    "side": 2.2,
+    "h": 1.45,
+    "fov": 50,
+    "mix": 0.5
+   }
+  },
+  {
+   "start": 2.5,
+   "preset": "faceCloseProfile",
+   "subject": "Face",
+   "name": "Close on the rider's face, tense, eyes forward",
+   "params": {
+    "side": 1,
+    "dist": 2.0,
+    "fov": 34,
+    "lead": 0.55
+   }
+  },
+  {
+   "start": 4.0,
+   "preset": "quarterClose",
+   "subject": "Package",
+   "look": "Gloves",
+   "name": "The cash luggage, rear quarter; focus racks to the gloves",
+   "focus": {
+    "from": "Package",
+    "to": "Gloves",
+    "at": [
+     0.3,
+     0.65
+    ]
+   }
+  },
+  {
+   "start": 5.5,
+   "preset": "frontWide",
+   "subject": "Bike",
+   "name": "In front and above: burnout, smoke beside the bike, the SUV's headlights behind it",
+   "params": {
+    "ahead0": 7,
+    "ahead1": 7,
+    "h0": 3,
+    "h1": 4,
+    "side": -2.5,
+    "fov": 60
+   }
+  },
+  {
+   "start": 6.93,
+   "preset": "faceCloseProfile",
+   "subject": "Face",
+   "name": "Close up on the rider as he looks behind",
+   "params": {
+    "side": -1,
+    "dist": 1.8,
+    "fov": 36,
+    "lead": 0
+   }
+  },
+  {
+   "start": 9.36,
+   "preset": "craneHigh",
+   "subject": "Bike",
+   "look": "SUV",
+   "name": "Crane high over the avenue, slow push-in"
+  },
+  {
+   "start": 11.0,
+   "preset": "frontLowTracking",
+   "subject": "SUV",
+   "name": "Low in front of the SUV: it bears down on the bike",
+   "look": "Bike",
+   "params": {
+    "ahead0": 14,
+    "ahead1": 12,
+    "h": 2.4,
+    "side": 1.5,
+    "fov": 60
+   }
+  },
+  {
+   "start": 11.7,
+   "preset": "sideTracking",
+   "subject": "SUV",
+   "name": "Side of the SUV, a little ahead: we see it plough through the fruit stall",
+   "params": {
+    "dist": 8,
+    "side": -1,
+    "h": 0.8,
+    "lead": -1,
+    "aimBack": -1,
+    "aimSide": 0,
+    "fov": 46
+   }
+  },
+  {
+   "start": 14.0,
+   "preset": "lowChase",
+   "subject": "Bike",
+   "name": "Bike 1: behind and low, it hits the rising leaf",
+   "params": {
+    "back": 5,
+    "back1": 6,
+    "side": 2.2,
+    "h": 0.9,
+    "fov": 66
+   }
+  },
+  {
+   "start": 15.05,
+   "preset": "sideTracking",
+   "subject": "Bike",
+   "name": "Bike 2: from the side over the water, we see the climb and the whole jump (slow motion from 15.43)",
+   "params": {
+    "dist": 22,
+    "side": -1,
+    "h": 10,
+    "lead": 0,
+    "aimBack": 0,
+    "aimSide": 0,
+    "fov": 30
+   }
+  },
+  {
+   "start": 16.79,
+   "preset": "sideTracking",
+   "subject": "Bike",
+   "name": "Bike 2b: very close up in the air (same side as the wide shot)",
+   "params": {
+    "dist": 4.2,
+    "side": -1,
+    "h": 8,
+    "lead": 0,
+    "aimBack": 0,
+    "aimSide": 0,
+    "fov": 46
+   }
+  },
+  {
+   "start": 17.75,
+   "preset": "faceCloseFront",
+   "subject": "Face",
+   "name": "His face, close up from the front, in the air",
+   "params": {
+    "dist": 1.4,
+    "side": 0.15,
+    "h": 0.05,
+    "fov": 34
+   }
+  },
+  {
+   "start": 19.1,
+   "preset": "wormsEye",
+   "subject": "Bike",
+   "name": "Bike 3: on the ground ahead of the landing, it comes down toward us",
+   "params": {
+    "atU": 1,
+    "ahead": 5,
+    "side": 3,
+    "h": 0.9,
+    "fov": 55
+   }
+  },
+  {
+   "start": 20.25,
+   "preset": "topDown",
+   "subject": "SUV",
+   "name": "From above: the SUV has skidded to a stop short of the raised leaves; it cannot follow",
+   "params": {
+    "h0": 14,
+    "h1": 13,
+    "follow": 0.6,
+    "dz": -2.5,
+    "fov": 66
+   }
+  },
+  {
+   "start": 21.3,
+   "preset": "wheelClose",
+   "subject": "Front wheel",
+   "name": "Front wheel and handlebar, speed in the tunnel"
+  },
+  {
+   "start": 22.0,
+   "preset": "fpv",
+   "subject": "Bike",
+   "name": "Wide-angle first person through the lit tunnel",
+   "params": {
+    "fov": 108
+   }
+  },
+  {
+   "start": 24.1,
+   "preset": "aerialSpiral",
+   "subject": "Bike",
+   "name": "Aerial spiral: out of the tunnel (24.34 s), up the ramp"
+  },
+  {
+   "start": 26.5,
+   "preset": "faceCloseFront",
+   "subject": "Face",
+   "name": "Face close from the front: relief as he slows",
+   "params": {
+    "dist": 2.3,
+    "fov": 38
+   }
+  },
+  {
+   "start": 28.0,
+   "preset": "aerialPullback",
+   "subject": "Bike",
+   "look": "Clock tower",
+   "name": "Helipad, close: he drifts and stops as the clock strikes 12",
+   "params": {
+    "D0": 3.5,
+    "D1": 4.5,
+    "h0": 1.6,
+    "h1": 2.2,
+    "mix": 0.6,
+    "until": 26.75,
+    "fov": 68
+   }
+  },
+  {
+   "start": 28.8,
+   "preset": "aerialPullback",
+   "subject": "Bike",
+   "look": "Clock tower",
+   "name": "Same view, now pulling far out and wide",
+   "minSize": 0.03,
+   "params": {
+    "D0": 4.5,
+    "D1": 26,
+    "h0": 2.2,
+    "h1": 12,
+    "mix": 0.5,
+    "until": 27.9,
+    "fov": 62
+   },
+   "focus": {
+    "from": "Bike",
+    "to": "Clock tower",
+    "at": [
+     0.35,
+     0.85
+    ]
+   }
+  }
+ ]
+}

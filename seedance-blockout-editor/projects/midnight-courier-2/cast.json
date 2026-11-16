@@ -1,0 +1,54 @@
+[
+ {
+  "name": "Courier",
+  "kind": "person",
+  "pill": "red",
+  "pillHex": "#ff2d20",
+  "look": "young man, motorbike courier, slim athletic build, dark hair, red open-face motorcycle helmet, black leather jacket with a reflective stripe, black gloves, dark riding trousers and boots",
+  "pose": "riding low over the scooter, both hands on the grips; at the start he jumps onto it holding the luggage, bare-headed until he puts the helmet on at about 2.5 to 4.5 seconds; at the end he sits up and looks at the clock tower",
+  "source": "claude"
+ },
+ {
+  "name": "Bike",
+  "kind": "object",
+  "look": "glossy red scooter, black wheels and seat, a bright white headlight, a small black rear rack carrying the cash-filled luggage",
+  "pose": "ridden fast; burns out, weaves, jumps the drawbridge gap, lands, then skids round 180 degrees to a stop on the helipad",
+  "source": "claude"
+ },
+ {
+  "name": "Package",
+  "kind": "object",
+  "look": "one piece of cash-filled hard-shell luggage, strapped to the scooter's rear rack with two black straps",
+  "pose": "he holds it while he mounts the scooter, then it is strapped to the rear rack and stays there the whole time",
+  "source": "claude"
+ },
+ {
+  "name": "SUV",
+  "kind": "object",
+  "look": "large black SUV, gloss black paint, dark tinted windows, bright white headlights",
+  "pose": "chasing the scooter; smashes through a fruit stall, then brakes hard and skids to a stop short of the raised bridge leaf, unable to follow (it never goes into the river)",
+  "source": "claude"
+ },
+ {
+  "name": "SUV driver",
+  "kind": "person",
+  "pill": "dark grey",
+  "pillHex": "#3c3c4c",
+  "look": "heavy-set man in a black suit and black sunglasses, seen through the tinted windscreen",
+  "pose": "both hands on the wheel, leaning forward; braces back when he brakes",
+  "source": "claude"
+ },
+ {
+  "name": "Clock tower",
+  "kind": "object",
+  "look": "tall pale stone clock tower on a large civic building, four big round white clock faces lit from inside with two black hands, reading 11:59 then 12:00",
+  "pose": "at the end of the avenue in shot 1, straight beyond the helipad in shot 11; the minute hand clicks to 12 at 28.4 s",
+  "source": "claude"
+ },
+ {
+  "name": "City",
+  "kind": "place",
+  "look": "small night city at midnight: a narrow alley, a straight avenue with street lamps and light traffic, a street market with fruit stalls and coloured awnings, a river with a bascule drawbridge, a road tunnel with strip lights, a concrete ramp up to a rooftop helipad; a low warm light from the west early on, cool moonlight on the roof",
+  "source": "claude"
+ }
+]

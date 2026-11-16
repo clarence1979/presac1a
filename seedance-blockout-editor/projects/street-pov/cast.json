@@ -1,0 +1,16 @@
+[
+ { "name": "Trout", "kind": "animal", "look": "rainbow trout, silver with a pink stripe along its side, wet and glistening", "pose": "side view, body slightly arched as if leaping, fins spread", "source": "the Street POV prompt" },
+ { "name": "Eagle", "kind": "animal", "look": "bald eagle, white head and tail, dark brown body, yellow beak and talons", "pose": "wings spread wide in flight, talons forward", "source": "the Street POV prompt" },
+ { "name": "Office man", "kind": "person", "look": "man in his thirties in a red sweater, dark trousers, short hair", "pose": "standing, smiling, right hand raised in a wave", "source": "the Street POV prompt" },
+ { "name": "Skater", "kind": "person", "look": "skateboarder in his twenties, teal hoodie, black jeans, on a wooden skateboard", "pose": "standing with one foot on a wooden skateboard, arms relaxed", "source": "the Street POV prompt" },
+ { "name": "Woman", "kind": "person", "look": "blonde woman in a white summer dress, sandals, small handbag on her shoulder", "pose": "walking toward the camera, relaxed stride", "source": "the Street POV prompt" },
+ { "name": "Pasta plate", "kind": "person", "look": "man in a blue shirt eating spaghetti with a meatball and tomato sauce, a glass of red wine on the table", "pose": "seated at a small round table, twirling pasta on his fork", "source": "the Street POV prompt" },
+ { "name": "Cat", "kind": "animal", "look": "white cat", "pose": "crouched, ready to spring", "source": "the Street POV prompt" },
+ { "name": "Red car", "kind": "object", "look": "red 1990s sports coupe", "pose": "three-quarter front view", "source": "the Street POV prompt" },
+ { "name": "Police car", "kind": "object", "look": "black-and-white police cruiser with a red-and-blue light bar, a police officer in a dark uniform and cap leaning from the driver's window holding a pink-frosted donut with sprinkles", "pose": "side view, driver's window open", "source": "the Street POV prompt" },
+ { "name": "Donut", "kind": "object", "look": "pink-frosted donut with sprinkles", "source": "the Street POV prompt" },
+ { "name": "Shark", "kind": "animal", "look": "great white shark", "pose": "side view, swimming, mouth half open", "source": "the Street POV prompt" },
+ { "name": "River valley", "kind": "place", "look": "lush green mountain valley in summer, a fast clear river over grey granite boulders, dense dark-green pine and fir forest down to both banks, no snow, clear morning light", "source": "the Street POV prompt" },
+ { "name": "City avenue and alley", "kind": "place", "look": "wide Manhattan avenue between very tall glass and pre-war brick towers, shop fronts with awnings, street trees, then a narrow brick back alley with fire escapes, dumpsters and a small trattoria with a red-and-white striped awning and string lights, bright late morning", "source": "the Street POV prompt" },
+ { "name": "Harbour and sea floor", "kind": "place", "look": "a harbour quay by the open sea in bright late-morning sun, and below the surface a sunlit sea floor with rocks and swaying kelp", "source": "the Street POV prompt" }
+]

@@ -1,0 +1,154 @@
+{
+ "kind": "pov-moves-index",
+ "v": 1,
+ "note": "Camera paths you can copy into the editor (Moves panel). Positions are relative to the camera, in multiples of the distance to the subject (unit subj) or metres (unit m). Format: moves-core.js.",
+ "moves": [
+  {
+   "id": "push-in",
+   "file": "push-in.json",
+   "name": "Push-in",
+   "len": 3,
+   "text": "A slow dolly toward the subject, about a third of the way in.",
+   "watch": "Watch the red person grow: the camera glides straight toward them.",
+   "tags": [
+    "dolly",
+    "build"
+   ],
+   "preview": "library/previews/push-in.mp4"
+  },
+  {
+   "id": "pull-back",
+   "file": "pull-back.json",
+   "name": "Pull-back",
+   "len": 3,
+   "text": "Backs away and rises a little, the subject stays framed: an ending or a reveal.",
+   "watch": "Watch the red person shrink as the camera backs away and rises a little.",
+   "tags": [
+    "dolly",
+    "reveal",
+    "ending"
+   ],
+   "preview": "library/previews/pull-back.mp4"
+  },
+  {
+   "id": "orbit",
+   "file": "orbit.json",
+   "name": "Orbit",
+   "len": 4,
+   "text": "Circles 60 degrees round the subject at the same distance, always looking at it.",
+   "watch": "Watch the street turn behind the red person: the camera circles them at the same distance.",
+   "tags": [
+    "orbit",
+    "hero"
+   ],
+   "preview": "library/previews/orbit.mp4"
+  },
+  {
+   "id": "low-arc-up",
+   "file": "low-arc-up.json",
+   "name": "Low arc up",
+   "len": 3,
+   "text": "Starts low beside the subject, arcs round the front and rises: a hero shot.",
+   "watch": "Watch the camera start low at the side, swing round the front and rise.",
+   "tags": [
+    "arc",
+    "hero",
+    "low"
+   ],
+   "preview": "library/previews/low-arc-up.mp4"
+  },
+  {
+   "id": "crane-up",
+   "file": "crane-up.json",
+   "name": "Crane up",
+   "len": 3.5,
+   "text": "Rises straight up and tilts down to keep the subject: shows the place.",
+   "watch": "Watch the camera lift straight up and tilt down to keep the red person in frame.",
+   "tags": [
+    "crane",
+    "reveal"
+   ],
+   "preview": "library/previews/crane-up.mp4"
+  },
+  {
+   "id": "whip-pan",
+   "file": "whip-pan.json",
+   "name": "Whip pan",
+   "len": 1.2,
+   "text": "Holds, then snaps 80 degrees to the right in a third of a second: a fast transition.",
+   "watch": "Watch the frame hold, then snap sideways in a blur.",
+   "tags": [
+    "pan",
+    "transition",
+    "fast"
+   ],
+   "preview": "library/previews/whip-pan.mp4"
+  },
+  {
+   "id": "dolly-zoom",
+   "file": "dolly-zoom.json",
+   "name": "Dolly zoom",
+   "len": 3,
+   "text": "Pulls back while the lens zooms in, so the subject keeps its size and the background stretches.",
+   "watch": "Watch the street stretch behind the red person while they keep the same size.",
+   "tags": [
+    "zoom",
+    "vertigo"
+   ],
+   "preview": "library/previews/dolly-zoom.mp4"
+  },
+  {
+   "id": "crash-zoom",
+   "file": "crash-zoom.json",
+   "name": "Crash zoom",
+   "len": 1.5,
+   "text": "A fast punch-in of the lens on the moment, the camera stays put.",
+   "watch": "Watch the red person: the camera stays put and the lens punches in.",
+   "tags": [
+    "zoom",
+    "fast"
+   ],
+   "preview": "library/previews/crash-zoom.mp4"
+  },
+  {
+   "id": "aerial-spiral",
+   "file": "aerial-spiral.json",
+   "name": "Aerial spiral",
+   "len": 5,
+   "text": "Circles a quarter turn while rising and widening: reveals the place round the subject.",
+   "watch": "Watch the camera circle a quarter turn while it climbs and widens.",
+   "tags": [
+    "aerial",
+    "orbit",
+    "reveal"
+   ],
+   "preview": "library/previews/aerial-spiral.mp4"
+  },
+  {
+   "id": "aerial-pullback",
+   "file": "aerial-pullback.json",
+   "name": "Aerial pull-back",
+   "len": 5,
+   "text": "A long, even pull-back that rises high and looks down: the ending.",
+   "watch": "Watch the camera pull back and climb high, looking down at the red person.",
+   "tags": [
+    "aerial",
+    "ending"
+   ],
+   "preview": "library/previews/aerial-pullback.mp4"
+  },
+  {
+   "id": "truck-right",
+   "file": "truck-right.json",
+   "name": "Truck right",
+   "len": 3,
+   "text": "Slides sideways to the right without turning: parallax past the subject.",
+   "watch": "Watch the street slide past: the camera moves sideways without turning.",
+   "tags": [
+    "truck",
+    "parallax"
+   ],
+   "preview": "library/previews/truck-right.mp4"
+  }
+ ]
+}

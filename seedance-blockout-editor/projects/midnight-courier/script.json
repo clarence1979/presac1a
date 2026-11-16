@@ -1,0 +1,17 @@
+{
+ "title": "Midnight Courier",
+ "version": "A",
+ "logline": "A courier on a red motorbike has 30 seconds to deliver a glowing package before the clock strikes twelve, with a black SUV on her tail.",
+ "times": "playback seconds of the 30.00 s take. Slow motion runs 16.1-18.1 s (30 % speed from 16.45 to 17.75 s).",
+ "rate": "no dialogue",
+ "lines": [],
+ "sound": [
+  { "start": 0.0, "end": 3.0, "what": "engine idling, distant city hum, a clock ticking" },
+  { "start": 5.55, "end": 6.4, "what": "burnout: rear tyre screaming" },
+  { "start": 12.6, "end": 13.0, "what": "crash of the fruit stall" },
+  { "start": 13.4, "end": 16.0, "what": "bridge warning bells" },
+  { "start": 18.6, "end": 19.3, "what": "SUV brakes screeching" },
+  { "start": 20.33, "end": 21.0, "what": "heavy splash" },
+  { "start": 28.39, "end": 30.0, "what": "the clock strikes twelve" }
+ ]
+}

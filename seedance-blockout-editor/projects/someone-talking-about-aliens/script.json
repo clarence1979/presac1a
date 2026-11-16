@@ -1,0 +1,69 @@
+{
+ "title": "Any second now",
+ "version": "D",
+ "logline": "A local TV crew at dusk interviews a man in his farmyard about the UFO he says comes over his barn every night. They give up and walk away; behind their backs, with their camera still rolling at the hip, it comes.",
+ "times": "playback seconds of the 30.00 s take. Slow motion runs 24.0-26.3 s (30 % speed, back to full speed by 26.7 s); no line is spoken inside it.",
+ "rate": "every line at 2.5-2.8 words per second",
+ "lines": [
+  {
+   "start": 3.6,
+   "end": 7.6,
+   "speaker": "Farmer",
+   "to": "the reporter",
+   "words": 10,
+   "text": "Every night at ten, it comes right over that barn.",
+   "delivery": "Plain and certain, a man stating a fact he is tired of defending.",
+   "gesture": "On \"over that barn\" he twists to his right and points his right arm fully straight back over his shoulder at the barn roof."
+  },
+  {
+   "start": 8.5,
+   "end": 9.3,
+   "speaker": "Reporter",
+   "to": "the farmer",
+   "words": 2,
+   "text": "And tonight?",
+   "delivery": "Bright TV voice, a little patient, as if humouring him.",
+   "gesture": "She has just thrust the mic in under his chin with her right arm."
+  },
+  {
+   "start": 10.0,
+   "end": 11.2,
+   "speaker": "Farmer",
+   "to": "the reporter",
+   "words": 3,
+   "text": "Any second now.",
+   "delivery": "Quiet, sure, glancing up from his watch.",
+   "gesture": "Left wrist raised to his face, reading his watch; lowers it as he finishes."
+  },
+  {
+   "start": 15.4,
+   "end": 17.8,
+   "speaker": "Reporter",
+   "to": "the cameraman",
+   "words": 6,
+   "text": "Okay... I think we've got enough.",
+   "delivery": "Polite, already finished with him; the pause after \"Okay\" says it.",
+   "gesture": "Lowers the mic, a small open left hand, then turns toward the van."
+  },
+  {
+   "start": 26.75,
+   "end": 27.15,
+   "speaker": "Farmer",
+   "to": "the crew",
+   "words": 1,
+   "text": "THERE!",
+   "delivery": "A shout, the moment speed returns to normal.",
+   "gesture": "Right arm fully up, pointing at the saucer as it streaks away."
+  },
+  {
+   "start": 27.85,
+   "end": 29.65,
+   "speaker": "Farmer",
+   "to": "the crew at the van",
+   "words": 5,
+   "text": "...Tell me you got that.",
+   "delivery": "Out of breath, half hope, half dread; not a shout.",
+   "gesture": "Turned to the crew, his right arm still raised to the empty sky, sinking slowly to his side."
+  }
+ ]
+}

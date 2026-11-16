@@ -1,0 +1,55 @@
+# ---- dependencies and build output
+node_modules/
+out/
+.frames-*/
+*.log
+.DS_Store
+
+# ---- YOUR generations and production files: never published
+# every draft: prompts, reference pictures, blockout and result videos
+drafts/
+# Seedance results and test videos
+seedance/*
+!seedance/prompt.txt
+# personal title-intro production (videos and matting models)
+title-intro/
+# demo reels
+demo/*.mp4
+# demo work-in-progress pictures
+demo/*.jpg
+demo/*.png
+demo/feature-results/
+# third-party reference clips and notes: not ours to publish
+reference/
+*.mov
+*.onnx
+
+# ---- per-user project data and generated media inside a project
+projects/*/fix-history/
+projects/*/notes.json
+projects/*/notes-fixed.json
+projects/*/review-result.json
+projects/*/fix-result.json
+projects/*/prompt-style.json
+projects/*/backup*/
+projects/*/stills*/
+projects/*/*.mp4
+projects/*/PLAN*.md
+projects/*/QA-BUILD.md
+
+# ---- internal working notes (not documentation)
+EDITOR-PROGRESS.md
+EDITOR-BRIEF.md
+SHOTPLAN.md
+BUILD-PROMPT.md
+
+# ---- machine-specific settings and secrets: the Tein key lives in the Keychain or ~/.config, never in this folder
+local-config.json
+.env
+.env.*
+*.key
+projects/*/frames-sheet.*
+
+# a nested git repo and a link into a folder on your own drive: never published
+release/
+seedance-skill

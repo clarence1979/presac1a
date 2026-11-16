@@ -1,0 +1,82 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "whip-pan",
+ "name": "Whip pan",
+ "len": 1.2,
+ "unit": "subj",
+ "text": "Holds, then snaps 80 degrees to the right in a third of a second: a fast transition.",
+ "watch": "Watch the frame hold, then snap sideways in a blur.",
+ "tags": [
+  "pan",
+  "transition",
+  "fast"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0
+  },
+  {
+   "t": 0.45,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "inout"
+  },
+  {
+   "t": 0.8,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    -0.64279,
+    0,
+    0.76604
+   ],
+   "df": 0,
+   "dr": 0
+  },
+  {
+   "t": 1.2,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    -0.64279,
+    0,
+    0.76604
+   ],
+   "df": 0,
+   "dr": 0
+  }
+ ]
+}

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Your generations · Seedance 3D Blockout Editor</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>html,body{margin:0;background:#000;color:#f4f4f6;min-height:100%;font:400 15px/1.45 'Hanken Grotesk',system-ui,sans-serif}
+.top{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid #26262c;position:sticky;top:0;background:#000;z-index:2}.top a{color:#9b9ca6;font-size:13.5px;text-decoration:underline;text-underline-offset:3px}.top a:hover{color:#f4f4f6}.top .sp{flex:1}.top .sub{color:#9b9ca6;font:500 14px 'Space Grotesk',sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px}</style></head>
+<body><div class="top" id="top"></div><div class="wrap" id="host"></div>
+<!-- Everything generated with Seedance, from drafts/<id>/ through the local helper. generations.html?id=<draft> opens one. -->
+<script type="module">
+import { mountGenerations } from './generations.js';
+import { teinLogo } from './brand/tein-logo.js';
+import { backButton, goBack } from './back.js';
+document.getElementById('top').innerHTML = `<a href="index.html" title="Back to the start screen" style="text-decoration:none;display:inline-flex">${teinLogo(18, 21, 6)}</a><span id="bk"></span><span class="sub">Blockout editor · Generations</span><span class="sp"></span><a href="index.html?editor=1">Editor</a><a href="index.html">Start screen</a>`;
+const G = mountGenerations(document.getElementById('host'));
+// Back: from one generation to the gallery, from the gallery to the previous page of the app (or the start screen)
+document.getElementById('bk').replaceWith(backButton({ esc: true, onBack: () => (G.isDetail() ? G.back() : goBack()) }));
+</script></body></html>

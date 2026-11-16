@@ -1,0 +1,119 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "aerial-spiral",
+ "name": "Aerial spiral",
+ "len": 5,
+ "unit": "subj",
+ "text": "Circles a quarter turn while rising and widening: reveals the place round the subject.",
+ "watch": "Watch the camera circle a quarter turn while it climbs and widens.",
+ "tags": [
+  "aerial",
+  "orbit",
+  "reveal"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  },
+  {
+   "t": 1,
+   "p": [
+    0.1728,
+    0.0832,
+    -0.0483
+   ],
+   "q": [
+    -0.03894,
+    0.08153,
+    0.00319,
+    0.99591
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  },
+  {
+   "t": 2,
+   "p": [
+    0.6361,
+    0.2816,
+    -0.0307
+   ],
+   "q": [
+    -0.10964,
+    0.27117,
+    0.03111,
+    0.95576
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  },
+  {
+   "t": 3,
+   "p": [
+    1.1819,
+    0.5184,
+    0.2706
+   ],
+   "q": [
+    -0.15516,
+    0.4795,
+    0.08657,
+    0.85937
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  },
+  {
+   "t": 4,
+   "p": [
+    1.5171,
+    0.7168,
+    0.7499
+   ],
+   "q": [
+    -0.16498,
+    0.63173,
+    0.14002,
+    0.74438
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  },
+  {
+   "t": 5,
+   "p": [
+    1.6,
+    0.8,
+    1
+   ],
+   "q": [
+    -0.16246,
+    0.68819,
+    0.16246,
+    0.68819
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  }
+ ]
+}

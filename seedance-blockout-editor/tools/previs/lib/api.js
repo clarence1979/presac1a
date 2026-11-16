@@ -1,0 +1,24 @@
+// ============================================================ PREVIS API (tools/previs/lib/api.js): what build.mjs and check-sheet.mjs ask the page for
+{ const NDC = (p) => { camera.updateMatrixWorld(); const v = p.clone().project(camera); return { x: v.x, y: v.y, front: v.z < 1 && p.clone().sub(camera.position).dot(camera.getWorldDirection(new V3())) > 0 }; };
+  const ray = new THREE.Raycaster(), solidMeshes = SOLIDS.map((q) => q.m);
+  // the baked camera (no editor layers) at story time t, put on the three.js camera
+  const bakedCam = (t) => { const c = bakedAt(t); camera.position.copy(c.p); camera.up.set(0, 1, 0); camera.lookAt(c.p.clone().add(c.d)); camera.rotateZ(THREE.MathUtils.degToRad(c.roll)); camera.fov = c.fov; camera.updateProjectionMatrix(); camera.updateMatrixWorld(); return c; };
+  const focusName = (sh, u) => { const f = sh.def.focus; if (!f) return [sh.subj, sh.subj, 0]; if (typeof f === 'string') return [f, f, 0]; const r = f.at || [0.35, 0.7]; return [f.from || sh.subj, f.to || sh.subj, smoothstep((u - r[0]) / Math.max(0.01, r[1] - r[0]))]; };
+  function focusKeys() { const keys = [];
+    for (const sh of SHOTS) { const L = sh.b - sh.a, n = Math.max(2, Math.ceil(L * 24));   /* a focus key every frame (24 a second): the head moves faster than 4 times a second, and a slower rate left it soft in some frames */ for (let i = 0; i <= n; i++) { const t = Math.min(sh.b - 0.007, Math.max(sh.a, sh.a + L * i / n)), u = (t - sh.a) / L;   /* first key exactly on the cut, last 3 ms before the next: the focus changes AT the cut, not over the next frame or two (that slide read as a blur / glitch on the figure) */ updateWorld(t); placeActors(t); const c = bakedAt(t), [A, B, w] = focusName(sh, u);
+        const dA = PV.pos(A).distanceTo(c.p), dB = PV.pos(B).distanceTo(c.p); keys.push({ t: +Math.max(0, i === 0 ? sh.a - 0.008 : i === n ? sh.b - 0.014 : t).toFixed(3), dist: +Math.max(0.3, dA + (dB - dA) * w).toFixed(2), fstop: sh.def.fstop || 2 }); } }
+    return keys; }
+  function trackOf(sh) { const tr = sh.def.track; if (!tr) return null; const o = tr === true ? {} : tr, subj = o.subj || (SUBJ[sh.subj] ? sh.subj : 'Bike'); let sx = 0, sy = 0, n = 0;
+    for (let i = 1; i < 12; i++) { const t = sh.a + (sh.b - sh.a) * i / 12; updateWorld(t); placeActors(t); bakedCam(t); SUBJ[subj].updateWorldMatrix(true, false); const v = NDC(new V3().setFromMatrixPosition(SUBJ[subj].matrixWorld)); if (v.front) { sx += v.x; sy += v.y; n++; } }
+    return { subj, a: +(sh.a + 0.001).toFixed(3), b: +(sh.b - 0.016).toFixed(3), in: 0, out: 0, ox: +(o.ox ?? cl(sx / Math.max(1, n), -0.6, 0.6)).toFixed(2), oy: +(o.oy ?? cl(sy / Math.max(1, n), -0.6, 0.6)).toFixed(2), sm: o.sm ?? 0.1 }; }
+  function editorProject() { const sp = defaultSpeed(); for (const b of sp.blocks) delete b.builtin;
+    return { v: 1, camera: [], base: null, speed: sp, tracks: SHOTS.map(trackOf).filter(Boolean), pace: [], layers: { base: { on: true, w: 1 }, edit: { on: true, w: 1 }, track: { on: true, w: 1 }, pace: { on: true, w: 1 }, solo: null },
+      cuts: CUT_S.map((t) => ({ t, o: t })), focus: { v: 1, looks: { depth: true }, mode: 'manual', fstop: 2, dist: 8, keys: focusKeys(), amount: 3 } }; }
+  // what the check measures at a playback second (after the editor project is loaded): the shot, its subject in frame, how big, the lens vs ground and solids, a wall in the way
+  function measure(pt) { prepAt(pt); const t = storyOf(pt), k = shotIdx(t), sh = SHOTS[k], c = window.camRaw, X = PV.pos(sh.subj), d = X.distanceTo(c.pos), v = NDC(X);
+    const frac = PV.sizeOf(sh.subj) / (2 * d * Math.tan(THREE.MathUtils.degToRad(c.fov) / 2)), gnd = c.pos.y - gy(c.pos.x, c.pos.z), solid = solidAt(c.pos, 0.02);
+    ray.set(c.pos, X.clone().sub(c.pos).normalize()); ray.far = Math.max(0, d - PV.sizeOf(sh.subj) * 0.6); const hit = ray.intersectObjects(solidMeshes, false)[0];
+    return { pt, t, k, preset: sh.preset, subj: sh.subj, x: +v.x.toFixed(3), y: +v.y.toFixed(3), front: v.front, dist: +d.toFixed(2), frac: +frac.toFixed(3), min: sh.min, check: sh.check, fov: +c.fov.toFixed(1), gnd: +gnd.toFixed(2), solid: solid ? (solid.name || solid.geometry.type + '@' + solid.getWorldPosition(new V3()).toArray().map((x) => x.toFixed(0)).join(',')) : null, blocked: hit && sh.check ? +hit.distance.toFixed(1) : null }; }
+  // camera direction every frame (24 fps), for the turn check
+  function frames() { const out = [], n = Math.round(window.DUR * 24); for (let i = 0; i <= n; i++) { prepAt(i / 24); const c = window.camRaw; out.push([i / 24, ...c.d.toArray(), ...c.pos.toArray()]); } return out; }
+  window.PREVIS = { sheet: SHEET, shots: SHOTS.map((s) => ({ k: s.k, a: s.a, b: s.b, pa: PofS(s.a), pb: PofS(s.b), preset: s.preset, subj: s.subj, name: s.def.name || '', min: s.min, check: s.check, maxTurn: s.def.maxTurn })), cutsPlay: CUT_P, cutsStory: CUT_S, editorProject, measure, frames, solids: SOLIDS.length, S, PofS }; }

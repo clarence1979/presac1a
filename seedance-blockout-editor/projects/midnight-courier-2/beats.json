@@ -1,0 +1,182 @@
+[
+ {
+  "shot": 1,
+  "start": 0,
+  "end": 2.5,
+  "name": "Alley, locked wide: the courier waits, the clock reads 11:59",
+  "time": 1.25,
+  "camera": "lockedWide on Bike, keeping Clock tower in frame. Hard cut at 2.5.",
+  "what": ""
+ },
+ {
+  "shot": 2,
+  "start": 2.5,
+  "end": 4,
+  "name": "Close on the rider's face, tense, eyes forward",
+  "time": 3.25,
+  "camera": "faceCloseProfile on Face. Hard cut at 4.",
+  "what": ""
+ },
+ {
+  "shot": 3,
+  "start": 4,
+  "end": 5.5,
+  "name": "The cash luggage, rear quarter; focus racks to the gloves",
+  "time": 4.75,
+  "camera": "quarterClose on Package, keeping Gloves in frame; focus racks Package to Gloves. Hard cut at 5.5.",
+  "what": ""
+ },
+ {
+  "shot": 4,
+  "start": 5.5,
+  "end": 6.93,
+  "name": "In front and above: burnout, smoke beside the bike, the SUV's headlights behind it",
+  "time": 6.21,
+  "camera": "frontWide on Bike. Hard cut at 6.93.",
+  "what": ""
+ },
+ {
+  "shot": 5,
+  "start": 6.93,
+  "end": 9.36,
+  "name": "Close up on the rider as he looks behind",
+  "time": 8.14,
+  "camera": "faceCloseProfile on Face. Hard cut at 9.36.",
+  "what": ""
+ },
+ {
+  "shot": 6,
+  "start": 9.36,
+  "end": 11,
+  "name": "Crane high over the avenue, slow push-in",
+  "time": 10.18,
+  "camera": "craneHigh on Bike, keeping SUV in frame. Hard cut at 11.",
+  "what": ""
+ },
+ {
+  "shot": 7,
+  "start": 11,
+  "end": 11.7,
+  "name": "Low in front of the SUV: it bears down on the bike",
+  "time": 11.35,
+  "camera": "frontLowTracking on SUV, keeping Bike in frame. Hard cut at 11.7.",
+  "what": ""
+ },
+ {
+  "shot": 8,
+  "start": 11.7,
+  "end": 14,
+  "name": "Side of the SUV, a little ahead: we see it plough through the fruit stall",
+  "time": 12.85,
+  "camera": "sideTracking on SUV. Hard cut at 14.",
+  "what": ""
+ },
+ {
+  "shot": 9,
+  "start": 14,
+  "end": 15.05,
+  "name": "Bike 1: behind and low, it hits the rising leaf",
+  "time": 14.53,
+  "camera": "lowChase on Bike. Hard cut at 15.05.",
+  "what": ""
+ },
+ {
+  "shot": 10,
+  "start": 15.05,
+  "end": 16.79,
+  "name": "Bike 2: from the side over the water, we see the climb and the whole jump (slow motion from 15.43)",
+  "time": 15.92,
+  "camera": "sideTracking on Bike. Hard cut at 16.79.",
+  "what": ""
+ },
+ {
+  "shot": 11,
+  "start": 16.79,
+  "end": 17.75,
+  "name": "Bike 2b: very close up in the air (same side as the wide shot)",
+  "time": 17.27,
+  "camera": "sideTracking on Bike. Hard cut at 17.75.",
+  "what": ""
+ },
+ {
+  "shot": 12,
+  "start": 17.75,
+  "end": 19.1,
+  "name": "His face, close up from the front, in the air",
+  "time": 18.43,
+  "camera": "faceCloseFront on Face. Hard cut at 19.1.",
+  "what": ""
+ },
+ {
+  "shot": 13,
+  "start": 19.1,
+  "end": 20.25,
+  "name": "Bike 3: on the ground ahead of the landing, it comes down toward us",
+  "time": 19.68,
+  "camera": "wormsEye on Bike. Hard cut at 20.25.",
+  "what": ""
+ },
+ {
+  "shot": 14,
+  "start": 20.25,
+  "end": 21.3,
+  "name": "From above: the SUV has skidded to a stop short of the raised leaves; it cannot follow",
+  "time": 20.77,
+  "camera": "topDown on SUV. Hard cut at 21.3.",
+  "what": ""
+ },
+ {
+  "shot": 15,
+  "start": 21.3,
+  "end": 22,
+  "name": "Front wheel and handlebar, speed in the tunnel",
+  "time": 21.65,
+  "camera": "wheelClose on Front wheel. Hard cut at 22.",
+  "what": ""
+ },
+ {
+  "shot": 16,
+  "start": 22,
+  "end": 24.1,
+  "name": "Wide-angle first person through the lit tunnel",
+  "time": 23.05,
+  "camera": "fpv on Bike. Hard cut at 24.1.",
+  "what": ""
+ },
+ {
+  "shot": 17,
+  "start": 24.1,
+  "end": 26.5,
+  "name": "Aerial spiral: out of the tunnel (24.34 s), up the ramp",
+  "time": 25.3,
+  "camera": "aerialSpiral on Bike. Hard cut at 26.5.",
+  "what": ""
+ },
+ {
+  "shot": 18,
+  "start": 26.5,
+  "end": 28,
+  "name": "Face close from the front: relief as he slows",
+  "time": 27.25,
+  "camera": "faceCloseFront on Face. Hard cut at 28.",
+  "what": ""
+ },
+ {
+  "shot": 19,
+  "start": 28,
+  "end": 28.8,
+  "name": "Helipad, close: he drifts and stops as the clock strikes 12",
+  "time": 28.4,
+  "camera": "aerialPullback on Bike, keeping Clock tower in frame. Hard cut at 28.8.",
+  "what": ""
+ },
+ {
+  "shot": 20,
+  "start": 28.8,
+  "end": 30,
+  "name": "Same view, now pulling far out and wide",
+  "time": 29.4,
+  "camera": "aerialPullback on Bike, keeping Clock tower in frame; focus racks Bike to Clock tower. End.",
+  "what": ""
+ }
+]

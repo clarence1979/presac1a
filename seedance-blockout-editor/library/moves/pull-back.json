@@ -1,0 +1,50 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "pull-back",
+ "name": "Pull-back",
+ "len": 3,
+ "unit": "subj",
+ "text": "Backs away and rises a little, the subject stays framed: an ending or a reveal.",
+ "watch": "Watch the red person shrink as the camera backs away and rises a little.",
+ "tags": [
+  "dolly",
+  "reveal",
+  "ending"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "inout"
+  },
+  {
+   "t": 3,
+   "p": [
+    0,
+    0.12,
+    -0.6
+   ],
+   "q": [
+    -0.03742,
+    0,
+    0,
+    0.9993
+   ],
+   "df": 0,
+   "dr": 0
+  }
+ ]
+}

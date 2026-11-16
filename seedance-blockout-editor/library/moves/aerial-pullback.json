@@ -1,0 +1,49 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "aerial-pullback",
+ "name": "Aerial pull-back",
+ "len": 5,
+ "unit": "subj",
+ "text": "A long, even pull-back that rises high and looks down: the ending.",
+ "watch": "Watch the camera pull back and climb high, looking down at the red person.",
+ "tags": [
+  "aerial",
+  "ending"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "inout"
+  },
+  {
+   "t": 5,
+   "p": [
+    0,
+    1,
+    -1.3
+   ],
+   "q": [
+    -0.20363,
+    0,
+    0,
+    0.97905
+   ],
+   "df": 0,
+   "dr": 0
+  }
+ ]
+}

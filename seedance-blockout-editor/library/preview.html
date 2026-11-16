@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Camera move preview</title>
+<style>html,body{margin:0;background:#000;overflow:hidden} #w{position:relative;width:640px;height:360px} canvas{position:absolute;left:0;top:0}</style></head>
+<body><div id="w"><canvas id="c" width="640" height="360"></canvas><canvas id="o" width="640" height="360"></canvas></div>
+<script type="importmap">{"imports":{"three":"../deps/three.module.js"}}</script>
+<script type="module">
+// One camera move, seen as the camera sees it: a plain street, a red person 6 m ahead and two more behind him for depth. The move is applied to the camera exactly as the editor's Moves panel does (moves-core.js sampleMove).
+// A small top-down map in the corner shows the camera's path. window.setT(s) draws second s of the looping clip; window.CLIP = { len, total } for the renderer.
+import * as THREE from 'three';
+import { sampleMove, normMove } from '../moves-core.js';
+const id = new URLSearchParams(location.search).get('id') || 'push-in', W = 640, H = 360, D = 6, HOLD = 0.6;
+const mv = normMove(await (await fetch(`moves/${id}.json`)).json());
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, preserveDrawingBuffer: true }); renderer.setSize(W, H, false);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#171a22'); scene.fog = new THREE.Fog('#171a22', 22, 70);
+scene.add(new THREE.HemisphereLight('#ffffff', '#3b4254', 1.0)); const sun = new THREE.DirectionalLight('#fff3dc', 1.6); sun.position.set(6, 12, 5); scene.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 160), new THREE.MeshLambertMaterial({ color: '#4c515d' })); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+const grid = new THREE.GridHelper(160, 80, '#6b7283', '#5a6070'); grid.position.y = 0.01; scene.add(grid);
+// buildings: plain boxes on both sides, deterministic
+let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647); const BX = [];
+for (let z = 6; z > -70; z -= 7) for (const sx of [-1, 1]) { const w = 5 + rnd() * 4, d = 5 + rnd() * 3, h = 6 + rnd() * 16, x = sx * (9 + w / 2 + rnd() * 3); const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color: rnd() > 0.5 ? '#b99a6a' : '#8d93a0' })); m.position.set(x, h / 2, z); scene.add(m); BX.push([x, z, w, d]); }
+const pill = (x, z, col, s = 1) => { const g = new THREE.Group(), body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28 * s, 0.95 * s, 6, 14), new THREE.MeshLambertMaterial({ color: col })); body.position.y = 0.76 * s; const head = new THREE.Mesh(new THREE.SphereGeometry(0.25 * s, 18, 14), new THREE.MeshLambertMaterial({ color: col })); head.position.y = 1.72 * s;
+  for (const ex of [-0.09, 0.09]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.035 * s, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' })); e.position.set(ex * s, 1.76 * s, 0.22 * s); g.add(e); } g.add(body, head); g.position.set(x, 0, z); scene.add(g); return g; };
+pill(0, -D, '#e03a2e'); pill(-1.6, -D - 3.2, '#3a7be0'); pill(1.8, -D - 6, '#e0b83a');
+// the original camera: 1.6 m high, looking at the red person's chest; p of a move is in multiples of D = the distance to him
+const C0 = new THREE.Vector3(0, 1.6, 0), cam = new THREE.PerspectiveCamera(50, W / H, 0.1, 200); cam.position.copy(C0); cam.lookAt(0, 1.15, -D); cam.updateMatrixWorld();
+const baseQ = cam.quaternion.clone(), R = new THREE.Vector3(1, 0, 0).applyQuaternion(baseQ), U = new THREE.Vector3(0, 1, 0).applyQuaternion(baseQ), F = new THREE.Vector3(0, 0, -1).applyQuaternion(baseQ);
+const poseAt = (t) => { const s = sampleMove(mv, t), p = C0.clone().addScaledVector(R, s.p[0] * D).addScaledVector(U, s.p[1] * D).addScaledVector(F, s.p[2] * D), q = baseQ.clone().multiply(new THREE.Quaternion(s.q[0], s.q[1], s.q[2], s.q[3])); return { p, q, fov: 2 * Math.atan(Math.tan(25 * Math.PI / 180) * (s.z ?? 1)) * 180 / Math.PI + (s.df || 0) }; };
+const path = []; for (let i = 0; i <= 60; i++) path.push(poseAt((mv.len * i) / 60).p.clone());
+const o = document.getElementById('o').getContext('2d'), MP = { x: 14, y: 232, w: 124, h: 114, sc: 6.4 };   // the corner map: 1 m = 6.4 px, centred on the subject
+const mx = (x) => MP.x + MP.w / 2 + (x - 0) * MP.sc, mz = (z) => MP.y + MP.h * 0.28 + (z - (-D)) * -MP.sc * -1 * -1;
+const drawMap = (pose) => { o.clearRect(0, 0, W, H); o.fillStyle = 'rgba(8,9,12,.78)'; o.strokeStyle = 'rgba(255,255,255,.28)'; o.lineWidth = 1; o.beginPath(); o.roundRect(MP.x, MP.y, MP.w, MP.h, 8); o.fill(); o.stroke();
+  const P = (x, z) => [MP.x + MP.w / 2 + x * MP.sc, MP.y + 22 + (-z - 0) * MP.sc * 0.78 * -1 * -1 - 0]; // world z (negative = ahead) to map y (down the page = toward the camera)
+  const toMap = (x, z) => [MP.x + MP.w / 2 + x * MP.sc, MP.y + MP.h - 18 + z * MP.sc * 0.86];
+  o.save(); o.beginPath(); o.roundRect(MP.x + 1, MP.y + 1, MP.w - 2, MP.h - 2, 7); o.clip();
+  for (const [bx, bz, bw, bd] of BX) { const [ax, ay] = toMap(bx - bw / 2, bz - bd / 2); o.fillStyle = 'rgba(190,160,110,.35)'; o.fillRect(ax, ay, bw * MP.sc, bd * MP.sc * 0.86); }
+  o.strokeStyle = '#ffcc33'; o.lineWidth = 2; o.beginPath(); path.forEach((q, i) => { const [x, y] = toMap(q.x, q.z); i ? o.lineTo(x, y) : o.moveTo(x, y); }); o.stroke();
+  const [sx, sy] = toMap(0, -D); o.fillStyle = '#e8594a'; o.beginPath(); o.arc(sx, sy, 5, 0, 7); o.fill();
+  const [cx, cy] = toMap(pose.p.x, pose.p.z), look = new THREE.Vector3(0, 0, -1).applyQuaternion(pose.q), ang = Math.atan2(look.x, -look.z), half = (pose.fov * Math.PI / 180) * 0.5 * (W / H) * 0.7;
+  o.strokeStyle = 'rgba(255,255,255,.75)'; o.lineWidth = 1.2; o.beginPath(); for (const a of [-half, half]) { o.moveTo(cx, cy); o.lineTo(cx + Math.sin(ang + a) * 26, cy - Math.cos(ang + a) * 26); } o.stroke();
+  o.fillStyle = '#ffffff'; o.beginPath(); o.arc(cx, cy, 4, 0, 7); o.fill(); o.restore();
+  o.font = '600 10px ui-monospace,Menlo,monospace'; o.fillStyle = 'rgba(255,255,255,.85)'; o.fillText('FROM ABOVE', MP.x + 8, MP.y + 14);
+  o.font = '600 11px ui-monospace,Menlo,monospace'; o.fillStyle = 'rgba(0,0,0,.55)'; o.fillRect(W - 168, 12, 156, 22); o.fillStyle = '#fff'; o.fillText('WHAT THE CAMERA SEES', W - 160, 27); };
+window.CLIP = { len: mv.len, hold: HOLD, total: mv.len + 2 * HOLD, name: mv.name };
+window.setT = (s) => { const t = Math.min(mv.len, Math.max(0, s - HOLD)), p = poseAt(t); cam.position.copy(p.p); cam.quaternion.copy(p.q); cam.fov = p.fov; cam.updateProjectionMatrix(); renderer.render(scene, cam); drawMap(p); };
+window.setT(0); window.ready = true;
+</script></body></html>

@@ -1,0 +1,6 @@
+{
+  "skills": {
+    "cameraControl": "/path/to/your/camera-control-skill-folder",
+    "promptAnatomy": "/path/to/your/prompt-anatomy.md"
+  }
+}

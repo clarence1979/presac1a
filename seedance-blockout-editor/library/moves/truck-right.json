@@ -1,0 +1,49 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "truck-right",
+ "name": "Truck right",
+ "len": 3,
+ "unit": "subj",
+ "text": "Slides sideways to the right without turning: parallax past the subject.",
+ "watch": "Watch the street slide past: the camera moves sideways without turning.",
+ "tags": [
+  "truck",
+  "parallax"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "inout"
+  },
+  {
+   "t": 3,
+   "p": [
+    0.45,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0
+  }
+ ]
+}

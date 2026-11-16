@@ -1,0 +1,106 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "dolly-zoom",
+ "name": "Dolly zoom",
+ "len": 3,
+ "unit": "subj",
+ "text": "Pulls back while the lens zooms in, so the subject keeps its size and the background stretches.",
+ "watch": "Watch the street stretch behind the red person while they keep the same size.",
+ "tags": [
+  "zoom",
+  "vertigo"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear",
+   "z": 1
+  },
+  {
+   "t": 0.75,
+   "p": [
+    0,
+    0,
+    -0.1563
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear",
+   "z": 0.8649
+  },
+  {
+   "t": 1.5,
+   "p": [
+    0,
+    0,
+    -0.5
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear",
+   "z": 0.6667
+  },
+  {
+   "t": 2.25,
+   "p": [
+    0,
+    0,
+    -0.8438
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear",
+   "z": 0.5424
+  },
+  {
+   "t": 3,
+   "p": [
+    0,
+    0,
+    -1
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear",
+   "z": 0.5
+  }
+ ]
+}

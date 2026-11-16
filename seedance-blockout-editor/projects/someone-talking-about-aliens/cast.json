@@ -1,0 +1,59 @@
+[
+ {
+  "name": "Farmer",
+  "kind": "person",
+  "pill": "yellow",
+  "pillHex": "#ffcc00",
+  "look": "the man in the reference photo, wearing a blue baseball cap and a faded denim work shirt",
+  "pose": "standing in his farmyard at dusk, right arm fully raised, pointing up over the barn",
+  "source": "claude"
+ },
+ {
+  "name": "Reporter",
+  "kind": "person",
+  "pill": "magenta",
+  "pillHex": "#ff2dd4",
+  "look": "local TV news reporter, slim, dark hair tied back, plum-coloured blazer, dark trousers, holding a black stick microphone with an orange station flag",
+  "source": "claude"
+ },
+ {
+  "name": "Cameraman",
+  "kind": "person",
+  "pill": "cyan",
+  "pillHex": "#00d5ff",
+  "look": "TV news cameraman, solid build, dark cap, grey work jacket, dark trousers, a black shoulder-mounted news camera with a small top light",
+  "source": "claude"
+ },
+ {
+  "name": "Van tech",
+  "kind": "person",
+  "pill": "lime green",
+  "pillHex": "#7dff3a",
+  "look": "TV crew technician, olive work jacket, dark trousers, coiling a black cable by the open door of the news van",
+  "source": "claude"
+ },
+ {
+  "name": "Saucer",
+  "kind": "object",
+  "look": "silent flying saucer, brushed silver disc about 9 m across with a pale glass dome, a ring of white and cyan lights round the rim, a glowing belly and a narrow searchlight beam",
+  "source": "claude"
+ },
+ {
+  "name": "News camera",
+  "kind": "object",
+  "look": "black professional shoulder-mounted TV news camera with a lens hood, side viewfinder, top handle and a small top light",
+  "source": "claude"
+ },
+ {
+  "name": "News van",
+  "kind": "object",
+  "look": "white local TV news van with a red side stripe, sliding side door open with warm light inside, a telescopic mast raised from the roof with a small dish on top",
+  "source": "claude"
+ },
+ {
+  "name": "Farmyard",
+  "kind": "place",
+  "look": "packed-earth farmyard at dusk: a red barn with white X doors, a lit lamp over the doors and a rooster weathervane on the ridge, a grey silo, a white farmhouse with lit windows, wooden rail fences, round hay bales and loose straw, dark crop fields to the horizon under a deep blue sky with an orange glow low in the west",
+  "source": "claude"
+ }
+]

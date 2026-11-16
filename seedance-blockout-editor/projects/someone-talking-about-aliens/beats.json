@@ -1,0 +1,101 @@
+[
+ {
+  "shot": 1,
+  "start": 0.0,
+  "end": 8.0,
+  "name": "Drone over the van, down behind the crew: he points at the barn",
+  "time": 6.5,
+  "camera": "Drone, 35 mm lens, dusk. Starts 6 m over dark crop rows south-east of the farm, flies north-west over the white news van and its raised mast (about 3 s, 8.6 m up), descends behind the crew and ends in a slow push into an over-the-shoulder: the cameraman's back and shoulder camera big in the right foreground, the reporter mid-left, the man centre, the red barn with lit doors and the weathervane behind him, the silo right. Hard cut at 8.0 s.",
+  "what": "Dusk farmyard from a drone over the news van, down into an over-the-shoulder behind the TV crew. The man faces the reporter, then twists to his right and points his right arm fully straight back over his right shoulder at the barn roof.",
+  "actions": [
+   "0.0-5.5 the man (yellow) stands facing the reporter, feet planted, arms loose at his sides, looking at her face.",
+   "3.6 he starts talking to her: \"Every night at ten, it comes right over that barn.\" (to 7.6).",
+   "5.55-6.05 he twists his chest to his right and raises his RIGHT arm fully straight, index finger pointing back over his right shoulder at the barn roof and the weathervane; his head turns back over his right shoulder to look at it.",
+   "6.05-7.4 he holds the full-arm point, looking at the barn.",
+   "7.4-7.95 he lowers his right arm to his side, turns his chest and head back to the reporter.",
+   "0.0-7.55 the reporter (magenta) stands 1 m from him, body turned to him, leaning in a little, RIGHT arm straight out holding the stick mic (black, orange flag) with its head under his chin.",
+   "7.55-7.95 she pulls the mic back to her own chest.",
+   "0.0-8.0 the cameraman (cyan) stands 3.5 m from him with the news camera on his RIGHT shoulder, right hand on the side grip, left hand on the lens, the camera's top light on, framing the man.",
+   "0.0-8.0 the van tech (lime) stands at the van's open side door facing the van, head down, coiling a black cable: left hand holds the coil at chest height, right hand loops the cable round it in steady circles (this continues until 27.3)."
+  ]
+ },
+ {
+  "shot": 2,
+  "start": 8.0,
+  "end": 15.0,
+  "name": "News-camera view: mic in, \"Any second now\", the empty sky, the shrug",
+  "time": 10.5,
+  "camera": "The news camera's own view, 50 mm, shoulder height, handheld (a small slow wander). Waist-up on the man, the reporter's shoulder and the mic at frame left, the barn doors behind him. 11.35-12.55 tilts up past the barn roof to the empty dusk sky (only the weathervane at the bottom edge), holds the empty sky 12.55-13.0, tilts back down 13.0-14.0, widens a touch 13.4-14.2 for the shrug. Hard cut at 15.0 s.",
+  "what": "Through the news camera: the reporter thrusts the mic under his chin, he raises his left wrist to his face to check his watch, the camera tilts up to an empty sky and back down to his two-arm shrug.",
+  "actions": [
+   "8.15-8.45 the reporter thrusts the mic in from frame left with her RIGHT arm straight out, mic head under his chin; she asks \"And tonight?\" 8.5-9.3; she holds the mic at his chin until 15.15.",
+   "9.45-9.9 the man raises his LEFT wrist to his face, forearm across in front of his chin, elbow out to his left; 9.75-10.35 he looks down at his wristwatch.",
+   "10.0-11.2 he says \"Any second now.\", looking up from the watch to the reporter at 10.35.",
+   "10.95-11.45 he lowers his left arm to his side.",
+   "11.3-13.25 he tips his head back and looks up at the sky.",
+   "13.25 he looks straight into the lens.",
+   "13.95-14.25 two-arm shrug: both forearms come forward at waist height, elbows bent, palms up, shoulders raised, head tilted; he leans back slightly.",
+   "14.25-14.7 he holds the shrug; 14.7-15.05 his arms drop to his sides."
+  ]
+ },
+ {
+  "shot": 3,
+  "start": 15.0,
+  "end": 19.0,
+  "name": "Low side-on wide: \"Okay... I think we've got enough\"",
+  "time": 17.0,
+  "camera": "Low side-on wide, 24 mm, 0.55 m off the ground, from the east side of the group, slowly orbiting toward the south. The cameraman left, the reporter and the man centre, the lit farmhouse beyond, the red barn on the right; a small square bale in the bottom-right corner. Hard cut at 19.0 s.",
+  "what": "All three side-on, the barn beyond: the reporter lowers the mic, says they have enough and turns toward the van; the cameraman drops the camera from his shoulder to his hip; the man lifts both palms: wait.",
+  "actions": [
+   "15.15-15.8 the reporter lowers the mic: her RIGHT arm goes straight down at her side, mic pointing at the ground.",
+   "15.4-17.8 she says \"Okay... I think we've got enough.\"; 16.0-16.35 she lifts her LEFT hand, palm open at waist height, holds it to 16.9, drops it by 17.3.",
+   "17.6-18.45 she turns on the spot to her left, toward the van; 18.35 she starts walking to the van at an easy pace.",
+   "17.95-18.8 the cameraman lifts the camera off his RIGHT shoulder and lowers it to his right hip, now carrying it by the top handle in his right hand, lens still pointing back at the man; the top light goes off 18.0-18.35.",
+   "18.1-18.55 his left hand lets go of the lens and drops to his side.",
+   "18.55-19.15 he turns round to his left to face the van.",
+   "17.8-18.15 the man raises both hands, palms out at chest height (\"wait\"); holds them there to 18.75; drops them 18.75-19.3."
+  ]
+ },
+ {
+  "shot": 4,
+  "start": 19.0,
+  "end": 24.0,
+  "name": "Camera at the hip, pointing back: the saucer rises over the barn",
+  "time": 22.8,
+  "camera": "The news camera's own view again, hanging at the cameraman's right hip (0.8 m up) as he walks away: lens pointing backward at the yard, tilted about 13 degrees (dutch), swaying side to side and bobbing with each step, about 26 mm. The man in the yard gets smaller (3.5 m to 9 m); the barn and the silo behind him. Hard cut at 24.0 s.",
+  "what": "The crew walk away with the camera still rolling at the hip, pointing back: the man alone in the yard, and behind him the saucer rises silently over the barn and sweeps its light onto his back.",
+  "actions": [
+   "18.95-24.0 the cameraman walks toward the rear of the van (1.1 m/s), the camera hanging from his right hand at his hip, lens backward, swinging a little with each step.",
+   "19.0-20.5 the reporter walks past the lens on its left, close, and out of frame left.",
+   "19.0-22.75 the man stands alone, arms at his sides, watching them go.",
+   "20.2-20.6 he lifts his RIGHT hand halfway, forearm forward at waist height, as if to call them back; holds it; 20.95-21.4 drops it.",
+   "20.6-23.15 the saucer rises silently from behind the barn and comes over the roof; its ring of white and cyan lights fades on 21.1-22.0.",
+   "22.0-23.1 its searchlight switches on and sweeps from the barn roof across the yard onto the man's back; loose straw stirs on the ground.",
+   "22.75-23.0 the man stiffens, both arms lift slightly away from his body; 22.85 he glances back over his right shoulder.",
+   "23.3 he starts to spin round to his left (counter-clockwise seen from above) toward the light."
+  ]
+ },
+ {
+  "shot": 5,
+  "start": 24.0,
+  "end": 30.0,
+  "name": "Slow motion: he spins and points, \"THERE!\"; crane up: \"...Tell me you got that.\"",
+  "time": 25.8,
+  "camera": "Low wide from behind the man, 24 mm, 0.3 m off the ground and 2.7 m behind his right shoulder, looking up: the man on the LEFT third, the saucer big in the UPPER RIGHT over the barn ridge (hero image of the spin and the full-arm point). Slow motion 24.0-26.3 (time at 30 %), back to normal speed by 26.7. From 25.9 the camera cranes up and back over the crew, slowly in the slow motion, then faster, to 9.5 m high south of the van by 29.45. FINAL FRAME 29.45-30.0, held: high wide, the man small in the empty yard centre, the crew frozen at the van lower right, the van's mast right, the empty sky over the barn.",
+  "what": "In slow motion he finishes the spin and points his right arm fully at the saucer over the barn; at normal speed it streaks away up and out of frame, straw swirls, the crew turn their heads too late. He turns to them, arm still raised, then lets it drop. Final high wide over the empty yard.",
+  "actions": [
+   "24.0-25.83 (slow motion) the man completes the spin to his left until he faces the barn and the saucer above it, small steps, the light on his back turning onto his front.",
+   "23.5-26.9 his LEFT arm is out to his side at waist height for balance; it drops to his side by 27.0.",
+   "24.67-26.0 (slow motion) his RIGHT arm rises fully straight to point up at the saucer; he leans back, head up; he holds the point.",
+   "26.6 the searchlight cuts; 26.72 the saucer streaks off up and to the right and leaves the frame within half a second, silently.",
+   "26.72-27.17 his pointing arm follows it up and to the right; 26.75-27.15 he shouts \"THERE!\".",
+   "26.72-29.5 a gust swirls the loose straw up round the yard; the weathervane spins; the straw settles.",
+   "27.3-27.9 he turns to his right toward the crew at the van, his right arm still raised at the empty sky.",
+   "27.85-29.65 he says \"...Tell me you got that.\"",
+   "28.3-29.5 his right arm sinks slowly to his side.",
+   "24.0-28.4 the reporter is still walking to the van's side door; she stops there facing the van.",
+   "the cameraman is already at the rear of the van facing it, the camera hanging at his right hip, lens pointing back at the yard.",
+   "27.3 the van tech stops coiling; 27.3-27.85 his head and chest turn back over his left shoulder toward the barn; 27.35-27.95 the reporter's head and chest turn back over her left shoulder; 27.4-28.0 the cameraman's head and chest turn back; they look at an empty sky and stay frozen to the end."
+  ]
+ }
+]

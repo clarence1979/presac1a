@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Building · Seedance 3D Blockout Editor</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>html,body{margin:0;background:#000;color:#f4f4f6;min-height:100%;font:400 15px/1.45 'Hanken Grotesk',system-ui,sans-serif}
+.top{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid #26262c;position:sticky;top:0;background:#000;z-index:2}.top a{color:#9b9ca6;font-size:13.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.top a:hover{color:#f4f4f6}.top .sp{flex:1}.top .sub{color:#9b9ca6;font:500 14px 'Space Grotesk',sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}.live{position:fixed;inset:49px 0 0 0}.live iframe{width:100%;height:100%;border:0;background:#000;display:block}</style></head>
+<body><div class="top" id="top"></div><div class="wrap" id="host"></div>
+<!-- The building view for one project: build.html?project=<id>. The live preview is the editor on the project with &building=1 (status pill in its own top bar, reloads when the agent saves). -->
+<script type="module">
+import { mountBuild } from './build.js';
+import { teinLogo } from './brand/tein-logo.js';
+import { backButton } from './back.js';
+const q = new URLSearchParams(location.search), id = /^[a-z0-9][a-z0-9-]{2,60}$/.test(q.get('project') || '') ? q.get('project') : null, top = document.getElementById('top'), host = document.getElementById('host');
+// &live=1 (older links): the live preview is the editor itself in building mode, with one top bar
+if (id && q.has('live')) location.replace('projects/' + id + '/index.html?editor=1&project=' + id + '&building=1');
+top.innerHTML = `<a href="index.html" title="Back to the start screen" style="text-decoration:none;display:inline-flex">${teinLogo(18, 21, 6)}</a><span id="bk"></span><span class="sub">Blockout editor · Build</span><span class="sp"></span><a href="index.html">Start screen</a>`;
+top.querySelector('#bk').replaceWith(backButton({ esc: true }));
+if (!id) host.textContent = 'No project named. Open this page from the start screen.';
+else if (!q.has('live')) mountBuild(host, { id });
+</script></body></html>

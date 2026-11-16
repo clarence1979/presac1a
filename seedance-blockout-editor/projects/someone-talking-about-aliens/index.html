@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Any second now (three.js blockout)</title>
+<style>html,body{margin:0;background:#000;height:100%;overflow:hidden}#c{display:block;width:100vw;height:56.25vw;max-height:100vh;max-width:177.78vh;margin:auto;position:absolute;inset:0}</style>
+<script type="importmap">{"imports":{"three":"../../deps/three.module.js"}}</script></head>
+<body><canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { installDOF } from '../../dof.js';
+// ============================================================ constants
+const W = 1280, H = 720, DUR = 30, FPS = 24;
+const params = new URLSearchParams(location.search);
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.02;
+const scene = new THREE.Scene();
+const SKY = new THREE.Color('#b98a78');   // dusk haze at the horizon
+scene.fog = new THREE.Fog(SKY, 120, 1100);
+const camera = new THREE.PerspectiveCamera(78, W / H, 0.05, 1400);
+
+// seeded random so every render is identical
+let seed = 7; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+const rr = (a, b) => a + (b - a) * rnd();
+
+// ============================================================ materials
+const clay = (hex, rough = 0.92) => new THREE.MeshStandardMaterial({ color: hex, roughness: rough, metalness: 0 });
+const M = { asphalt: clay('#8e8f94'), walk: clay('#b4b5b9'), curb: clay('#b0b1b5'), line: clay('#f2f2f0', 0.8), yel: clay('#cdb64a', 0.8),
+  roof: clay('#b9babd'), dark: clay('#6d6e74'), glass: clay('#868a90', 0.45), car: clay('#a8a9ac'), tree: clay('#7fa27a'), trunk: clay('#7a6654') };
+const box = (w, h, d, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.castShadow = m.receiveShadow = true; return m; };
+const put = (m, x, y, z, parent = scene) => { m.position.set(x, y, z); parent.add(m); return m; };
+
+// sky gradient dome
+{ const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#141c34'); gr.addColorStop(0.28, '#26345c'); gr.addColorStop(0.42, '#5a5b80'); gr.addColorStop(0.475, '#b5807a'); gr.addColorStop(0.5, '#e0a06f'); gr.addColorStop(0.53, '#b98a78'); gr.addColorStop(1, '#5d5048'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(1200, 24, 16), new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false, depthWrite: false })); dome.name = 'dome'; scene.add(dome); }
+
+// lights
+scene.add(new THREE.HemisphereLight('#eef3f8', '#a2a4a9', 1.45));
+const sun = new THREE.DirectionalLight('#fff3e2', 1.9); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.25; sun.shadow.radius = 2.5;
+scene.add(sun, sun.target);
+// ============================================================ ground height and noise (the scene is flat)
+const smooth = (a, b, x) => { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
+const hash2 = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
+function noise2(x, z) { const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi, u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
+  return hash2(xi, zi) * (1 - u) * (1 - v) + hash2(xi + 1, zi) * u * (1 - v) + hash2(xi, zi + 1) * (1 - u) * v + hash2(xi + 1, zi + 1) * u * v; }
+const fbm = (x, z) => { let a = 0.5, f = 1, s = 0; for (let i = 0; i < 5; i++) { s += a * noise2(x * f, z * f); f *= 2; a *= 0.5; } return s; };
+const terrain = () => 0;   // flat desert
+const QUAY = -1e6;         // no sea in this scene
+const bub = new THREE.InstancedMesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: '#e8f4f8', transparent: true, opacity: 0.55, fog: false }), 220); bub.frustumCulled = false; bub.visible = false; scene.add(bub);
+// ============================================================ cars
+function makeCar(hex, taxi, len = 4.6, cop = false) {
+  const g = new THREE.Group(), body = clay(hex, 0.7);
+  const low = box(1.9, 0.72, len, body); low.position.y = 0.62; g.add(low);
+  const cab = box(1.7, 0.62, len * 0.5, cop ? clay('#e8e8ea', 0.7) : body); cab.position.set(0, 1.28, -len * 0.04); g.add(cab);
+  const gl = box(1.72, 0.4, len * 0.46, M.glass); gl.position.set(0, 1.3, -len * 0.04); g.add(gl);
+  const wh = box(2.0, 0.5, len * 0.78, M.dark); wh.position.y = 0.3; g.add(wh);
+  if (taxi) { const s = box(0.7, 0.22, 0.28, clay('#d9d9d9')); s.position.set(0, 1.72, 0); g.add(s); }
+  if (cop) { g.children[0].material = clay('#2f3035', 0.6); const a = box(0.55, 0.16, 0.3, new THREE.MeshStandardMaterial({ color: '#d02020', emissive: '#d02020', emissiveIntensity: 1.2 })), b = box(0.55, 0.16, 0.3, new THREE.MeshStandardMaterial({ color: '#2050d0', emissive: '#2050d0', emissiveIntensity: 1.2 }));
+    a.position.set(-0.3, 1.68, 0); b.position.set(0.3, 1.68, 0); g.add(a, b); }
+  return g;
+}
+const traffic = []; // [mesh, x, z0, vz]: none on this scene
+// ============================================================ the pill method: striped capsule + white dot on the front
+function stripes(hex) { const c = new THREE.Color(hex), d = new THREE.Color('#141414'), n = 64, px = new Uint8Array(n * n * 4);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const k = ((x + y) % 32) < 16 ? c : d, i = (y * n + x) * 4; px[i] = k.r * 255; px[i + 1] = k.g * 255; px[i + 2] = k.b * 255; px[i + 3] = 255; }
+  const t = new THREE.DataTexture(px, n, n); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 6); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; return t; }
+const COL = { woman: '#e3261f', coat: '#ffe600', cat: '#00c8d7', scarf: '#ff7a00', vest: '#d81fb5', x: ['#1fa84a', '#1f5fe3', '#e3261f', '#ffe600', '#ff7a00', '#d81fb5', '#00c8d7'] };
+// ---- contextual shapes: people, four-legged animals, fish and birds as simple clay figures (front is +z)
+const UG = { cap: new THREE.CapsuleGeometry(1, 1, 4, 10), sph: new THREE.SphereGeometry(1, 14, 10), cyl: new THREE.CylinderGeometry(1, 1, 1, 10), cone: new THREE.ConeGeometry(1, 1, 8), box: new THREE.BoxGeometry(1, 1, 1) };
+const MATC = new Map(); const cm = (hex) => { if (!MATC.has(hex)) MATC.set(hex, new THREE.MeshStandardMaterial({ color: hex, roughness: 0.82 })); return MATC.get(hex); };
+const part = (g, geo, hex, sx, sy, sz, x, y, z, rx = 0, rz = 0) => { const m = new THREE.Mesh(UG[geo], cm(hex)); m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); m.castShadow = true; g.add(m); return m; };
+const SKIN = '#e9dccf';
+// ============================================================ CHARACTER LOOK: ?chars=pill (default) | skeleton | full; window.charLook.set(mode). skeleton = OpenPose-style bones and joint dots (no face,
+// no hands, no limb volumes), pill = one smooth bright capsule body + plain head per person (animals: body pill + head), full = the rigged figures. Skeletons and pills are drawn from
+// anchor points fixed on the rigs, so they move, lean, crouch and jump exactly like the figures; in skeleton and pill the figures' own meshes are hidden. Same in every view style.
+const CHARS = (() => {
+  const C = (a) => a.map((c) => new THREE.Color(c)), OP = C(['#ff0000', '#ff5500', '#ffaa00', '#ffff00', '#aaff00', '#55ff00', '#00ff00', '#00ff55', '#00ffaa', '#00ffff', '#00aaff', '#0055ff', '#0000ff', '#5500ff', '#aa00ff', '#ff00ff', '#ff00aa', '#ff0055']);
+  const BRIGHT = C(['#ff3b30', '#ffcc00', '#00d5ff', '#ff2dd4', '#7dff3a', '#ff8a00', '#3d7bff', '#00ffb3', '#b05cff', '#ff5c8a', '#c6ff00', '#00a2ff']);
+  const LIMBS = [[1, 2], [1, 5], [2, 3], [3, 4], [5, 6], [6, 7], [1, 8], [8, 9], [9, 10], [1, 11], [11, 12], [12, 13], [1, 0]];
+  const list = []; let nC = 0, mode = 'pill', inst = null;
+  const A = (p, x, y, z) => { const o = new THREE.Object3D(); o.position.set(x, y, z); p.add(o); return o; };
+  const meshesOf = (root, only) => { const a = []; root.traverse((m) => { if (m.isMesh && (!only || only.includes(m))) a.push(m); }); return a; };
+  // a person: J = the 14 OpenPose joints as anchors (0 head centre, 1 neck, 2-4 right shoulder/elbow/wrist, 5-7 left, 8-10 right hip/knee/ankle, 11-13 left); 14 = pelvis, 15 = chest top (the pill body ends there, so the head reads apart)
+  function person(root, J, h, o = {}) { const kind = 'p'; const s = h / 1.7, c = o.c ? new THREE.Color(o.c) : BRIGHT[nC++ % BRIGHT.length];   // o.c = this person's own pill colour
+    list.push({ kind, root, J, mids: [[8, 11], [14, 1, 0.85]], rad: h, w: 0.024 * s, body: meshesOf(o.body || root, o.only), alt: [],
+      sk: { B: LIMBS.map(([a, b], i) => [a, b, OP[i]]), D: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((i) => [i, OP[i]]), H: [0, (o.hr || 0.1) * s, OP[17]] },
+      pl: { c, S: [[14, 15, 0.16 * s], [8, 10, 0.065 * s], [11, 13, 0.065 * s]], O: [[0, (o.hr || 0.11) * s]] } }); return list[list.length - 1]; }
+  // an animal: J anchors, B bones [a, b], head [index, radius], w bone radius, pill: S [a, b, r] segments, O [index, r] spheres
+  function animal(root, J, B, head, w, pill, o = {}) { const c = BRIGHT[nC++ % BRIGHT.length];
+    list.push({ kind: 'a', root, J, mids: o.mids || [], rad: o.rad || 2, w, body: meshesOf(root, o.only), alt: [],
+      sk: { B: B.map(([a, b]) => [a, b, c]), D: J.map((_, i) => i).concat((o.mids || []).map((_, k) => J.length + k)).filter((i) => i !== head[0] && !(o.nodot || []).includes(i)).map((i) => [i, c]), H: [head[0], head[1], c] },
+      pl: { c, S: pill.S, O: pill.O } }); return list[list.length - 1]; }
+  // an extra rig part that, while it is visible, carries some joints instead (an arm raised by a separate group)
+  const alt = (e, vis, idx, J) => e.alt.push({ vis, idx, J });
+  const visChain = (o) => { for (let q = o; q; q = q.parent) if (!q.visible) return false; return true; };
+  // FACING (pill and skeleton): each instance carries the way its person or animal faces (aFace, world space; zero = no tone). The half of a pill whose surface looks that way is
+  // drawn 28% lighter, split along the facing plane, so a turn reads as the light half rotating; a small self-lit white dot sits on the front of the head at eye height.
+  function faceTone(mat) { if (mat.userData.faceTone) return; mat.userData.faceTone = true; const prev = mat.onBeforeCompile;
+    mat.onBeforeCompile = (sh, r) => { if (prev) prev.call(mat, sh, r);
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aFace;\nvarying vec2 vFace;').replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\nvFace = vec2(dot(normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal), aFace), step(0.5, length(aFace)));\n#else\nvFace = vec2(0.0);\n#endif');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vFace;').replace('#include <opaque_fragment>', 'outgoingLight = mix(outgoingLight, vec3(1.0), 0.28 * vFace.y * smoothstep(-0.1, 0.1, vFace.x));\n#include <opaque_fragment>'); };
+    mat.customProgramCacheKey = () => 'faceTone'; mat.needsUpdate = true; }
+  const _fy = new THREE.Vector3(), _fx = new THREE.Vector3(), _mb = new THREE.Matrix4(), _fb = new THREE.Vector3(), _fh = new THREE.Vector3(), _z0 = new THREE.Vector3(), _np = new THREE.Vector3(), _cen = new THREE.Vector3(), _hq = new THREE.Vector3();
+  // body facing: people from the shoulders and hips (left minus right, crossed with up); animals from the body towards the head. Head facing: the head anchor's own +z when the
+  // rig turns the head on its own (all rigs face +z), else the body's.
+  function facing(e, P) { if (e.kind === 'p') { _fb.subVectors(P[5], P[2]).add(P[11]).sub(P[8]).cross(_up); if (_fb.lengthSq() < 1e-8) _fb.setFromMatrixColumn(e.root.matrixWorld, 2).setY(0); _fb.normalize();
+      const hp = e.J[0].parent; if (hp && hp !== e.J[1].parent) { _fh.setFromMatrixColumn(hp.matrixWorld, 2).normalize(); if (_fh.dot(_fb) < -0.2) _fh.copy(_fb); } else _fh.copy(_fb); }
+    else { const h = e.sk.H[0]; _cen.set(0, 0, 0); let n = 0; for (let i = 0; i < P.length; i++) if (i !== h) { _cen.add(P[i]); n++; } _cen.multiplyScalar(1 / Math.max(1, n)); _fb.subVectors(P[h], _cen); if (_fb.lengthSq() < 1e-8) _fb.setFromMatrixColumn(e.root.matrixWorld, 2); _fb.normalize(); _fh.copy(_fb); } }
+  function build() { let nb = 0, nd = 0; for (const e of list) { nb += Math.max(e.sk.B.length, e.pl.S.length); nd += Math.max(e.sk.D.length + 1, e.pl.S.length * 2 + e.pl.O.length); }
+    const mk = (geo0, mat, n) => { const geo = geo0.clone(); geo.setAttribute('aFace', new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, n) * 3), 3)); faceTone(mat); const m = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); m.frustumCulled = false; m.castShadow = false; m.receiveShadow = false; m.count = 0; m.userData.charLook = true; m.setColorAt(0, new THREE.Color()); scene.add(m); return m; };
+    const basic = () => new THREE.MeshBasicMaterial({ fog: false, toneMapped: false }), lit = () => { const m = new THREE.MeshLambertMaterial({ fog: false, emissive: '#000000' }); m.toneMapped = false;   // self-lit: each pill keeps its exact colour in any light and any look,
+      m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', '#ifdef USE_COLOR\nfloat rimK = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));\noutgoingLight = vColor * (0.84 + 0.16 * clamp(normal.y * 0.5 + 0.5, 0.0, 1.0)) + vec3(0.22) * pow(rimK, 3.0);\n#endif\n#include <opaque_fragment>'); }; return m; };   // a soft top shade and a light rim keep the form
+    const cyl = new THREE.CylinderGeometry(1, 1, 1, 10, 1), sph = new THREE.SphereGeometry(1, 16, 10);
+    inst = { sk: { b: mk(cyl, basic(), nb), d: mk(sph, basic(), nd) }, pl: { b: mk(cyl, lit(), nb), d: mk(sph, lit(), nd) } };
+    const white = () => new THREE.MeshBasicMaterial({ color: '#ffffff', fog: false, toneMapped: false }), arc = new THREE.TorusGeometry(1, 0.09, 5, 14, 1.4); arc.rotateZ(-Math.PI / 2 - 0.7);   // the mouth: a short arc, lowest point at (0, -1, 0)
+    inst.nose = mk(sph, white(), list.length * 2); inst.mouth = mk(arc, white(), list.length); for (let i = 0; i < Math.max(1, list.length * 2); i++) { inst.nose.setColorAt(i, new THREE.Color('#ffffff')); if (i < Math.max(1, list.length)) inst.mouth.setColorAt(i, new THREE.Color('#ffffff')); }
+    for (const e of list) e.P = Array.from({ length: e.J.length + e.mids.length }, () => new THREE.Vector3()); apply(); }
+  function apply() { const on = mode !== 'full'; for (const e of list) for (const m of e.body) m.visible = !on; if (inst) for (const m of [inst.nose, inst.mouth]) { m.visible = on; if (!on) m.count = 0; } if (inst) for (const k of ['sk', 'pl']) for (const m of [inst[k].b, inst[k].d]) { m.visible = (k === 'sk' ? mode === 'skeleton' : mode === 'pill'); if (!m.visible) m.count = 0; } }
+  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _mid = new THREE.Vector3(), _d = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0), _fr = new THREE.Frustum(), _pv = new THREE.Matrix4(), _sp = new THREE.Sphere();
+  function update(cam) { if (!inst || mode === 'full') return; const I = mode === 'skeleton' ? inst.sk : inst.pl, N = inst.nose, M = inst.mouth, FB = I.b.geometry.attributes.aFace, FD = I.d.geometry.attributes.aFace; let nb = 0, nd = 0, nn = 0, nm = 0;
+    scene.updateMatrixWorld(); cam.updateMatrixWorld(); _pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); _fr.setFromProjectionMatrix(_pv);
+    const pxK = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2) / H, cp = cam.position;
+    const seg = (a, b, r, c, f) => { _d.subVectors(b, a); const L = _d.length(); if (L < 1e-5) return; _mid.addVectors(a, b).multiplyScalar(0.5); _q.setFromUnitVectors(_up, _d.multiplyScalar(1 / L)); _m.compose(_mid, _q, _s.set(r, L, r)); I.b.setMatrixAt(nb, _m); FB.setXYZ(nb, f ? f.x : 0, f ? f.y : 0, f ? f.z : 0); I.b.setColorAt(nb++, c); };
+    const dot = (p, r, c, f) => { _m.compose(p, _q.identity(), _s.set(r, r, r)); I.d.setMatrixAt(nd, _m); FD.setXYZ(nd, f ? f.x : 0, f ? f.y : 0, f ? f.z : 0); I.d.setColorAt(nd++, c); };
+    // the face: people get two very small eye dots (9% of the head's diameter) and a short static mouth arc (30% of its width) on the front of the head; animals one dot on the snout/beak
+    const nose = (p, r, f, e) => { if (e.kind !== 'p') { const rr = Math.max(r * 0.21, p.distanceTo(cp) * pxK * 1.8); _np.copy(p).addScaledVector(f, r * 0.93).addScaledVector(_up, r * 0.08); _m.compose(_np, _q.identity(), _s.set(rr, rr, rr)); N.setMatrixAt(nn++, _m); return; }
+      _fy.copy(_up).addScaledVector(f, -_up.dot(f)); if (_fy.lengthSq() < 1e-6) _fy.set(0, 0, 1); _fy.normalize(); _fx.crossVectors(_fy, f).normalize(); const re = Math.max(r * 0.09, p.distanceTo(cp) * pxK * 0.5);
+      for (const sx of [-1, 1]) { _np.copy(p).addScaledVector(f, r * 0.95).addScaledVector(_fy, r * 0.12).addScaledVector(_fx, sx * r * 0.32); _m.compose(_np, _q.identity(), _s.set(re, re, re)); N.setMatrixAt(nn++, _m); }
+      const R = r * 0.465; _np.copy(p).addScaledVector(f, r * 0.97).addScaledVector(_fy, -r * 0.3 + R); _mb.makeBasis(_fx, _fy, f); _q.setFromRotationMatrix(_mb); _m.compose(_np, _q, _s.set(R, R, R)); M.setMatrixAt(nm++, _m); };
+    for (const e of list) { if (!visChain(e.root)) continue; e.root.getWorldPosition(_sp.center); _sp.radius = e.rad * 1.5 + 1; if (!_fr.intersectsSphere(_sp)) continue;
+      const k = e.root.matrixWorld.getMaxScaleOnAxis(), w = e.w * k, P = e.P; e.J.forEach((j, i) => P[i].setFromMatrixPosition(j.matrixWorld)); for (const a of e.alt) if (visChain(a.vis)) a.idx.forEach((i, k) => P[i].setFromMatrixPosition(a.J[k].matrixWorld));
+      e.mids.forEach(([a, b, f], k) => P[e.J.length + k].lerpVectors(P[a], P[b], f === undefined ? 0.5 : f));
+      const dist = (p) => Math.max(0.05, p.distanceTo(cp)); facing(e, P);
+      if (mode === 'skeleton') { const S = e.sk;
+        for (const [a, b, c] of S.B) { _mid.addVectors(P[a], P[b]).multiplyScalar(0.5); const r = Math.min(w * 6, Math.max(w, dist(_mid) * pxK * 2.0)); seg(P[a], P[b], r, c); }
+        for (const [i, c] of S.D) { const r = Math.min(w * 9, Math.max(w * 1.6, dist(P[i]) * pxK * 3.0)); dot(P[i], r, c); }
+        if (S.H) { const p = P[S.H[0]], r = Math.min(S.H[1] * k * 3, Math.max(S.H[1] * k, dist(p) * pxK * 4.5)); dot(p, r, S.H[2], _fh); nose(p, r, _fh, e); } }
+      else { const L = e.pl; for (const [a, b, r0] of L.S) { _mid.addVectors(P[a], P[b]).multiplyScalar(0.5); const r = Math.max(r0 * k, dist(_mid) * pxK * 1.5); seg(P[a], P[b], r, L.c, _fb); dot(P[a], r, L.c, _fb); dot(P[b], r, L.c, _fb); }
+        const hi = e.sk.H ? e.sk.H[0] : 0; let hr = 0; for (const [i, r0] of L.O) { const r = Math.max(r0 * k, dist(P[i]) * pxK * 2); dot(P[i], r, L.c, i === hi ? _fh : _fb); if (i === hi) hr = r; }
+        if (!hr && e.sk.H) hr = Math.max(e.sk.H[1] * k, dist(P[hi]) * pxK * 2); if (hr) nose(P[hi], hr, _fh, e); } }
+    I.b.count = nb; I.d.count = nd; N.count = nn; M.count = nm; M.instanceMatrix.needsUpdate = N.instanceMatrix.needsUpdate = FB.needsUpdate = FD.needsUpdate = true; I.b.instanceMatrix.needsUpdate = I.d.instanceMatrix.needsUpdate = true; if (I.b.instanceColor) I.b.instanceColor.needsUpdate = true; if (I.d.instanceColor) I.d.instanceColor.needsUpdate = true; }
+  const set = (m) => { mode = ['skeleton', 'pill', 'full'].includes(m) ? m : 'pill'; apply(); };
+  return { A, person, animal, alt, build, update, set, get: () => mode, list, modes: ['skeleton', 'pill', 'full'] };
+})();
+const PJ = [[0, 0.91, 0.01], [0, 0.81, 0], [-0.15, 0.77, 0], [-0.175, 0.62, 0], [-0.19, 0.48, 0.01], [0.15, 0.77, 0], [0.175, 0.62, 0], [0.19, 0.48, 0.01], [-0.075, 0.45, 0], [-0.07, 0.24, 0], [-0.07, 0.03, 0], [0.075, 0.45, 0], [0.07, 0.24, 0], [0.07, 0.03, 0]];   // a standing figure's 14 joints in units of its height (right side = -x, it faces +z)
+const stdPerson = (g, u, h, o) => CHARS.person(g, PJ.map(([x, y, z]) => CHARS.A(g, x * u, y * u, z * u)), h, o);
+function mkPerson(h, hex, o = {}) { const g = new THREE.Group(), u = h;
+  part(g, 'cap', o.dress ? SKIN : '#3a3d45', 0.045 * u, 0.13 * u, 0.045 * u, -0.07 * u, 0.2 * u, 0); part(g, 'cap', o.dress ? SKIN : '#3a3d45', 0.045 * u, 0.13 * u, 0.045 * u, 0.07 * u, 0.2 * u, 0);   // legs
+  if (o.dress) part(g, 'cyl', hex, 0.15 * u, 0.36 * u, 0.13 * u, 0, 0.5 * u, 0);
+  part(g, 'cap', hex, 0.125 * u, 0.085 * u, 0.085 * u, 0, 0.66 * u, 0);                                                          // torso
+  part(g, 'cap', o.dress ? SKIN : hex, 0.033 * u, 0.1 * u, 0.033 * u, -0.17 * u, 0.62 * u, 0, 0, -0.12); part(g, 'cap', o.dress ? SKIN : hex, 0.033 * u, 0.1 * u, 0.033 * u, 0.17 * u, 0.62 * u, 0, 0, 0.12);   // arms
+  part(g, 'sph', SKIN, 0.068 * u, 0.08 * u, 0.072 * u, 0, 0.91 * u, 0); part(g, 'sph', o.hair || '#4a3b30', 0.072 * u, 0.06 * u, 0.076 * u, 0, 0.94 * u, -0.012 * u);   // head, hair
+  g.userData.char = stdPerson(g, u, h); return g; }
+function mkQuad(len, r, hex, o = {}) { const g = new THREE.Group(), b = new THREE.Group(); b.position.y = o.lift || 0; g.add(b); const leg = o.leg === undefined ? r * 1.1 : o.leg;
+  part(b, 'sph', hex, r, r * 0.9, len / 2, 0, 0, 0); part(b, 'sph', hex, r * 0.62, r * 0.6, r * 0.7, 0, r * 0.35, len / 2 + r * 0.25);                // body, head
+  part(b, 'sph', hex, r * 0.3, r * 0.25, r * 0.4, 0, r * 0.2, len / 2 + r * 0.85);                                                                    // muzzle
+  for (const sx of [-1, 1]) { part(b, o.ears === 'point' ? 'cone' : 'sph', hex, r * 0.2, r * 0.28, r * 0.12, sx * r * 0.38, r * 0.92, len / 2 + r * 0.15);
+    for (const sz of [-1, 1]) part(b, 'cyl', hex, r * 0.24, leg, r * 0.24, sx * r * 0.55, -r * 0.5 - leg / 2, sz * len * 0.3); }
+  if (o.tail === 'bushy') part(b, 'sph', hex, r * 0.6, r * 1.5, r * 0.7, 0, r * 1.2, -len / 2 - r * 0.3, -0.4);
+  else part(b, 'cyl', hex, r * 0.1, len * 0.5, r * 0.1, 0, r * 0.4, -len / 2 - len * 0.2, o.tail === 'long' ? -1.0 : -1.4);
+  { const Q = (x, y, z) => CHARS.A(b, x, y, z), L = len / 2, rx = o.tail === 'long' ? -1.0 : -1.4, tl = o.tail === 'bushy' ? [0, r * 2.58, -L - r * 0.88] : [0, r * 0.4 + 0.25 * len * Math.cos(rx), -L - len * 0.2 + 0.25 * len * Math.sin(rx)];
+    const J = [Q(0, r * 0.35, L + r * 0.25), Q(0, r * 0.2, L + r * 1.1), Q(0, r * 0.15, len * 0.3), Q(0, r * 0.15, -len * 0.3), Q(...tl)], B = [[2, 0], [0, 1], [2, 3], [3, 4]];   // head, muzzle, shoulders, hips, tail tip
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const k = J.length; J.push(Q(sx * r * 0.55, -r * 0.3, sz * len * 0.3), Q(sx * r * 0.55, -r * 0.5 - leg, sz * len * 0.3)); B.push([sz > 0 ? 2 : 3, k], [k, k + 1]); }
+    g.userData.char = CHARS.animal(g, J, B, [0, r * 0.62], Math.max(0.01, r * 0.16), { S: [[3, 2, r * 0.85]], O: [[0, r * 0.6]] }, { rad: len }); }
+  scene.add(g); return g; }
+function mkFish(len, r, hex, o = {}) { const g = new THREE.Group();
+  part(g, 'sph', hex, r * 0.55, r, len / 2, 0, 0, 0); part(g, 'cone', hex, r * 0.12, len * 0.28, r * 0.95, 0, 0, -len / 2 - len * 0.08, -Math.PI / 2);     // body, tail fin
+  if (o.dorsal) part(g, 'cone', hex, r * 0.1, r * 1.1, r * 0.6, 0, r * 1.2, 0, -0.5);
+  for (const sx of [-1, 1]) part(g, 'cone', hex, r * 0.5, r * 0.12, r * 0.5, sx * r * 0.75, -r * 0.3, len * 0.12, 0, sx * 0.6);                               // side fins
+  part(g, 'sph', '#f4f4f2', r * 0.1, r * 0.1, r * 0.1, r * 0.4, r * 0.25, len * 0.36); part(g, 'sph', '#f4f4f2', r * 0.1, r * 0.1, r * 0.1, -r * 0.4, r * 0.25, len * 0.36);
+  { const Q = (x, y, z) => CHARS.A(g, x, y, z), J = [Q(0, 0, len * 0.42), Q(0, 0, 0), Q(0, 0, -len / 2), Q(0, r * 0.8, -len / 2 - len * 0.25), Q(0, -r * 0.8, -len / 2 - len * 0.25), Q(r * 0.9, -r * 0.3, len * 0.1), Q(-r * 0.9, -r * 0.3, len * 0.1)], B = [[0, 1], [1, 2], [2, 3], [2, 4], [1, 5], [1, 6]];
+    if (o.dorsal) { J.push(Q(0, r * 1.7, -len * 0.05)); B.push([1, 7]); }
+    g.userData.char = CHARS.animal(g, J, B, [0, r * 0.5], Math.max(0.008, r * 0.14), { S: [[0, 2, r * 0.6], [2, 3, r * 0.16], [2, 4, r * 0.16]], O: [] }, { rad: len }); }
+  scene.add(g); return g; }
+function pill(h, r, hex, eye) { return h >= 1.2 ? mkPerson(h, hex) : pillCapsule(h, r, hex, eye); }
+function pillCapsule(h, r, hex, eye = 0.88) {   // the person is as tall as the pill; the dot sits on the side they face (+z), at eye height
+  const g = new THREE.Group(), body = new THREE.Mesh(new THREE.CapsuleGeometry(r, h - 2 * r, 8, 28), new THREE.MeshStandardMaterial({ map: stripes(hex), roughness: 0.75 }));
+  body.position.y = h / 2; body.castShadow = body.receiveShadow = true; g.add(body);
+  const ey = h * eye, dy = ey - (h - r), zs = Math.sqrt(Math.max(r * r - Math.max(dy, 0) ** 2, 0.0001));
+  const dot = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r * 0.45, r * 0.08, 32), new THREE.MeshStandardMaterial({ color: '#f4f4f2', roughness: 0.6 }));
+  dot.rotation.x = Math.PI / 2 - Math.max(dy, 0) / r * 0.6; dot.position.set(0, ey, zs); g.add(dot); g.userData.char = stdPerson(g, h, h); return g; }
+const walkers = [];   // {root, pos(t)->[x,z,heading], bob}
+function addWalker(root, pos, step = 1.8, amp = 0.025) { scene.add(root); walkers.push({ root, pos, step, amp, ph: rnd() * 6 }); return root; }
+const lin = (x, z, vx, vz, t0 = 0) => (t) => [x + vx * (t - t0), z + vz * (t - t0)];
+// ---- helpers for the cast
+const lying = (h, r, hex) => { const g = new THREE.Group(), p = pill(h, r, hex, 0.9); p.rotation.x = Math.PI / 2; p.position.set(0, 0, -h / 2); g.add(p); scene.add(g); return g; };
+const _v = new THREE.Vector3();
+function aim(o, x, y, z, nx, ny, nz, roll = 0) { o.position.set(x, y, z); o.lookAt(nx, ny, nz); if (roll) o.rotateZ(roll); }
+const gy = () => 0;   // the farmyard is flat
+const board = (hex = '#d9d9d9') => { const b = box(0.28, 0.06, 1.5, clay(hex)); return b; };
+const wingMat = clay('#5a4332');
+function bird(hex) { const g = new THREE.Group(), b = new THREE.Group(); part(b, 'sph', '#5a4332', 0.14, 0.13, 0.42, 0, 0, 0); part(b, 'sph', '#f1f1ef', 0.1, 0.1, 0.12, 0, 0.04, 0.45); part(b, 'cone', '#e3b23c', 0.035, 0.12, 0.035, 0, 0.02, 0.6, Math.PI / 2); part(b, 'box', '#f1f1ef', 0.24, 0.02, 0.3, 0, 0, -0.5); g.add(b); const w = [-1, 1].map((s) => { const p = new THREE.Group(), m = box(1.5, 0.03, 0.45, wingMat); m.position.x = s * 0.75; p.add(m); p.position.set(s * 0.1, 0.05, -0.4); g.add(p); return p; }); g.userData.w = w;
+  { const Q = CHARS.A, J = [Q(b, 0, 0.04, 0.45), Q(b, 0, 0.02, 0.66), Q(b, 0, 0, 0), Q(b, 0, 0, -0.62), Q(w[0], 0, 0, 0), Q(w[0], -0.75, 0, 0), Q(w[0], -1.5, 0, 0), Q(w[1], 0, 0, 0), Q(w[1], 0.75, 0, 0), Q(w[1], 1.5, 0, 0)];   // head, beak, body, tail, wings
+    g.userData.char = CHARS.animal(g, J, [[0, 1], [0, 2], [2, 3], [2, 4], [4, 5], [5, 6], [2, 7], [7, 8], [8, 9]], [0, 0.11], 0.03, { S: [[2, 0, 0.16], [2, 3, 0.1], [4, 6, 0.08], [7, 9, 0.08]], O: [[0, 0.12]] }, { rad: 2 }); }
+  scene.add(g); return g; }
+function wheelPair(g, rad, off) { for (const z of [-off, off]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, 0.06, 16), M.dark); w.rotation.z = Math.PI / 2; w.position.set(0, rad, z); g.add(w); } }
+const cyc = [];
+// ============================================================ helpers
+const smoothstep = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const G9 = 9.8;
+const lerp = (a, b, u) => a + (b - a) * u;
+// local frame: origin O (on the ground), yaw; forward = (-sin yaw, 0, -cos yaw), right = (cos yaw, 0, -sin yaw)
+function frame(O, yaw) { const fw = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), rt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const L = (r, u, f) => new THREE.Vector3(O[0] + rt.x * r + fw.x * f, O[1] + u, O[2] + rt.z * r + fw.z * f);
+  const G = (r, h, f) => { const p = L(r, 0, f); p.y = gy(p.x, p.z) + h; return p; };
+  return { L, G, fw, rt, O }; }
+const faceTo = (o, p, q) => { o.position.copy(p); o.lookAt(q); };                       // pills, animals: front is +z
+const carTo = (o, p, q) => { o.position.copy(p); o.lookAt(p.clone().multiplyScalar(2).sub(q)); };   // cars: front is -z
+const ballis = (p0, v, tau, g = G9) => new THREE.Vector3(p0.x + v.x * tau, p0.y + v.y * tau - 0.5 * g * tau * tau, p0.z + v.z * tau);
+const lerpA = (a, b, u) => a + ((((b - a) % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI) * u;   // blend two angles the short way
+// Hermite spline through timed keys [t, ...values]: continuous position and velocity in time
+function timedSpline(K) { const n = K.length, d = K[0].length - 1, tan = K.map((k, i) => { const a = K[Math.max(0, i - 1)], b = K[Math.min(n - 1, i + 1)], dt = b[0] - a[0] || 1; return k.slice(1).map((_, j) => (i === 0 || i === n - 1) ? 0 : (b[j + 1] - a[j + 1]) / dt); });
+  return (t) => { if (t <= K[0][0]) return K[0].slice(1); if (t >= K[n - 1][0]) return K[n - 1].slice(1); let i = 0; while (i < n - 2 && t > K[i + 1][0]) i++; const h = K[i + 1][0] - K[i][0], u = (t - K[i][0]) / h, u2 = u * u, u3 = u2 * u;
+    const out = []; for (let j = 0; j < d; j++) out.push((2 * u3 - 3 * u2 + 1) * K[i][j + 1] + (u3 - 2 * u2 + u) * h * tan[i][j] + (-2 * u3 + 3 * u2) * K[i + 1][j + 1] + (u3 - u2) * h * tan[i + 1][j]); return out; }; }
+// smoothstep-blended keys per parameter: K = [[t, value], ...]
+const keyed = (K) => (t) => { if (t <= K[0][0]) return K[0][1]; for (let i = 0; i < K.length - 1; i++) if (t <= K[i + 1][0]) return lerp(K[i][1], K[i + 1][1], smoothstep((t - K[i][0]) / (K[i + 1][0] - K[i][0]))); return K[K.length - 1][1]; };
+const win = (t, a, b, r = 0.25) => smoothstep((t - a) / r) * (1 - smoothstep((t - b) / r));   // 0..1 window with soft edges
+// ============================================================ TIME. Story time = playback time (1.0x) except shot 5's slow motion: playback 24.0-26.3 s at 30 %, back to full speed by 26.7 s.
+// No line of dialogue is spoken inside it. S(pt) = the story second for a playback second; every key below is written in playback seconds through S().
+const SLOW_A = 24.0, SLOW_B = 26.3, SLOW_K = 0.7;
+const rhoP = (pt) => (pt < SLOW_A ? 1 : 1 - SLOW_K * (1 - smoothstep((pt - SLOW_B) / 0.4)));
+const PST = [0]; for (let i = 1; i <= 30 * 480; i++) PST.push(PST[i - 1] + rhoP((i - 0.5) / 480) / 480);
+const S = (pt) => { const f = cl(pt * 480, 0, PST.length - 1), i = Math.min(Math.floor(f), PST.length - 2); return PST[i] + (PST[i + 1] - PST[i]) * (f - i); };
+const PofS = (st) => { let lo = 0, hi = PST.length - 1; if (st <= 0) return 0; if (st >= PST[hi]) return 30; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (PST[m] <= st) lo = m; else hi = m; } return (lo + (st - PST[lo]) / Math.max(1e-9, PST[hi] - PST[lo])) / 480; };
+const STORY_END = S(30);
+// ============================================================ FIVE SHOTS, FOUR HARD CUTS (story seconds; window.CUTS gives them in playback seconds). Each shot is its own smooth camera move;
+// the smoothing below never reaches across a cut, so a cut is an instant jump from one camera to the next.
+const CUT_S = [8, 15, 19, 24].map(S);
+const T_GO = S(26.72);                 // the saucer streaks away (normal speed again)
+const T_TURN0 = S(27.3), T_TURN1 = S(27.9), T_DROP0 = S(28.3), T_DROP1 = S(29.5), T_CR0 = S(25.9), T_CR1 = S(29.45);
+// ============================================================ THE FARMYARD AT DUSK (north = -z). The red barn with its weathervane closes the yard to the north, the farmhouse is west, a silo east of the barn,
+// crop fields all round, a dirt drive comes in from the road in the south; the news van is parked inside the gate with its mast up. The sun has just gone down in the west.
+const D = { soil: clay('#6f6a58'), yard: clay('#958a74'), crop: clay('#56603f'), barn: clay('#8c3a2f'), trim: clay('#e3ddd0'), roofD: clay('#3f3f44'), doorW: clay('#4a2c25'), wood: clay('#6e5a45'),
+  house: clay('#c9c3b5'), hroof: clay('#4f4642'), silo: clay('#a3a5a4'), road: clay('#5f5a52'), hay: clay('#9c8250') };
+const warm = (hex, k = 1.6) => new THREE.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: k, roughness: 0.6 });
+const prism = (pts, depth, mat) => { const s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) s.lineTo(p[0], p[1]); s.closePath(); const m = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false }), mat); m.castShadow = m.receiveShadow = true; return m; };
+{ const g = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), D.soil); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g); }
+{ const y = box(30, 0.04, 36, D.yard); y.castShadow = false; put(y, 0, 0.02, -13); const dr = box(4.6, 0.03, 22, D.yard); dr.castShadow = false; put(dr, 4.3, 0.015, 16.5);   // packed-earth yard, the drive
+  for (const z of [28.5, -95]) { const r = box(3000, 0.03, 6.5, D.road); r.castShadow = false; put(r, 0, 0.016, z); } }
+// crop rows: one instanced mesh, rows 0.4 m wide and 0.32 m high
+{ const R = []; for (let x = 16; x < 330; x += 1.5) R.push([x, -60, 0.42, 165]); for (let x = -32; x > -330; x -= 1.5) R.push([x, -60, 0.42, 165]);
+  for (let z = -46; z > -88; z -= 1.5) R.push([5, z, 70, 0.42]); for (let z = 34; z < 330; z += 1.5) R.push([0, z, 660, 0.42]);
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), D.crop, R.length), m4 = new THREE.Matrix4(); R.forEach(([x, z, sx, sz], i) => im.setMatrixAt(i, m4.compose(new THREE.Vector3(x, 0.16, z), new THREE.Quaternion(), new THREE.Vector3(sx, 0.32, sz)))); im.receiveShadow = true; im.castShadow = true; scene.add(im); }
+// fences: posts every 2.5 m, two rails; a gap for the drive in the south side
+function fence(x0, z0, x1, z1) { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.5)), yaw = Math.atan2(x1 - x0, z1 - z0);
+  for (let i = 0; i <= n; i++) put(box(0.12, 1.15, 0.12, D.wood), x0 + (x1 - x0) * i / n, 0.575, z0 + (z1 - z0) * i / n);
+  for (const y of [0.5, 1.0]) { const r = box(0.05, 0.1, L, D.wood); r.rotation.y = yaw; put(r, (x0 + x1) / 2, y, (z0 + z1) / 2); } }
+fence(-13, -42, -13, 6); fence(-13, 6, 2, 6); fence(6.6, 6, 12, 6); fence(12, 6, 12, -20); fence(-13, -42, -6.5, -42);
+// utility poles along the south road
+for (let x = -180; x <= 180; x += 40) { put(box(0.26, 8.5, 0.26, D.wood), x, 4.25, 32.2); put(box(2.2, 0.14, 0.14, D.wood), x, 7.9, 32.2); }
+// THE BARN: red, gable roof (ridge along z, 9 m), big front doors with white X trim, hay-loft door, a lamp over the doors, the weathervane on the front of the ridge
+const BARN_Z0 = -24, BARN_Z1 = -38;
+{ const b = prism([[-5.5, 0], [5.5, 0], [5.5, 5.5], [0, 9], [-5.5, 5.5]], 14, D.barn); b.position.set(0, 0, BARN_Z1); scene.add(b);
+  const th = Math.atan2(3.5, 5.5), L = Math.hypot(6.0, 3.82); for (const s of [-1, 1]) { const r = box(L, 0.22, 14.8, D.roofD); r.rotation.z = -s * th; put(r, s * 2.95, 7.38, (BARN_Z0 + BARN_Z1) / 2); }
+  const zf = BARN_Z0 + 0.06; put(box(4.4, 4.5, 0.12, D.doorW), 0, 2.25, zf);
+  for (const sx of [-1, 1]) { const cx = sx * 1.1, dl = Math.hypot(2.2, 4.5); for (const s of [-1, 1]) { const x = box(0.14, dl, 0.06, D.trim); x.rotation.z = s * Math.atan2(2.2, 4.5); put(x, cx, 2.25, zf + 0.08); } }
+  for (const [w, h, x, y] of [[4.6, 0.16, 0, 4.55], [0.16, 4.6, -2.25, 2.25], [0.16, 4.6, 2.25, 2.25], [0.12, 4.5, 0, 2.25]]) put(box(w, h, 0.07, D.trim), x, y, zf + 0.09);
+  put(box(1.8, 1.8, 0.1, D.doorW), 0, 6.55, zf); for (const [w, h, x, y] of [[2.0, 0.14, 0, 7.45], [2.0, 0.14, 0, 5.65], [0.14, 1.9, -0.95, 6.55], [0.14, 1.9, 0.95, 6.55]]) put(box(w, h, 0.07, D.trim), x, y, zf + 0.08);
+  put(box(0.45, 0.22, 0.3, warm('#ffc27a', 2.2)), 0, 4.95, zf + 0.2); put(box(0.08, 0.08, 0.4, D.roofD), 0, 5.1, zf + 0.12);
+  const lamp = new THREE.PointLight('#ffb36b', 45, 32, 2); lamp.position.set(0, 4.7, zf + 0.7); scene.add(lamp); }
+const vane = new THREE.Group(); vane.position.set(0, 10.35, -25.4); scene.add(vane);
+{ put(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1.5, 8), D.roofD), 0, 9.6, -25.4);
+  for (const ry of [0, Math.PI / 2]) { const a = box(0.9, 0.04, 0.04, D.roofD); a.rotation.y = ry; put(a, 0, 9.95, -25.4); }
+  part(vane, 'box', '#2a2a2e', 0.04, 0.04, 1.3, 0, 0, 0); part(vane, 'cone', '#2a2a2e', 0.08, 0.22, 0.08, 0, 0, 0.72, Math.PI / 2); part(vane, 'box', '#2a2a2e', 0.02, 0.32, 0.36, 0, 0.05, -0.55);
+  part(vane, 'sph', '#2a2a2e', 0.12, 0.1, 0.2, 0, 0.22, 0.05); part(vane, 'sph', '#2a2a2e', 0.06, 0.07, 0.06, 0, 0.36, 0.2); part(vane, 'box', '#2a2a2e', 0.02, 0.22, 0.16, 0, 0.3, -0.15); }
+// silo east of the barn, the farmhouse west of the yard (lit windows), trees, a far tree line
+{ const s = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 13, 24), D.silo); s.castShadow = s.receiveShadow = true; put(s, 9.8, 6.5, -35.5);
+  const d = new THREE.Mesh(new THREE.SphereGeometry(2.6, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), D.roofD); d.castShadow = true; put(d, 9.8, 13, -35.5); }
+{ const HX = -21.5, HZ = -15.5; put(box(10, 6, 8, D.house), HX, 3, HZ); const r = prism([[-4.6, 0], [4.6, 0], [0, 2.8]], 10.8, D.hroof); r.rotation.y = Math.PI / 2; r.position.set(HX - 5.4, 6, HZ); scene.add(r);
+  put(box(1.0, 1.6, 1.0, D.hroof), HX + 2.5, 8.2, HZ - 1.5);
+  const lit = warm('#ffbf73', 1.7), dk = clay('#3a3b40'); for (const [x, y, on] of [[-3, 1.6, 1], [-0.8, 1.6, 0], [2.6, 1.6, 1], [-3, 4.4, 0], [0.4, 4.4, 1], [2.6, 4.4, 0]]) put(box(1.1, 1.3, 0.08, on ? lit : dk), HX + x, y, HZ + 4.02);
+  for (const [z, y, on] of [[-2, 1.6, 1], [1.5, 1.6, 0], [-2, 4.4, 1], [1.5, 4.4, 1]]) put(box(0.08, 1.3, 1.1, on ? lit : dk), HX + 5.02, y, HZ + z);
+  put(box(1.0, 2.1, 0.08, D.hroof), HX + 0.9, 1.05, HZ + 4.03); put(box(0.3, 0.2, 0.2, warm('#ffd28f', 2.0)), HX + 0.9, 2.45, HZ + 4.2);
+  const pl = new THREE.PointLight('#ffb070', 18, 18, 2); pl.position.set(HX + 0.9, 2.3, HZ + 5.2); scene.add(pl); }
+function tree(x, z, s = 1) { const g = new THREE.Group(); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 4.4, 8), D.wood); t.position.y = 2.2; t.castShadow = true; g.add(t);
+  for (const [dx, dy, dz, r] of [[0, 5.6, 0, 2.4], [1.1, 5.0, 0.5, 1.7], [-1.0, 5.1, -0.6, 1.8], [0.2, 6.7, -0.2, 1.6]]) { const b = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), M.tree); b.position.set(dx, dy, dz); b.castShadow = true; g.add(b); }
+  g.position.set(x, 0, z); g.scale.setScalar(s); scene.add(g); }
+tree(-27, -24, 1.3); tree(-16, -27, 1.1); tree(-29, -6, 1.2); tree(-10.5, -44, 1.0); tree(20, -44, 1.15); tree(22, 16, 0.9);
+for (let i = 0; i < 26; i++) tree(-160 + i * 13 + rr(-4, 4), -140 + rr(-6, 6), rr(1.4, 2.2));
+// round hay bales (lying), a stack by the barn doors, loose straw at the doors
+const BALES = [[-8.4, -20.6, 0.3], [-6.8, -19.9, -0.15], [-7.6, -20.3, 0.1, 1], [5.4, -19.8, 1.2], [8.6, -16.5, 1.25], [-2.6, -6.6, 0.4], [-7.5, -14, 1.0]];
+for (const [x, z, yaw, up] of BALES) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 1.25, 20), D.hay); c.castShadow = c.receiveShadow = true; c.rotation.set(0, yaw, Math.PI / 2, 'YXZ'); put(c, x, up ? 2.2 : 0.78, z); }
+{ for (let i = 0; i < 40; i++) { const s = box(rr(0.3, 0.9), rr(0.05, 0.16), rr(0.3, 0.9), D.hay); s.rotation.y = rr(0, 3); put(s, rr(-2.6, 2.6), 0.04, rr(-23.6, -21.6)); } }
+// far farm lights on the horizon
+for (let i = 0; i < 9; i++) put(box(1.2, 0.8, 0.4, warm('#ffc47e', 2.2)), -300 + i * 75 + rr(-20, 20), 1.5, -420 + rr(-40, 40));
+// THE NEWS VAN: white box van with a red band, sliding door open (warm light inside), telescopic mast up from the front of the roof with a small dish. Front faces south (+z).
+const van = new THREE.Group();
+{ const W = clay('#ecebe6', 0.55), band = clay('#c8262b', 0.6), gl = clay('#2b2f36', 0.35);
+  put(box(2.06, 2.1, 4.3, W), 0, 1.42, -0.55, van); put(box(2.0, 1.25, 1.4, W), 0, 1.0, 2.25, van); const ws = box(1.9, 0.75, 0.06, gl); ws.rotation.x = -0.55; put(ws, 0, 1.92, 1.62, van);
+  put(box(2.09, 0.3, 4.32, band), 0, 1.2, -0.55, van); put(box(2.02, 0.28, 1.42, band), 0, 1.2, 2.25, van);
+  for (const sx of [-1, 1]) put(box(0.06, 0.55, 0.9, gl), sx * 1.03, 1.85, 1.25, van);
+  for (const [sx, z] of [[-1, -1.95], [1, -1.95], [-1, 1.95], [1, 1.95]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.26, 16), M.dark); w.rotation.z = Math.PI / 2; w.castShadow = true; put(w, sx * 0.93, 0.38, z, van); }
+  put(box(0.05, 1.75, 1.25, warm('#ffcf8a', 0.9)), -1.04, 1.28, 0.25, van);             // the open sliding door: warm light inside (west side)
+  put(box(0.08, 1.85, 0.08, M.dark), -1.12, 1.3, -0.4, van);
+  for (const [r, h, y] of [[0.1, 2.3, 3.6], [0.075, 2.2, 5.85]]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 10), M.dark); c.castShadow = true; put(c, 0, y, 1.0, van); }
+  put(box(0.5, 0.25, 0.5, M.dark), 0, 2.55, 1.0, van);
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.55, 18, 8, 0, Math.PI * 2, 0, 1.0), new THREE.MeshStandardMaterial({ color: '#e8e8e4', roughness: 0.5, side: THREE.DoubleSide })); dish.rotation.x = -1.1; dish.castShadow = true; put(dish, 0, 7.1, 1.25, van);
+  put(box(0.1, 0.1, 0.1, warm('#ff3b30', 2.5)), 0, 7.05, 0.95, van);   // red mast-top lamp
+  van.position.set(6.6, 0, -0.8); scene.add(van); }
+// ============================================================ THE CAST: people are rigs (legs, chest, head, two-bone arms); the default look draws each as one bright pill. Front is +z, his left is +x.
+const DOWN = new THREE.Vector3(0, -1, 0), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _qA = new THREE.Quaternion(), _qB = new THREE.Quaternion();
+function mkRig(h, o) { const u = h / 1.8, g = new THREE.Group(), HY = 0.92 * u, legs = {}, arms = {}, skin = o.skin || SKIN;
+  const limb = (p, hex, r, len, y) => part(p, 'cap', hex, r, len / 3, r, 0, y, 0);
+  for (const [k, sx] of [['L', 1], ['R', -1]]) { const L = new THREE.Group(); L.position.set(sx * 0.1 * u, HY, 0); g.add(L); limb(L, o.pants, 0.075 * u, 0.5 * u, -0.22 * u);
+    const K = new THREE.Group(); K.position.y = -0.45 * u; L.add(K); limb(K, o.pants, 0.062 * u, 0.46 * u, -0.21 * u); part(K, 'box', o.boots || '#3b2a20', 0.11 * u, 0.08 * u, 0.27 * u, 0, -0.43 * u, 0.05 * u);
+    legs[k] = { L, K, A: CHARS.A(K, 0, -0.44 * u, 0) }; }
+  part(g, 'sph', o.pants, 0.17 * u, 0.11 * u, 0.12 * u, 0, HY, 0);
+  const C = new THREE.Group(); C.rotation.order = 'YXZ'; C.position.y = HY; g.add(C);
+  part(C, 'cap', o.shirt, 0.175 * u, 0.19 * u, 0.12 * u, 0, 0.3 * u, 0); part(C, 'cyl', skin, 0.05 * u, 0.1 * u, 0.05 * u, 0, 0.6 * u, 0);
+  const head = new THREE.Group(); head.rotation.order = 'YXZ'; head.position.y = 0.63 * u; C.add(head);
+  part(head, 'sph', skin, 0.1 * u, 0.12 * u, 0.11 * u, 0, 0.12 * u, 0);
+  if (o.hair) part(head, 'sph', o.hair, 0.105 * u, 0.08 * u, 0.115 * u, 0, 0.17 * u, -0.015 * u);
+  if (o.cap) { part(head, 'sph', o.cap, 0.112 * u, 0.065 * u, 0.12 * u, 0, 0.19 * u, -0.005 * u); part(head, 'box', o.cap, 0.17 * u, 0.012 * u, 0.1 * u, 0, 0.165 * u, 0.13 * u); }
+  for (const [k, sx] of [['L', 1], ['R', -1]]) { const Sg = new THREE.Group(); Sg.position.set(sx * 0.2 * u, 0.52 * u, 0); C.add(Sg); part(Sg, 'sph', o.shirt, 0.06 * u, 0.06 * u, 0.06 * u, 0, 0, 0); limb(Sg, o.shirt, 0.052 * u, 0.3 * u, -0.15 * u);
+    const E = new THREE.Group(); E.position.y = -0.3 * u; Sg.add(E); limb(E, o.shirt, 0.045 * u, 0.27 * u, -0.135 * u);
+    const Hd = new THREE.Group(); Hd.position.y = -0.28 * u; E.add(Hd); part(Hd, 'sph', skin, 0.045 * u, 0.055 * u, 0.03 * u, 0, -0.03 * u, 0);
+    arms[k] = { S: Sg, E, Hd, sx, y0: 0.52 * u }; }
+  g.userData = { u, HY, legs, arms, C, head, l1: 0.3 * u, l2: 0.28 * u };
+  const Q = CHARS.A, J = [Q(head, 0, 0.12 * u, 0), Q(C, 0, 0.6 * u, 0), Q(arms.R.S, 0, 0, 0), Q(arms.R.E, 0, 0, 0), Q(arms.R.Hd, 0, 0, 0), Q(arms.L.S, 0, 0, 0), Q(arms.L.E, 0, 0, 0), Q(arms.L.Hd, 0, 0, 0),
+    Q(legs.R.L, 0, 0, 0), Q(legs.R.K, 0, 0, 0), legs.R.A, Q(legs.L.L, 0, 0, 0), Q(legs.L.K, 0, 0, 0), legs.L.A];
+  g.userData.char = CHARS.person(g, J, h, { hr: 0.115, c: o.pill });
+  g.traverse((m) => { if (m.isMesh) m.receiveShadow = true; }); scene.add(g); return g; }
+// two-bone arm IK. T = the hand target in the rig's root frame (x his left, y up, z his front); pole = where the elbow points, in the chest frame
+function armIK(R, side, T, pole) { const U = R.userData, a = U.arms[side], C = U.C; R.updateMatrixWorld(true);
+  _a.set(T[0], T[1], T[2]); R.localToWorld(_a); C.worldToLocal(_a); const Sp = a.S.position, d = _a.sub(Sp), D0 = d.length(), Dd = cl(D0, 0.08, U.l1 + U.l2 - 0.002); d.normalize();
+  _b.set(pole ? pole[0] : a.sx * 0.45, pole ? pole[1] : -1, pole ? pole[2] : -0.35); _b.addScaledVector(d, -_b.dot(d)); if (_b.lengthSq() < 1e-6) _b.set(0, 0, -1).addScaledVector(d, d.z); _b.normalize();
+  const l1 = U.l1, l2 = U.l2, al = Math.acos(cl((l1 * l1 + Dd * Dd - l2 * l2) / (2 * l1 * Dd), -1, 1)), be = Math.acos(cl((l1 * l1 + l2 * l2 - Dd * Dd) / (2 * l1 * l2), -1, 1));
+  const up = d.clone().multiplyScalar(Math.cos(al)).addScaledVector(_b, Math.sin(al)).normalize(), el = Sp.clone().addScaledVector(up, l1), fw = Sp.clone().addScaledVector(d, Dd).sub(el).normalize();
+  _qA.setFromUnitVectors(DOWN, up); const z0 = new THREE.Vector3(0, 0, 1).applyQuaternion(_qA), w = fw.clone().addScaledVector(up, -fw.dot(up));
+  if (w.lengthSq() > 1e-8) { w.normalize(); const ang = Math.atan2(new THREE.Vector3().crossVectors(z0, w).dot(up), z0.dot(w)); _qB.setFromAxisAngle(up, ang); _qA.premultiply(_qB); }
+  a.S.quaternion.copy(_qA); a.E.rotation.set(-(Math.PI - be), 0, 0); }
+const toRoot = (R, p) => { R.updateMatrixWorld(true); const v = R.worldToLocal(p.clone()); return [v.x, v.y, v.z]; };
+const shoulderW = (R, side) => { R.updateMatrixWorld(true); return R.userData.arms[side].S.getWorldPosition(new THREE.Vector3()); };
+const pointAt = (R, side, P) => { const s = shoulderW(R, side), d = P.clone().sub(s).normalize(); return toRoot(R, s.addScaledVector(d, 0.8)); };   // a straight arm aimed at a world point
+function headAng(R, p) { const U = R.userData; R.updateMatrixWorld(true); _c.copy(p); U.C.worldToLocal(_c); _c.sub(U.head.position); _c.y -= 0.12 * U.u; return [Math.atan2(_c.x, _c.z), Math.atan2(_c.y, Math.hypot(_c.x, _c.z))]; }
+function lookTrack(R, K, t, dur = 0.4) { let i = 0; for (let j = 0; j < K.length; j++) if (t >= K[j][0]) i = j; const a1 = headAng(R, K[i][1](t)), a0 = i > 0 ? headAng(R, K[i - 1][1](t)) : a1, u = smoothstep((t - K[i][0]) / dur);
+  const yaw = cl(lerpA(a0[0], a1[0], u), -1.3, 1.3), pit = cl(lerp(a0[1], a1[1], u), -0.75, 0.9); R.userData.head.rotation.set(-pit, yaw, 0); }
+function legsAt(R, ph, amt) { const L = R.userData.legs, s = Math.sin(ph); L.L.L.rotation.x = -0.42 * s * amt; L.R.L.rotation.x = 0.42 * s * amt;
+  L.L.K.rotation.x = 0.6 * Math.max(0, Math.sin(ph + 1.3)) * amt; L.R.K.rotation.x = 0.6 * Math.max(0, -Math.sin(ph + 1.3)) * amt; }
+function trk(K, t) { let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++; const A = K[i], B = K[i + 1], u = t <= A[0] ? 0 : t >= B[0] ? 1 : smoothstep((t - A[0]) / (B[0] - A[0]));
+  const v = (k) => (typeof k[1] === 'function' ? k[1](t) : k[1]), a = v(A), b = v(B), pa = A[2], pb = B[2];
+  return { T: [lerp(a[0], b[0], u), lerp(a[1], b[1], u), lerp(a[2], b[2], u)], pole: pa || pb ? [0, 1, 2].map((j) => lerp((pa || pb)[j], (pb || pa)[j], u)) : null }; }
+function mkWalk(pts, tA, v, a = 0.5, d = 0.7) { const c = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal'), L = c.getLength(), T = L / v + (a + d) / 2;
+  const dist = (t) => { const u = cl(t - tA, 0, T); if (u < a) return 0.5 * v * u * u / a; if (u < T - d) return 0.5 * v * a + v * (u - a); const r = T - u; return L - 0.5 * v * r * r / d; };
+  return { tA, tB: tA + T, L, dist, at: (t) => { const s = dist(t), k = cl(s / L), p = c.getPointAt(k), tg = c.getTangentAt(cl(k, 0.001, 0.999)); return { p, yaw: Math.atan2(tg.x, tg.z), v: (dist(t + 0.04) - dist(t - 0.04)) / 0.08, s }; } }; }
+// ---- THE FARMER (yellow pill): faded denim work shirt, blue baseball cap. Stands in the yard between the crew and the barn.
+const farmer = mkRig(1.8, { shirt: '#6f93bf', pants: '#4b4337', boots: '#3b2a20', hair: '#6b5a4a', cap: '#1f4fa8', pill: '#ffcc00' });
+// ---- THE REPORTER (magenta pill), with the stick mic in her right hand
+const reporter = mkRig(1.68, { shirt: '#7a2550', pants: '#2b2b33', boots: '#1d1d22', hair: '#3a2418', pill: '#ff2dd4' });
+const mic = new THREE.Group(); { part(mic, 'cyl', '#1b1b1f', 0.017, 0.2, 0.017, 0, -0.08, 0); part(mic, 'sph', '#3a3a40', 0.032, 0.036, 0.032, 0, -0.2, 0); part(mic, 'box', '#ff6a00', 0.055, 0.055, 0.055, 0, -0.14, 0);
+  reporter.userData.arms.R.Hd.add(mic); mic.position.set(0, -0.04, 0.01); mic.traverse((m) => { if (m.isMesh) m.castShadow = true; }); }   // added after the pill registered it, so the mic stays visible in every look
+// ---- THE CAMERAMAN (cyan pill) and his shoulder news camera (a separate prop: on his right shoulder, then hanging from his right hand at the hip)
+const cameraman = mkRig(1.83, { shirt: '#4a5560', pants: '#3a3d45', boots: '#2a2420', hair: '#2a2a2a', cap: '#2d2d30', pill: '#00d5ff' });
+const newsCam = new THREE.Group(); scene.add(newsCam);
+{ const k = '#202125'; part(newsCam, 'box', k, 0.13, 0.2, 0.36, 0, 0, 0); part(newsCam, 'cyl', '#151518', 0.055, 0.17, 0.055, 0, 0.0, 0.255, Math.PI / 2); part(newsCam, 'cyl', '#0d0d10', 0.068, 0.04, 0.068, 0, 0.0, 0.345, Math.PI / 2);
+  part(newsCam, 'box', k, 0.05, 0.05, 0.12, 0.1, 0.05, 0.17); part(newsCam, 'box', '#2c2d31', 0.035, 0.035, 0.17, 0, 0.14, 0.02); for (const z of [-0.06, 0.1]) part(newsCam, 'box', '#2c2d31', 0.03, 0.06, 0.03, 0, 0.11, z);
+  part(newsCam, 'box', '#3a3b40', 0.11, 0.06, 0.06, 0, -0.07, -0.2); part(newsCam, 'box', '#efe9d8', 0.07, 0.045, 0.02, 0, 0.18, 0.12); part(newsCam, 'box', '#ff2a2a', 0.02, 0.02, 0.02, 0.06, 0.08, 0.18);
+  newsCam.traverse((m) => { if (m.isMesh) m.castShadow = true; }); }
+const camLight = new THREE.SpotLight('#fff0da', 0, 14, 0.55, 0.7, 2); camLight.castShadow = false; scene.add(camLight, camLight.target);
+// ---- THE VAN TECH (lime pill) at the open sliding door, coiling a cable
+const tech = mkRig(1.76, { shirt: '#5a5a3a', pants: '#3b3a32', boots: '#2a2420', hair: '#4a3020', pill: '#7dff3a' });
+const coil = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.025, 8, 24), clay('#1e1e22')); coil.castShadow = true; tech.userData.arms.L.Hd.add(coil); coil.position.set(0, -0.12, 0.02);
+// ---- THE SAUCER: brushed silver disc, glass dome, a ring of white and cyan lights, a glowing belly, and the searchlight it sweeps over the yard
+const saucer = new THREE.Group(); scene.add(saucer);
+const glowW = new THREE.MeshStandardMaterial({ color: '#fff6e0', emissive: '#fff1d0', emissiveIntensity: 0 }), glowC = new THREE.MeshStandardMaterial({ color: '#b8fbff', emissive: '#7ff6ff', emissiveIntensity: 0 });
+{ part(saucer, 'sph', '#c9ced6', 4.4, 0.62, 4.4, 0, 0, 0); part(saucer, 'sph', '#9ea6b2', 2.3, 0.42, 2.3, 0, -0.32, 0); part(saucer, 'sph', '#9fd8e6', 1.65, 1.05, 1.65, 0, 0.42, 0);
+  for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, l = new THREE.Mesh(UG.sph, i % 2 ? glowC : glowW); l.scale.setScalar(0.2); l.position.set(Math.cos(a) * 4.25, -0.06, Math.sin(a) * 4.25); saucer.add(l); }
+  saucer.children[0].material = new THREE.MeshStandardMaterial({ color: '#d7dce4', emissive: '#4b525e', roughness: 0.35 });   // silver hull, a little self-lit so it reads silver at dusk
+  const belly = new THREE.Mesh(UG.sph, glowC); belly.scale.set(1.5, 0.12, 1.5); belly.position.y = -0.68; saucer.add(belly); saucer.traverse((m) => { if (m.isMesh) m.castShadow = true; }); }
+const beamMat = new THREE.MeshBasicMaterial({ color: '#d8fbff', transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, fog: false, blending: THREE.AdditiveBlending });
+const beamG = new THREE.Group(); { const g = new THREE.CylinderGeometry(0.45, 2.4, 1, 32, 1, true); g.translate(0, -0.5, 0); beamG.add(new THREE.Mesh(g, beamMat)); scene.add(beamG); }
+const poolMat = new THREE.MeshBasicMaterial({ color: '#e6feff', transparent: true, opacity: 0, depthWrite: false, fog: false, blending: THREE.AdditiveBlending });
+const pool = new THREE.Mesh(new THREE.CircleGeometry(2.6, 40), poolMat); pool.rotation.x = -Math.PI / 2; scene.add(pool);
+const sSpot = new THREE.SpotLight('#d6f6ff', 0, 70, 0.13, 0.6, 1.2); scene.add(sSpot, sSpot.target);
+// ---- loose straw in the yard: lies on the ground until the saucer's gust lifts it and swirls it round the yard
+const HAYN = 420, hay = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), clay('#d9bc6a'), HAYN), HAYD = []; hay.castShadow = false; hay.frustumCulled = false; scene.add(hay);
+for (let i = 0; i < HAYN; i++) { const nearDoor = i < 170, x = nearDoor ? rr(-5, 5) : rr(-6, 7), z = nearDoor ? rr(-23.5, -17) : rr(-17, -10.5); HAYD.push({ x, z, yaw: rr(0, 6.28), len: rr(0.14, 0.32), w: rr(0.6, 1.4), h: rr(0.6, 1), ph: rr(0, 6.28) }); }
+{ const f = new THREE.DirectionalLight('#8fa3d0', 0.35); f.position.set(30, 25, 60); scene.add(f); }   // a faint cool fill from the south-east (no shadows)
+const SET = [farmer, reporter, cameraman, tech, newsCam, saucer, beamG, van, hay];
+// background life: crows over the west field, a pickup with its headlights on along the far north road
+const crows = [0, 1, 2, 3, 4].map(() => { const b = bird('#2a2a2a'); b.scale.setScalar(0.45); b.userData.char.pl.c = new THREE.Color('#1c1c1c'); return b; });   // crows stay dark in the pill look
+const pickup = makeCar('#3b4a5a', false, 5.2); scene.add(pickup); for (const sx of [-0.6, 0.6]) put(box(0.25, 0.14, 0.05, warm('#fff2cc', 3)), sx, 0.75, -2.62, pickup);
+const BGM = [...crows, pickup];
+// ============================================================ STAGING. Every actor is ONE function of story time t; key times are playback seconds (= story seconds before 24 s) or S(playback).
+const FP = new THREE.Vector3(1.5, 0, -12.5);                               // where the farmer stands
+const RP = new THREE.Vector3(0.95, 0, -11.9), CP = new THREE.Vector3(3.0, 0, -9.6), TP = new THREE.Vector3(4.8, 0, 0.15);
+const BARN_TOP = new THREE.Vector3(0, 9.6, -24.5), SKY_GONE = new THREE.Vector3(55, 62, -95);
+const headW = (R) => { R.updateMatrixWorld(true); return R.userData.head.localToWorld(new THREE.Vector3(0, 0.12 * R.userData.u, 0)); };
+// saucer: hidden behind the barn, rises over it (20.6-22.1; clear of the roof in the hip shot from about 21.8), hovers, then streaks off up and to the right (T_GO); its searchlight comes on at 22.0 and sweeps onto his back
+const SAU = timedSpline([[20.6, 0.4, 1.15, -47], [21.3, 0.4, 9.5, -38.5], [22.1, 0.3, 11.9, -28.8], [T_GO, 0.35, 11.2, -27.6]]), GO_DIR = new THREE.Vector3(1.0, 0.75, -0.95).normalize();
+function saucerAt(t) { const p = new THREE.Vector3(...SAU(Math.min(t, T_GO))); p.y += 0.12 * Math.sin(t * 1.6) * smoothstep((t - 22.5) / 0.8); if (t > T_GO) { const u = t - T_GO; p.addScaledVector(GO_DIR, 900 * u * u * u + 60 * u * u); } return p; }
+function beamTargetAt(t) { const f = FP.clone().add(new THREE.Vector3(0, 1.25, -0.35)); return BARN_TOP.clone().setY(8.8).lerp(f, smoothstep((t - 22.0) / 1.1)); }
+function placeSaucer(t) { const p = saucerAt(t); saucer.position.copy(p); saucer.rotation.set(0.05 * Math.sin(t * 0.9), t * 0.8, 0.07 + 0.25 * smoothstep((t - T_GO) / 0.2)); saucer.visible = t >= 19.0;
+  const glow = smoothstep((t - 21.1) / 0.9); glowW.emissiveIntensity = 2.2 * glow; glowC.emissiveIntensity = 2.6 * glow;
+  const on = smoothstep((t - 22.0) / 0.4) * (1 - smoothstep((t - T_GO + 0.12) / 0.12)), b0 = p.clone().add(new THREE.Vector3(0, -0.7, 0)), tg = beamTargetAt(t), dv = tg.clone().sub(b0), L = dv.length();
+  beamG.position.copy(b0); beamG.quaternion.setFromUnitVectors(DOWN, dv.normalize()); beamG.scale.set(1, L, 1); beamMat.opacity = 0.05 * on; beamG.visible = on > 0.002;
+  pool.position.set(tg.x, 0.03, tg.z); poolMat.opacity = 0.05 * on; pool.visible = on > 0.002; sSpot.position.copy(b0); sSpot.target.position.copy(tg); sSpot.intensity = 120 * on; }
+// ---- the farmer
+const F_REST_R = [-0.24, 0.87, 0.07], F_REST_L = [0.24, 0.87, 0.07];
+const F_ARM = {
+  R: [[0, F_REST_R], [5.55, F_REST_R], [6.05, (t) => pointAt(farmer, 'R', BARN_TOP)], [7.4, (t) => pointAt(farmer, 'R', BARN_TOP)], [7.95, F_REST_R],
+    [13.95, F_REST_R], [14.25, [-0.44, 1.03, 0.3], [-1, -1, -0.6]], [14.7, [-0.44, 1.03, 0.3], [-1, -1, -0.6]], [15.05, F_REST_R],
+    [17.8, F_REST_R], [18.15, [-0.22, 1.24, 0.42]], [18.75, [-0.22, 1.24, 0.42]], [19.3, F_REST_R], [20.2, F_REST_R], [20.6, [-0.3, 1.1, 0.38]], [20.95, [-0.3, 1.1, 0.38]], [21.4, F_REST_R],
+    [22.75, F_REST_R], [23.0, [-0.37, 0.93, -0.02]], [24.2, [-0.37, 0.93, -0.02]], [24.6, (t) => pointAt(farmer, 'R', saucerAt(Math.min(t, T_GO)))], [T_GO, (t) => pointAt(farmer, 'R', saucerAt(T_GO))],
+    [T_GO + 0.45, (t) => pointAt(farmer, 'R', SKY_GONE)], [T_DROP0, (t) => pointAt(farmer, 'R', SKY_GONE)], [T_DROP1, F_REST_R], [STORY_END + 1, F_REST_R]],
+  L: [[0, F_REST_L], [9.45, F_REST_L], [9.9, [0.03, 1.42, 0.3], [1, -0.3, -0.2]], [10.95, [0.03, 1.42, 0.3], [1, -0.3, -0.2]], [11.45, F_REST_L],
+    [13.95, F_REST_L], [14.25, [0.44, 1.03, 0.3], [1, -1, -0.6]], [14.7, [0.44, 1.03, 0.3], [1, -1, -0.6]], [15.05, F_REST_L],
+    [17.8, F_REST_L], [18.15, [0.22, 1.24, 0.42]], [18.75, [0.22, 1.24, 0.42]], [19.3, F_REST_L], [22.75, F_REST_L], [23.0, [0.37, 0.93, -0.02]], [23.5, [0.62, 1.12, 0.05]], [24.55, [0.62, 1.12, 0.05]], [S(27.0), F_REST_L], [STORY_END + 1, F_REST_L]] };
+const fYawBase = -0.05, fYawSpin = 3.25, fYawCrew = Math.atan2(5.45 - FP.x, -4.9 - FP.z);   // toward the cameraman's stop at the van
+const fTwist = keyed([[0, 0], [5.5, 0], [5.95, -0.55], [7.4, -0.55], [7.95, 0], [23.3, 0], [23.65, 0.3], [24.3, 0.05], [24.6, 0]]);
+const fLean = keyed([[0, 0.04], [9.6, 0.04], [9.9, 0.1], [10.9, 0.1], [11.3, -0.04], [13.1, -0.04], [13.6, 0.02], [14.0, -0.06], [14.7, -0.06], [15.05, 0.03], [22.75, 0.03], [23.0, -0.08], [23.3, 0], [24.3, -0.03], [24.6, -0.14], [T_GO + 0.5, -0.12], [T_TURN1, 0.04]]);
+const fShrug = keyed([[13.95, 0], [14.25, 1], [14.7, 1], [15.05, 0]]);
+const R_HEAD = RP.clone().setY(1.56), C_HEAD = (t) => C_WALK.at(t).p.clone().setY(1.7);
+const F_LOOK = [[0, () => R_HEAD], [5.55, () => BARN_TOP], [7.45, () => R_HEAD], [9.75, () => farmer.userData.arms.L.Hd.getWorldPosition(new THREE.Vector3())], [10.35, () => R_HEAD],
+  [11.3, () => new THREE.Vector3(FP.x - 0.4, 30, FP.z + 9)], [13.25, () => new THREE.Vector3(3.2, 1.62, -9.75)], [15.0, () => R_HEAD], [18.9, C_HEAD], [22.85, () => new THREE.Vector3(FP.x - 2.5, 1.6, FP.z - 3)],
+  [23.35, (t) => saucerAt(Math.min(t, T_GO))], [T_GO + 0.05, () => SKY_GONE], [T_TURN0, C_HEAD]];
+function fYaw(t) { let y = fYawBase + fYawSpin * smoothstep((t - 23.3) / 1.25); y = lerpA(y, fYawCrew, smoothstep((t - T_TURN0) / (T_TURN1 - T_TURN0))); return y; }
+function placeFarmer(t) { const R = farmer, U = R.userData, yaw = fYaw(t); R.position.set(FP.x, 0, FP.z); R.rotation.set(0, yaw, 0);
+  const sp = Math.abs(fYaw(t + 0.03) - fYaw(t - 0.03)) / 0.06; legsAt(R, (t - 23.3) * 9, cl(sp / 3.5) * 0.55); R.position.y = 0.012 * Math.abs(Math.sin((t - 23.3) * 9)) * cl(sp / 3.5);
+  U.C.rotation.set(fLean(t), fTwist(t), 0); const sh = fShrug(t); U.arms.L.S.position.y = U.arms.R.S.position.y = U.arms.L.y0 + 0.05 * sh;
+  for (const side of ['L', 'R']) { const a = trk(F_ARM[side], t); armIK(R, side, a.T, a.pole); }
+  lookTrack(R, F_LOOK, t); }
+// ---- the reporter: mic to his chin, pulls it back, thrusts it in again ("And tonight?"), lowers it, turns and walks to the van; at the van her head comes round too late
+const R_WALK = mkWalk([[RP.x, RP.z], [1.35, -9.55], [2.6, -6.5], [3.7, -3.6], [4.35, -1.75]], 18.35, 1.32);
+const chin = () => headW(farmer).add(new THREE.Vector3(0, -0.07, 0.05));
+const micAt = (dist) => () => { const c = chin(), me = reporter.localToWorld(new THREE.Vector3(0, 1.3, 0)); return toRoot(reporter, c.clone().addScaledVector(me.sub(c).normalize(), dist)); };
+const rLean = keyed([[0, 1], [7.55, 1], [7.95, 0.2], [8.15, 0.2], [8.45, 1], [15.15, 1], [15.8, 0]]);
+const R_ARM = { R: [[0, micAt(0.42)], [7.55, micAt(0.42)], [7.95, [-0.16, 1.2, 0.3]], [8.15, [-0.16, 1.2, 0.3]], [8.45, micAt(0.3)], [15.15, micAt(0.3)], [15.85, [-0.22, 0.84, 0.12]], [STORY_END + 1, [-0.22, 0.84, 0.12]]],
+  L: [[0, [0.22, 0.86, 0.08]], [16.0, [0.22, 0.86, 0.08]], [16.35, [0.27, 1.06, 0.33]], [16.9, [0.27, 1.06, 0.33]], [17.3, [0.22, 0.86, 0.08]], [STORY_END + 1, [0.22, 0.86, 0.08]]] };
+const R_LOOK = [[0, () => headW(farmer)], [17.55, (t) => R_WALK.at(Math.max(t, 18.5)).p.clone().setY(1.5).add(new THREE.Vector3(0.5, 0, 2.5))], [S(27.35), () => BARN_TOP.clone().setY(6)]];
+const yawTo = (a, b) => Math.atan2(b.x - a.x, b.z - a.z), rYaw0 = yawTo(RP, FP);
+function placeReporter(t) { const R = reporter, U = R.userData, w = R_WALK.at(t), y0 = R_WALK.at(R_WALK.tA + 0.3).yaw;
+  let yaw = lerpA(rYaw0, y0, smoothstep((t - 17.6) / 0.85)); if (t > R_WALK.tA + 0.3) yaw = w.yaw; yaw = lerpA(yaw, Math.PI / 2, smoothstep((t - R_WALK.tB + 0.1) / 0.55));
+  if (t > R_WALK.tA + 0.2 && t < R_WALK.tA + 0.6) yaw = lerpA(lerpA(rYaw0, y0, 1), w.yaw, smoothstep((t - R_WALK.tA - 0.2) / 0.4));
+  const ph = w.s * Math.PI / 0.68 + (t > 17.6 && t < 18.5 ? (t - 17.6) * 6 : 0), amt = cl(w.v / 1.0) + (t > 17.6 && t < 18.5 ? 0.35 : 0);
+  R.position.set(w.p.x, 0.022 * Math.abs(Math.cos(ph)) * cl(amt), w.p.z); R.rotation.set(0, yaw, 0); legsAt(R, ph, cl(amt));
+  const back = smoothstep((t - S(27.35)) / (S(27.95) - S(27.35))); U.C.rotation.set(0.03 + 0.13 * rLean(t), 0.45 * back, 0);
+  for (const side of ['L', 'R']) { const a = trk(R_ARM[side], t); const sw = 0.13 * Math.sin(ph) * cl(w.v / 1.0) * (side === 'L' ? 1 : -1); a.T[2] += sw; armIK(R, side, a.T, a.pole); }
+  { const hd = U.arms.R.Hd, hp = hd.getWorldPosition(new THREE.Vector3()), toC = chin().sub(hp).normalize(), d = slerpDir(DOWN.clone(), toC, rLean(t)), q = hd.getWorldQuaternion(new THREE.Quaternion()).invert();   // the mic points at his chin, or hangs down
+    mic.quaternion.setFromUnitVectors(DOWN, d).premultiply(q); }
+  lookTrack(R, R_LOOK, t, 0.5); }
+// ---- the cameraman: camera on his right shoulder framing the farmer (tilts up to the sky and down again), drops it to his right hip (18.0-18.8), turns and walks to the van
+// with the camera hanging from his right hand, lens pointing back at the yard (it is still rolling); at the van his head comes round too late
+const C_WALK = mkWalk([[CP.x, CP.z], [3.5, -8.3], [4.7, -6.5], [5.45, -4.9]], 18.95, 1.12);
+const AIM_F1 = new THREE.Vector3(1.48, 1.45, -12.5), AIM_SKY1 = new THREE.Vector3(0.6, 17.5, -30), AIM_SKY2 = new THREE.Vector3(1.05, 18.2, -30), AIM_F2 = new THREE.Vector3(1.5, 1.3, -12.5), HIPAIM = new THREE.Vector3(1.2, 3.4, -17);
+const NCAM = { lens: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1), roll: 0 };
+function slerpDir(a, b, u) { return a.clone().applyQuaternion(new THREE.Quaternion().slerp(new THREE.Quaternion().setFromUnitVectors(a, b), u)).normalize(); }
+function newsAim(t, from) { const K = [[0, AIM_F1], [11.35, AIM_F1], [12.55, AIM_SKY1], [13.0, AIM_SKY2], [14.0, AIM_F2], [99, AIM_F2]]; let i = 0; while (i < K.length - 2 && t > K[i + 1][0]) i++;
+  const u = smoothstep((t - K[i][0]) / (K[i + 1][0] - K[i][0])); return slerpDir(K[i][1].clone().sub(from).normalize(), K[i + 1][1].clone().sub(from).normalize(), u); }
+const nz = (t, a, b, c) => Math.sin(t * a) * 0.55 + Math.sin(t * b + 1.3) * 0.3 + Math.sin(t * c + 2.1) * 0.15;   // smooth deterministic handheld wander
+const yawOf = (d) => Math.atan2(d.x, d.z);
+function placeCameraman(t) { const R = cameraman, U = R.userData, w = C_WALK.at(t), drop = smoothstep((t - 18.0) / 0.8);
+  // body: faces where the camera aims, turns round (18.55-19.15), walks, faces the van's rear doors
+  const aim0 = newsAim(t, new THREE.Vector3(CP.x, 1.6, CP.z)), yA = yawOf(aim0) + 0.12, yW0 = C_WALK.at(C_WALK.tA + 0.4).yaw;
+  let yaw = yA; if (t > 18.55) yaw = lerp(yA, yW0 + (yW0 < yA ? 2 * Math.PI : 0), smoothstep((t - 18.55) / 0.6)); if (t > C_WALK.tA + 0.4) yaw = w.yaw; yaw = lerpA(yaw, 0, smoothstep((t - C_WALK.tB + 0.1) / 0.5));
+  const turning = t > 18.55 && t < 19.2, ph = w.s * Math.PI / 0.7 + (turning ? (t - 18.55) * 7 : 0), amt = cl(w.v / 1.0) + (turning ? 0.35 : 0);
+  R.position.set(w.p.x, 0.022 * Math.abs(Math.cos(ph)) * cl(amt), w.p.z); R.rotation.set(0, yaw, 0); legsAt(R, ph, cl(amt));
+  const tilt = Math.asin(cl(aim0.y, -1, 1)) * (1 - drop), back = smoothstep((t - S(27.4)) / (S(28.0) - S(27.4)));
+  U.C.rotation.set(-0.35 * Math.max(0, tilt) + 0.04, 0.4 * back, 0); R.updateMatrixWorld(true);
+  // the camera prop: shoulder pose and hip pose, blended by the drop
+  const sho = R.localToWorld(new THREE.Vector3(-0.21, 1.585, 0.09)).add(new THREE.Vector3(0, -0.12 * Math.max(0, tilt), 0)), hip = R.localToWorld(new THREE.Vector3(-0.34, 0.66, -0.02));
+  const walkAmt = cl(w.v / 1.0);
+  const pos = sho.clone().lerp(hip, drop); pos.y += 0.03 * Math.abs(Math.cos(ph)) * walkAmt;
+  let dS = newsAim(t, sho), dH = HIPAIM.clone().sub(hip).normalize();
+  const hh = (1 - drop) * THREE.MathUtils.degToRad(0.4); dS = dS.applyAxisAngle(new THREE.Vector3(0, 1, 0), hh * nz(t, 1.3, 2.9, 5.1)); dS.y += hh * nz(t, 1.7, 3.7, 6.3); dS.normalize();
+  dH.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(2.4) * Math.sin(ph / 2) * walkAmt + THREE.MathUtils.degToRad(0.6) * nz(t, 0.9, 2.1, 3.3)); dH.y += THREE.MathUtils.degToRad(1.4) * Math.sin(ph) * walkAmt; dH.normalize();
+  const dir = slerpDir(dS, dH, drop), roll = drop * (-13 + 3.2 * Math.sin(ph / 2 + 0.5) * walkAmt) + (1 - drop) * 0.5 * nz(t, 1.1, 2.3, 4.7);
+  newsCam.position.copy(pos); newsCam.up.set(0, 1, 0); newsCam.lookAt(pos.clone().add(dir)); newsCam.rotateZ(THREE.MathUtils.degToRad(roll)); newsCam.updateMatrixWorld(true);
+  NCAM.lens.copy(newsCam.localToWorld(new THREE.Vector3(0, 0, 0.39))); NCAM.dir.copy(dir); NCAM.roll = roll;
+  const lon = 1 - smoothstep((t - 18.0) / 0.35); camLight.position.copy(newsCam.localToWorld(new THREE.Vector3(0, 0.19, 0.14))); camLight.target.position.copy(NCAM.lens).addScaledVector(dir, 4); camLight.intensity = 16 * lon;
+  // hands: right on the grip, then on the top handle; left on the lens, then free
+  const grip = toRoot(R, newsCam.localToWorld(new THREE.Vector3(-0.11, -0.03, 0.1))), handle = toRoot(R, newsCam.localToWorld(new THREE.Vector3(0, 0.15, 0.0))), lensP = toRoot(R, newsCam.localToWorld(new THREE.Vector3(0.05, -0.05, 0.27)));
+  const hr = smoothstep((t - 17.95) / 0.3); armIK(R, 'R', [lerp(grip[0], handle[0], hr), lerp(grip[1], handle[1], hr), lerp(grip[2], handle[2], hr)], [-0.8, -1, -0.2]);
+  const free = smoothstep((t - 18.1) / 0.45), restL = [0.23, 0.87, 0.06 + 0.13 * Math.sin(ph) * walkAmt]; armIK(R, 'L', [lerp(lensP[0], restL[0], free), lerp(lensP[1], restL[1], free), lerp(lensP[2], restL[2], free)], [1, -1, -0.3]);
+  const ahead = w.p.clone().add(new THREE.Vector3(Math.sin(yaw) * 3, 1.5, Math.cos(yaw) * 3));
+  if (t < 18.3) { const a = headAng(R, NCAM.lens.clone().addScaledVector(dir, 5)); U.head.rotation.set(-cl(a[1], -0.6, 0.8), cl(a[0] + 0.25, -1, 1), 0.12); }
+  else { const a0 = headAng(R, ahead), a1 = headAng(R, BARN_TOP.clone().setY(6)), k = back; U.head.rotation.set(-cl(lerp(a0[1], a1[1], k), -0.5, 0.6), cl(lerpA(a0[0], a1[0], k), -1.3, 1.3) * smoothstep((t - 18.3) / 0.4), 0); } }
+// ---- the van tech: at the open door coiling the cable (right hand circling), head down; his head comes round too late
+function placeTech(t) { const R = tech, U = R.userData, stop = smoothstep((t - S(27.3)) / 0.4), run = 1 - stop;
+  R.position.copy(TP); R.rotation.set(0, Math.PI / 2 - 0.25, 0); legsAt(R, 0, 0); U.C.rotation.set(0.12 * run, 0.5 * stop, 0);
+  const ta = t - stop * (t - S(27.3)); armIK(R, 'R', [-0.06 + 0.04 * Math.cos(ta * 3.9), 1.07 + 0.11 * Math.sin(ta * 3.9), 0.4 + 0.08 * Math.cos(ta * 3.9)], [-1, -1, -0.4]); armIK(R, 'L', [0.08, 1.08, 0.36], [1, -1, -0.3]);
+  const k = smoothstep((t - S(27.3)) / (S(27.85) - S(27.3))), a0 = [0.05, -0.55], a1 = headAng(R, BARN_TOP.clone().setY(6)); U.head.rotation.set(-lerp(a0[1], cl(a1[1], -0.5, 0.6), k), lerp(a0[0], cl(a1[0], -1.3, 1.3), k), 0); }
+// ---- the straw and the weathervane: the gust when the saucer streaks off
+const gust = (t) => { const u = t - T_GO; return u <= 0 ? 0 : (1 - Math.exp(-u / 0.3)) * Math.exp(-u / 2.4); };
+const swirl = (t) => { const u = t - T_GO; return u <= 0 ? 0 : 3.4 * (1 - Math.exp(-u / 1.1)); };
+const HAYC = new THREE.Vector3(0.8, 0, -19.5), _m4 = new THREE.Matrix4(), _qh = new THREE.Quaternion(), _eh = new THREE.Euler(), _sh = new THREE.Vector3(), _ph = new THREE.Vector3();
+function placeHay(t) { const g = gust(t), sw = swirl(t), stir = smoothstep((t - 22.6) / 0.8) * (t < T_GO ? 1 : Math.exp(-(t - T_GO) / 1.5));
+  HAYD.forEach((b, i) => { const dx = b.x - HAYC.x, dz = b.z - HAYC.z, r0 = Math.hypot(dx, dz), a0 = Math.atan2(dz, dx), fall = Math.exp(-r0 / 8), a = a0 + sw * b.w * fall * 1.2, r = r0 * (1 + 0.35 * g * fall);
+    const lift = 6.5 * b.h * fall * g + 0.05 * stir * fall * (0.5 + 0.5 * Math.sin(t * 5 + b.ph));
+    _ph.set(HAYC.x + Math.cos(a) * r, 0.02 + lift, HAYC.z + Math.sin(a) * r); _eh.set((lift * 2.1 + b.ph) * (lift > 0.03 ? 1 : 0), b.yaw + a - a0, 0); _qh.setFromEuler(_eh);
+    hay.setMatrixAt(i, _m4.compose(_ph, _qh, _sh.set(0.03, 0.012, b.len))); }); hay.instanceMatrix.needsUpdate = true; }
+function placeVane(t) { vane.rotation.y = 0.6 + 0.08 * Math.sin(t * 0.7) + (t > T_GO ? 9 * (1 - Math.exp(-(t - T_GO) / 0.9)) : 0); }
+function placeActors(t) { placeSaucer(t); placeFarmer(t); placeReporter(t); placeCameraman(t); placeTech(t); placeHay(t); placeVane(t); for (const o of [farmer, reporter, cameraman, tech, newsCam, van, hay]) o.visible = true; }
+// ============================================================ THE SHOTS. Each returns { p: camera position, tgt: what the lens aims at, fov (vertical degrees), roll (degrees) } for story time t.
+// 1) 0-8 s drone (35 mm): low over the dusk fields from the south-east, over the van, down into an over-the-shoulder behind the crew, a slow push in. The barn and the vane stay in the top of the frame.
+const SH1 = timedSpline([[-1.5, 37, 5.6, 52], [0, 31, 6.0, 42], [3.1, 9.6, 8.6, 2.6], [5.6, 3.9, 2.8, -4.9], [8.0, 2.42, 1.62, -7.35], [9.5, 2.3, 1.6, -7.9]]);
+function shot1(t) { const A = new THREE.Vector3(1.0, 3.2, -19), B = new THREE.Vector3(1.45, 2.55, -12.5); return { p: new THREE.Vector3(...SH1(t)), tgt: A.lerp(B, smoothstep((t - 2.2) / 3.6)), fov: 37.8, roll: 0 }; }
+// 2) 8-15 s news-camera POV (50 mm) from the cameraman's shoulder, handheld: the mic comes in, the watch, the tilt up to the empty sky and down to the shrug (zooms out a touch)
+function shot2(t) { return { p: NCAM.lens.clone().addScaledVector(NCAM.dir, 0.03), tgt: NCAM.lens.clone().addScaledVector(NCAM.dir, 6), fov: 27 + 4 * smoothstep((t - 13.4) / 0.8), roll: NCAM.roll }; }
+// 3) 15-19 s low side-on wide (24 mm), 0.55 m off the ground, a slow orbit round the three of them with the barn beyond
+function shot3(t) { const a = THREE.MathUtils.degToRad(lerp(80, 66, (t - 15) / 4)), R = 6.4, p = new THREE.Vector3(1.8 + R * Math.sin(a), 0.55, -11.2 + R * Math.cos(a)), b = -a + THREE.MathUtils.degToRad(17), k = Math.tan(THREE.MathUtils.degToRad(9));
+  return { p, tgt: p.clone().add(new THREE.Vector3(Math.sin(b), k, -Math.cos(b)).multiplyScalar(10)), fov: 53, roll: 0 }; }
+// 4) 19-24 s news-camera POV at the hip: tilted, swaying with the walk, lens pointing back at the yard as the crew walk away
+function shot4(t) { return { p: NCAM.lens.clone().addScaledVector(NCAM.dir, 0.03), tgt: NCAM.lens.clone().addScaledVector(NCAM.dir, 6), fov: 50, roll: NCAM.roll }; }
+// 5) 24-30 s low wide (24 mm) from behind the man, slow motion on the spin and the point, then (normal speed) a crane up and back to the final high wide: the man small in the yard, the crew at the van
+// shot 5 starts low and close behind him: the man on the left third, the saucer big in the upper right over the barn
+const P5a = new THREE.Vector3(3.4, 0.3, -10.6), P5b = new THREE.Vector3(3.35, 0.31, -10.75), P5c = new THREE.Vector3(0.0, 9.5, 12.5), P5d = new THREE.Vector3(0.02, 9.54, 12.6);
+const A5a = (() => { const b = THREE.MathUtils.degToRad(-27), h = new THREE.Vector3(Math.sin(b), 0, -Math.cos(b)), k = THREE.MathUtils.degToRad(21); return P5a.clone().add(h.multiplyScalar(12 * Math.cos(k))).add(new THREE.Vector3(0, 12 * Math.sin(k), 0)); })(), A5b = new THREE.Vector3(2.0, 3.85, -14);
+function shot5(t) { let p; if (t < T_CR0) p = P5a.clone().lerp(P5b, cl((t - CUT_S[3]) / (T_CR0 - CUT_S[3])));
+  else if (t < T_CR1) { const u = (t - T_CR0) / (T_CR1 - T_CR0), kx = smoothstep(u), ky = smoothstep(cl(u * 1.5)); p = new THREE.Vector3(lerp(P5b.x, P5c.x, kx), lerp(P5b.y, P5c.y, ky), lerp(P5b.z, P5c.z, kx)); }
+  else p = P5c.clone().lerp(P5d, cl((t - T_CR1) / (STORY_END - T_CR1)));
+  return { p, tgt: A5a.clone().lerp(A5b, smoothstep((t - T_CR0) / (T_CR1 - T_CR0))), fov: 53, roll: 0 }; }
+const SHOTS = [{ a: 0, b: CUT_S[0], f: shot1, sg: 0.18 }, { a: CUT_S[0], b: CUT_S[1], f: shot2, sg: 0.035 }, { a: CUT_S[1], b: CUT_S[2], f: shot3, sg: 0.15 }, { a: CUT_S[2], b: CUT_S[3], f: shot4, sg: 0.03 }, { a: CUT_S[3], b: STORY_END, f: shot5, sg: 0.12 }];
+// a frame within 15 ms of a cut already shows the new shot (the editor's speed curve can move a cut by a few ms)
+const shotOf = (t) => { let k = 0; for (let i = 0; i < CUT_S.length; i++) if (t >= CUT_S[i] - 0.015) k = i + 1; return SHOTS[k]; };
+// ============================================================ THE BEATS (story seconds; the scenes list in the editor)
+const SCN = [
+  { name: 'Shot 1, drone: over the dusk fields and the news van', wa: 0, wb: 3.6, subj: 'News van' },
+  { name: 'Shot 1: down behind the crew; he points back at the barn', wa: 3.6, wb: CUT_S[0], subj: 'Farmer' },
+  { name: 'Shot 2, news camera: the mic comes in, he checks his watch', wa: CUT_S[0], wb: 11.4, subj: 'Farmer' },
+  { name: 'Shot 2: tilt up to the empty sky, down to his shrug', wa: 11.4, wb: CUT_S[1], subj: 'Farmer' },
+  { name: 'Shot 3, low wide: "Okay... I think we\'ve got enough."', wa: CUT_S[1], wb: CUT_S[2], subj: 'Reporter' },
+  { name: 'Shot 4, camera at the hip: the saucer rises over the barn', wa: CUT_S[2], wb: CUT_S[3], subj: 'Saucer' },
+  { name: 'Shot 5, slow motion: he spins and points, "THERE!"', wa: CUT_S[3], wb: S(27.15), subj: 'Farmer' },
+  { name: 'Shot 5: crane up; the crew turn too late; "...Tell me you got that."', wa: S(27.15), wb: STORY_END, subj: 'Farmer' }];
+SCN.forEach((q, k) => { q.k = k; q.t0 = q.wa; });
+const SH = SCN.map((q) => ({ d: q.wb - q.wa, name: q.name, run: () => ({ show: [] }) }));
+// what the lens aims at, story time t (actors must already be placed for t): the current shot's aim point
+function lookTarget(t) { const c = shotOf(t).f(t); return { tgt: c.tgt, fov: c.fov }; }
+// ============================================================ THE BAKE: each shot sampled at 60 Hz and low-pass filtered ON ITS OWN (the filter stops at the cuts), position kept above the ground
+const BDT = 1 / 60;
+function gauss(arr, sigma, isVec) { const rad = Math.ceil(sigma * 3 / BDT), k = []; for (let q = -rad; q <= rad; q++) k.push(Math.exp(-0.5 * ((q * BDT) / sigma) ** 2));
+  return arr.map((_, i) => { let w = 0; const acc = isVec ? new THREE.Vector3() : 0; let a = 0; for (let q = -rad; q <= rad; q++) { const v = arr[Math.min(arr.length - 1, Math.max(0, i + q))], kk = k[q + rad]; if (isVec) acc.addScaledVector(v, kk); else a += v * kk; w += kk; } return isVec ? acc.multiplyScalar(1 / w) : a / w; }); }
+for (const sh of SHOTS) { const n = Math.max(2, Math.ceil((sh.b - sh.a) / BDT) + 1), dt = (sh.b - sh.a) / (n - 1), P = [], Dv = [], F = [], R = [];
+  for (let i = 0; i < n; i++) { const t = sh.a + i * dt; placeActors(t); const c = sh.f(t); P.push(c.p.clone()); Dv.push(c.tgt.clone().sub(c.p).normalize()); F.push(c.fov); R.push(c.roll || 0); }
+  let SPx = gauss(P, sh.sg, true); for (const p of SPx) p.y = Math.max(p.y, gy(p.x, p.z) + 0.25);
+  Object.assign(sh, { n, dt, P: SPx, D: gauss(Dv, sh.sg * 1.2, true).map((v) => v.normalize()), F: gauss(F, 0.2, false), R: gauss(R, sh.sg, false) }); }
+function bakedAt(t) { t = cl(cutWarp(t), 0, STORY_END); const sh = shotOf(t), f = cl((t - sh.a) / sh.dt, 0, sh.n - 1), i = Math.min(Math.floor(f), sh.n - 2), u = f - i;
+  return { p: sh.P[i].clone().lerp(sh.P[i + 1], u), d: sh.D[i].clone().lerp(sh.D[i + 1], u).normalize(), fov: sh.F[i] + (sh.F[i + 1] - sh.F[i]) * u, roll: sh.R[i] + (sh.R[i + 1] - sh.R[i]) * u }; }
+const SP = SHOTS.flatMap((s) => s.P), BN = SP.length;   // the whole track (the player's map draws it)
+const WP2 = []; for (const sh of SHOTS) { for (let t = sh.a; t < sh.b - 0.25; t += 0.5) WP2.push([+t.toFixed(3), ...bakedAt(t).p.toArray()]); } WP2.push([STORY_END, ...bakedAt(STORY_END).p.toArray()]);
+const WP3 = WP2; window.KEYFRAMES = { camera: WP2 };
+let REL0 = null, RELQ = null;
+const spAt = (t) => bakedAt(t).p;
+// ---- MANUAL CAMERA KEYS: each key stores an offset from the baked camera at its time; offsets blend between keys and fade out 1 s beyond the first and last key
+const PRJ = /^[a-z0-9][a-z0-9-]{2,60}$/.test(params.get('project') || '') ? params.get('project') : 'someone-talking-about-aliens';   // ?project=<folder in projects/>; Street POV keeps the original saved keys
+const SBX = params.has('sandbox') ? '-sandbox' + (params.get('sandbox') === '1' ? '' : params.get('sandbox')) : PRJ !== 'street-pov' ? '-p-' + PRJ : '';   // ?sandbox=1 keeps tests away from the real saved keys
+const LSK = 'pov-camkeys' + SBX, LSS = 'pov-speedkeys' + SBX;
+let OVR = []; try { OVR = JSON.parse(localStorage.getItem(LSK) || '[]'); } catch (e) {}
+// ---- easing (deterministic CSS-style cubic bezier). Camera keys: k.e = linear | in | out | inout | hold | bezier (k.bz = [x1,y1,x2,y2]); no k.e = the old smoothstep
+const cbz = (x1, y1, x2, y2) => (u) => { if (u <= 0) return 0; if (u >= 1) return 1; let lo = 0, hi = 1, s = u; for (let i = 0; i < 28; i++) { s = (lo + hi) / 2; const x = 3 * (1 - s) * (1 - s) * s * x1 + 3 * (1 - s) * s * s * x2 + s * s * s; if (x < u) lo = s; else hi = s; } return 3 * (1 - s) * (1 - s) * s * y1 + 3 * (1 - s) * s * s * y2 + s * s * s; };
+const EASES = { linear: (u) => u, in: cbz(0.42, 0, 1, 1), out: cbz(0, 0, 0.58, 1), inout: cbz(0.42, 0, 0.58, 1), hold: (u) => (u >= 1 ? 1 : 0), snap: (u) => (u > 0 ? 1 : 0), auto: smoothstep };
+const easeOf = (e, bz) => (Array.isArray(e) ? cbz(cl(e[0]), e[1], cl(e[2]), e[3]) : e === 'bezier' && bz ? cbz(cl(bz[0]), bz[1], cl(bz[2]), bz[3]) : EASES[e] || smoothstep);
+window.EDIT = null;
+function ovrAt(t, L = OVR) { if (!L.length) return null; const K = L.slice().sort((a, b) => a.t - b.t), off = (k) => ({ dp: new THREE.Vector3(...k.dp), q: new THREE.Quaternion(...k.q), df: k.df, dr: k.dr || 0 });
+  if (t <= K[0].t) return cutIn(t, K[0].t) != null ? null : { ...off(K[0]), w: smoothstep(1 - (K[0].t - t) / 1.0) };
+  if (t >= K[K.length - 1].t) return cutIn(K[K.length - 1].t, t) != null ? null : { ...off(K[K.length - 1]), w: smoothstep(1 - (t - K[K.length - 1].t) / 1.0) };
+  for (let i = 0; i < K.length - 1; i++) if (t <= K[i + 1].t) { const cc = cutIn(K[i].t, K[i + 1].t); if (cc != null) return { ...off(t < cc ? K[i] : K[i + 1]), w: 1 }; const a = off(K[i]), b = off(K[i + 1]), u = easeOf(K[i].e, K[i].bz)(cl((t - K[i].t) / (K[i + 1].t - K[i].t))); const hO = K[i].ho, hI = K[i + 1].hi; let dp;                                              // optional Bezier path handles (offset space): ho leaves key i, hi arrives at key i+1
+      if (hO || hI) { const d3 = b.dp.clone().sub(a.dp).multiplyScalar(1 / 3), c1 = a.dp.clone().add(hO ? new THREE.Vector3(...hO) : d3), c2 = b.dp.clone().add(hI ? new THREE.Vector3(...hI) : d3.clone().negate()), v = 1 - u;
+        dp = a.dp.clone().multiplyScalar(v * v * v).addScaledVector(c1, 3 * v * v * u).addScaledVector(c2, 3 * v * u * u).addScaledVector(b.dp, u * u * u); } else dp = a.dp.lerp(b.dp, u);
+      return { dp, q: a.q.slerp(b.q, u), df: a.df + (b.df - a.df) * u, dr: a.dr + (b.dr - a.dr) * u, w: 1 }; } }
+function keyFromEdit(t) { const b = evalBase(t), E = window.EDIT, d = new THREE.Vector3(Math.sin(E.yaw) * Math.cos(E.pitch), Math.sin(E.pitch), Math.cos(E.yaw) * Math.cos(E.pitch)).normalize(), q = new THREE.Quaternion().setFromUnitVectors(b.d, d);
+  return { t: +t.toFixed(3), dp: E.pos.clone().sub(b.p).toArray().map((v) => +v.toFixed(3)), q: q.toArray().map((v) => +v.toFixed(5)), df: +(E.fov - b.fov).toFixed(2), dr: +(E.roll - b.roll).toFixed(2) }; }
+window.camKeys = { list: () => OVR, save: () => { try { localStorage.setItem(LSK, JSON.stringify(OVR)); } catch (e) {} }, set: (k) => { OVR = OVR.filter((x) => Math.abs(x.t - k.t) > 0.05).concat([k]); window.camKeys.save(); }, del: (t) => { OVR = OVR.filter((x) => Math.abs(x.t - t) > 0.25); window.camKeys.save(); }, clear: () => { OVR = []; window.camKeys.save(); }, load: (a) => { OVR = a; window.camKeys.save(); } };
+// ---- SUBJECT TRACKING (editor): tracks = [{subj, a, b (story s), in, out (ease s), ox, oy (framing, -1..1 of the frame), sm (smoothing s), follow, dist, h, side}]
+const LST = 'pov-trackkeys' + SBX;
+const SUBJ = { 'Farmer': farmer, 'Reporter': reporter, 'Cameraman': cameraman, 'Van tech': tech, 'Saucer': saucer, 'News camera': newsCam, 'News van': van };
+let TRK = []; try { const t0 = JSON.parse(localStorage.getItem(LST) || '[]'); if (Array.isArray(t0)) TRK = t0; } catch (e) {}
+const SBDT = 1 / 30; let SBAKE = null;
+function bakeSubj() { if (SBAKE) return SBAKE; const n = Math.ceil(STORY_END / SBDT) + 1, B = {}; for (const k in SUBJ) B[k] = { p: new Float32Array(n * 3), v: new Uint8Array(n) }; const v3 = new THREE.Vector3();
+  for (let i = 0; i < n; i++) { const t = i * SBDT; updateWorld(t); placeActors(t); for (const k in SUBJ) { const o = SUBJ[k]; if (!o) continue; o.updateWorldMatrix(true, false); v3.setFromMatrixPosition(o.matrixWorld); B[k].p.set([v3.x, v3.y, v3.z], i * 3); let vis = true; for (let q = o; q; q = q.parent) if (!q.visible) { vis = false; break; } B[k].v[i] = vis ? 1 : 0; } }
+  SBAKE = B; return B; }
+function subjAt(name, t, sm = 0) { const B = bakeSubj()[name], out = new THREE.Vector3(); if (!B) return out; const n = B.v.length, at = (tt, o) => { const f = cl(tt / SBDT, 0, n - 1), i = Math.min(Math.floor(f), n - 2), u = f - i; return o.set(B.p[i * 3] + (B.p[i * 3 + 3] - B.p[i * 3]) * u, B.p[i * 3 + 1] + (B.p[i * 3 + 4] - B.p[i * 3 + 1]) * u, B.p[i * 3 + 2] + (B.p[i * 3 + 5] - B.p[i * 3 + 2]) * u); };
+  if (!(sm > 0.005)) return at(t, out); const tmp = new THREE.Vector3(), r = Math.ceil(sm * 2.5 / SBDT); let ws = 0; for (let q = -r; q <= r; q++) { const w = Math.exp(-0.5 * ((q * SBDT) / sm) ** 2); out.addScaledVector(at(t + q * SBDT, tmp), w); ws += w; } return out.multiplyScalar(1 / ws); }
+function subjVis(name) { const B = bakeSubj()[name], res = []; if (!B) return res; let a = -1; for (let i = 0; i <= B.v.length; i++) { const v = i < B.v.length && B.v[i]; if (v && a < 0) a = i; if (!v && a >= 0) { res.push([a * SBDT, (i - 1) * SBDT]); a = -1; } } return res; }
+function applyTracks(t, b, W = 1) { for (const k of TRK) { if (!SUBJ[k.subj] || !(k.b > k.a)) continue; const wi = k.in > 0 ? EASES.inout(cl((t - k.a) / k.in)) : (t >= k.a ? 1 : 0), wo = k.out > 0 ? EASES.inout(cl((k.b - t) / k.out)) : (t <= k.b ? 1 : 0), w = wi * wo * W; if (w <= 0) continue;
+    const tg = subjAt(k.subj, t, k.sm || 0);
+    if (k.follow) { const hd = subjAt(k.subj, t + 0.25, Math.max(0.2, k.sm || 0)).sub(subjAt(k.subj, t - 0.25, Math.max(0.2, k.sm || 0))); hd.y = 0; if (hd.lengthSq() < 1e-4) hd.set(b.d.x, 0, b.d.z); if (hd.lengthSq() < 1e-8) hd.set(0, 0, -1); hd.normalize();
+      const want = tg.clone().addScaledVector(hd, -(k.dist ?? 4)).add(new THREE.Vector3(-hd.z * (k.side || 0), k.h ?? 1.2, hd.x * (k.side || 0))); b.p.lerp(want, w); }
+    const o = tg.clone().sub(b.p); if (o.lengthSq() < 1e-6) continue; o.normalize(); const tv = Math.tan(THREE.MathUtils.degToRad(b.fov) / 2);
+    const yaw = Math.atan2(o.x, o.z) + Math.atan((k.ox || 0) * tv * W / H), pitch = cl(Math.asin(cl(o.y, -1, 1)) - Math.atan((k.oy || 0) * tv), -1.5, 1.5), aim = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+    b.d.applyQuaternion(new THREE.Quaternion().slerp(new THREE.Quaternion().setFromUnitVectors(b.d, aim), w)).normalize(); } return b; }
+window.trackKeys = { get: () => TRK, save: () => { try { localStorage.setItem(LST, JSON.stringify(TRK)); } catch (e) {} }, load: (a) => { TRK = (a || []).map((k) => ({ ...k })); window.trackKeys.save(); } };
+// ---- LAYERS. Base = the original move as editable keys {t, s, dp, q, df, dr, e}: s is the point of the original baked track the key sits on, t is when the camera gets there
+// (so retiming a base key retimes the original move), dp/q/df/dr move it. Untouched base keys reproduce the baked track. Edit = the camera keys above (OVR), added on top.
+// Tracking = subject tracking. Pace = camera-only timing blocks {a, b (story s), r, in, out, cs}: r = 0 holds the camera while the world keeps playing, r < 1 slows it, r > 1 hurries it,
+// then it catches up over `out` seconds; cs = constant camera speed between a and b. Each layer: on, w (weight 0..1); LAY.solo = one layer name or null.
+// ---- CUTS (editor, project.cuts). CUTL = null: the page's own cuts (CUT_DEF). Else [{t (story s), o (the page cut it came from, if any)}]; CUTJ = [{o, dur, e}] how a removed page cut is joined.
+// Moving a page cut retimes the two shots around it (bakedAt is warped so the jump lands on the new time). Removing one replaces the jump with a smooth move over the end of the first shot
+// (dur auto 0.6-1.0 s from the turn and the distance, easing e). Camera keys never blend across a cut: before it the last key holds, from it the next key applies.
+var CUT_DEF = CUT_S, CUTL = null, CUTJ = [], CUTC = null;
+function cutNorm(a) { if (!Array.isArray(a)) return null; return a.map((c) => { const t = typeof c === 'number' ? c : +c.t, o = typeof c === 'number' ? CUT_DEF.find((d) => Math.abs(d - c) < 1e-3) : c.o; return o != null ? { t, o } : { t }; }).filter((c) => c.t > 0 && c.t < STORY_END).sort((a, b) => a.t - b.t); }
+function cutList() { return CUTL ? CUTL.map((c) => c.t).sort((a, b) => a - b) : CUT_DEF.slice(); }
+const cutIn = (a, b) => { for (const c of cutList()) if (c > a && c <= b) return c; return null; };
+function cutCache() { const v = typeof PVER === 'number' ? PVER : -1; if (CUTC && CUTC.v === v && CUTC.L === CUTL) return CUTC; const A = [[0, 0]]; for (const c of (CUTL || []).slice().sort((a, b) => a.t - b.t)) if (c.o != null) A.push([c.t, c.o]); A.push([STORY_END, STORY_END]); CUTC = { v, L: CUTL, A, J: null }; return CUTC; }
+const pwl = (A, x, i0, i1) => { for (let i = 0; i < A.length - 1; i++) if (x <= A[i + 1][i0] || i === A.length - 2) { const a = A[i], b = A[i + 1], d = b[i0] - a[i0]; return d > 1e-9 ? a[i1] + (b[i1] - a[i1]) * (x - a[i0]) / d : a[i1]; } return x; };
+function cutWarp(t) { if (!CUTL) return t; return pwl(cutCache().A, t, 0, 1); }       // shown time -> the page's own (baked) time
+function cutUnwarp(o) { if (!CUTL) return o; return pwl(cutCache().A, o, 1, 0); }
+function cutJoins() { if (!CUTL && !CUTJ.some((j) => j.x)) return []; const C = cutCache(); if (C.J) return C.J; C.J = [];
+  const cand = (CUTL ? CUT_DEF : []).filter((o) => !CUTL.some((c) => c.o != null && Math.abs(c.o - o) < 1e-4)).map((o) => ({ o, u: cutUnwarp(o - 0.015), uc: cutUnwarp(o) })).concat(CUTJ.filter((j) => j.x && !cutList().some((c) => Math.abs(c - j.o) < 1e-4)).map((j) => ({ o: j.o, u: j.o, uc: j.o, x: 1, pre: j.pre })));   // x: a cut added in the editor, then removed
+  for (const { o, u: u1, uc, x, pre: pre0 } of cand) { const pre1 = pre0 != null ? pre0 : u1 - 1e-4; const set = CUTJ.find((j) => Math.abs(j.o - o) < 1e-4) || {}, prev = cutList().filter((c) => c < u1).pop() || 0;
+    const jm = (a, b) => { const A = poseRaw0(a), B = poseRaw0(b); return A.p.distanceTo(B.p) + 2 * A.d.angleTo(B.d) + Math.abs(A.fov - B.fov) * 0.05; };
+    let pre = pre1, u = u1; if (jm(pre, u + 1e-4) < 0.03) { if (x) continue; let bt = -1, bd = 0; for (let s = u - 0.3; s < u + 0.3; s += 1 / 240) { const d = jm(s, s + 1 / 240); if (d > bd) { bd = d; bt = s; } }   // edited original keys can move the page's jump a little: find it
+      if (bt < 0 || bd < 0.05) continue; let lo = bt, hi = bt + 1 / 240; for (let k = 0; k < 16; k++) { const m = (lo + hi) / 2; if (jm(lo, m) >= jm(m, hi)) hi = m; else lo = m; } if (jm(lo, hi) < 0.4 * bd) continue; pre = lo; u = hi - 1e-4; }   // no jump: nothing to join
+    let dur = +set.dur; if (!(dur > 0)) { const A = poseRaw0(pre - 0.03), B = poseRaw0(u + 1e-4), ang = THREE.MathUtils.radToDeg(Math.acos(cl(A.d.dot(B.d), -1, 1))); dur = cl(Math.max(ang / 150, A.p.distanceTo(B.p) / 12), 0.6, 1.0); }
+    C.J.push({ o, u, uc, x, pre, dur: Math.max(0.05, Math.min(dur, u - prev - 0.05)), e: set.e || 'inout' }); } return C.J; }
+// a join spreads the jump over the end of the first shot: the camera keeps its own move and drifts by the jump (position, aim, lens, roll) so it arrives exactly where the next shot starts
+function poseRaw(t, L = OVR, KB = BASE) { const p = poseRaw0(t, L, KB); if (!CUTL && !CUTJ.length) return p; for (const j of cutJoins()) if (t >= j.u - j.dur && t < j.u) { const B = poseRaw0(j.u + 1e-4, L, KB); if (t >= j.pre) return B; const A = poseRaw0(j.pre, L, KB), w = easeOf(j.e)(cl((t - (j.u - j.dur)) / (j.pre - (j.u - j.dur))));
+    p.p.addScaledVector(B.p.clone().sub(A.p), w); p.d.applyQuaternion(new THREE.Quaternion().slerp(new THREE.Quaternion().setFromUnitVectors(A.d, B.d), w)).normalize(); p.fov += (B.fov - A.fov) * w; p.roll += (B.roll - A.roll) * w; return p; } return p; }
+window.cutApi = { list: () => cutList(), joins: () => cutJoins(), warp: (t) => cutWarp(t), unwarp: (t) => cutUnwarp(t), page: CUT_DEF };
+const LSP = 'pov-project' + SBX; let BASE = null, PACE = [], LAY = { base: { on: true, w: 1 }, edit: { on: true, w: 1 }, track: { on: true, w: 1 }, pace: { on: true, w: 1 }, solo: null }, PVER = 0, ARC = null;
+try { const p0 = JSON.parse(localStorage.getItem(LSP) || 'null'); if (p0) { if (Array.isArray(p0.base)) BASE = p0.base; if (Array.isArray(p0.pace)) PACE = p0.pace; if (p0.layers) LAY = { ...LAY, ...p0.layers }; CUTL = cutNorm(p0.cuts); if (Array.isArray(p0.cutJoin)) CUTJ = p0.cutJoin; } } catch (e) {}
+const lw = (n) => (LAY.solo && LAY.solo !== n ? 0 : LAY[n] && LAY[n].on !== false ? (LAY[n].w ?? 1) : 0);
+function defaultBase() { const ts = [0]; for (const w of WP2) if (w[0] - ts[ts.length - 1] >= 0.3 && w[0] < STORY_END - 0.3) ts.push(+w[0].toFixed(3)); ts.push(STORY_END);
+  const out = []; for (let i = 0; i < ts.length; i++) { out.push(ts[i]); if (i < ts.length - 1) { const n = Math.ceil((ts[i + 1] - ts[i]) / 1.0); for (let j = 1; j < n; j++) out.push(+(ts[i] + (ts[i + 1] - ts[i]) * j / n).toFixed(3)); } }
+  return out.map((t) => ({ t, s: t, dp: [0, 0, 0], q: [0, 0, 0, 1], df: 0, dr: 0 })); }
+const isZ = (k) => !k.dp[0] && !k.dp[1] && !k.dp[2] && k.q[3] === 1 && !k.df && !k.dr;
+function baseSeg(t, K) { const n = K.length; if (t <= K[0].t) return { a: K[0], b: K[0], u: 0, s: K[0].s + (t - K[0].t) }; if (t >= K[n - 1].t) return { a: K[n - 1], b: K[n - 1], u: 0, s: K[n - 1].s + (t - K[n - 1].t) };
+  let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (K[m].t <= t) lo = m; else hi = m; } const a = K[lo], b = K[hi], u0 = (t - a.t) / (b.t - a.t), u = a.e ? easeOf(a.e, a.bz)(u0) : u0; return { a, b, u, s: a.s + (b.s - a.s) * u }; }
+const absKey = (k) => { const p = bakedAt(k.s); if (isZ(k)) return p; p.p.add(new THREE.Vector3(...k.dp)); p.d.applyQuaternion(new THREE.Quaternion(...k.q)).normalize(); p.fov += k.df; p.roll += k.dr || 0; return p; };
+const mixPose = (A, B, u) => { A.p.lerp(B.p, u); A.d.applyQuaternion(new THREE.Quaternion().slerp(new THREE.Quaternion().setFromUnitVectors(A.d, B.d), u)).normalize(); A.fov += (B.fov - A.fov) * u; A.roll += (B.roll - A.roll) * u; return A; };
+// the camera from the Base keys alone. Between two neighbouring original keys it follows the original curve (plus what the keys add); where a key was deleted (a.lin) it goes straight from key to key.
+function evalBase(t, K = BASE) { if (!K || !K.length) return bakedAt(t); const g = baseSeg(t, K), a = g.a, b = g.b; if (a.lin && a !== b) return mixPose(absKey(a), absKey(b), g.u);
+  const p = bakedAt(g.s); if (isZ(a) && isZ(b)) return p;
+  const cc = a !== b ? cutIn(a.t, b.t) : null, w = cc != null ? (t < cc ? 0 : 1) : a.e ? g.u : smoothstep(g.u), A = new THREE.Vector3(...a.dp), B = new THREE.Vector3(...b.dp); let dp;
+  if (a !== b && (a.ho || b.hi)) { const d3 = B.clone().sub(A).multiplyScalar(1 / 3), c1 = A.clone().add(a.ho ? new THREE.Vector3(...a.ho) : d3), c2 = B.clone().add(b.hi ? new THREE.Vector3(...b.hi) : d3.clone().negate()), v = 1 - w; dp = A.clone().multiplyScalar(v * v * v).addScaledVector(c1, 3 * v * v * w).addScaledVector(c2, 3 * v * w * w).addScaledVector(B, w * w * w); } else dp = A.lerp(B, w);
+  p.p.add(dp); p.d.applyQuaternion(new THREE.Quaternion(...a.q).slerp(new THREE.Quaternion(...b.q), w)).normalize(); p.fov += a.df + (b.df - a.df) * w; p.roll += (a.dr || 0) + ((b.dr || 0) - (a.dr || 0)) * w; return p; }
+// Base layer muted: the camera comes from the Edit keys alone (straight from key to key, holding the first and last); with no Edit keys it stays on the opening pose.
+function editOnly(t, L, KB) { const K = lw('edit') > 0 ? L.slice().sort((a, b) => a.t - b.t) : []; if (!K.length) return evalBase(0, KB);
+  const abs = (k) => { const b = evalBase(k.t, KB); b.p.add(new THREE.Vector3(...k.dp)); b.d.applyQuaternion(new THREE.Quaternion(...k.q)).normalize(); b.fov += k.df; b.roll += k.dr || 0; return b; };
+  if (t <= K[0].t) return abs(K[0]); if (t >= K[K.length - 1].t) return abs(K[K.length - 1]); let i = 0; while (i < K.length - 2 && t > K[i + 1].t) i++; return mixPose(abs(K[i]), abs(K[i + 1]), easeOf(K[i].e, K[i].bz)(cl((t - K[i].t) / (K[i + 1].t - K[i].t)))); }
+function poseRaw0(t, L = OVR, KB = BASE) { const WB = KB ? lw('base') : 1; let b;
+  if (WB > 0) { b = evalBase(t, KB); const o = ovrAt(t, L), W = lw('edit'); if (o && o.w * W > 0) { const w = o.w * W; b.p.addScaledVector(o.dp, w); b.d.applyQuaternion(new THREE.Quaternion().slerp(o.q, w)).normalize(); b.fov += o.df * w; b.roll += o.dr * w; } }
+  if (WB < 1) b = WB > 0 ? mixPose(editOnly(t, L, KB), b, WB) : editOnly(t, L, KB);
+  const WT = lw('track'); return TRK.length && WT > 0 ? applyTracks(t, b, WT) : b; }
+const herm = (p0, m0, p1, m1, x) => { const x2 = x * x, x3 = x2 * x; return (2 * x3 - 3 * x2 + 1) * p0 + (x3 - 2 * x2 + x) * m0 + (-2 * x3 + 3 * x2) * p1 + (x3 - x2) * m1; };
+function arcTab() { if (ARC && ARC.v === PVER) return ARC; const n = Math.ceil(STORY_END * 30) + 1, A = new Float64Array(n); let prev = poseRaw(0).p; for (let i = 1; i < n; i++) { const p = poseRaw(Math.min(STORY_END, i / 30)).p; A[i] = A[i - 1] + p.distanceTo(prev); prev = p; } ARC = { v: PVER, A, n }; return ARC; }
+const arcAt = (tau) => { const { A, n } = arcTab(), f = cl(tau * 30, 0, n - 1), i = Math.min(Math.floor(f), n - 2); return A[i] + (A[i + 1] - A[i]) * (f - i); };
+const arcInv = (len) => { const { A, n } = arcTab(); let lo = 0, hi = n - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (A[m] <= len) lo = m; else hi = m; } const d = A[hi] - A[lo]; return (lo + (d > 1e-9 ? (len - A[lo]) / d : 0)) / 30; };
+function camTime(t) { const W = lw('pace'); if (!PACE.length || W <= 0) return t; for (const h of PACE) { if (!(h.b > h.a)) continue; let tau;
+    if (h.cs) { if (t <= h.a || t >= h.b) continue; const pa = playOf(h.a), pb = playOf(h.b), x = pb - pa > 1e-6 ? cl((playOf(t) - pa) / (pb - pa)) : (t - h.a) / (h.b - h.a), la = arcAt(h.a), lb = arcAt(h.b); tau = arcInv(la + (lb - la) * x); }
+    else { const r = Math.max(0, h.r || 0), i = Math.max(0, h.in || 0), a0 = h.a - i, ta = a0 + i * (1 + r) / 2, tb = ta + r * (h.b - h.a), lead = tb - h.b, o = Math.max(h.out || 0, 0.05, lead * 2 + 0.05); if (t <= a0 || t >= h.b + o) continue;
+      if (t < h.a) tau = herm(a0, i, ta, r * i, (t - a0) / i); else if (t <= h.b) tau = ta + r * (t - h.a); else { const D = h.b + o - tb; tau = herm(tb, Math.min(r * o, 3 * D), h.b + o, Math.min(o, 3 * D), (t - h.b) / o); } }
+    return cl(t + (tau - t) * W, 0, STORY_END); } return t; }
+function invCam(tau) { if (!PACE.length || lw('pace') <= 0) return tau; let lo = 0, hi = STORY_END; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (camTime(m) < tau) lo = m; else hi = m; } return hi; }
+function poseAt(t, L = OVR, KB = BASE) { return poseRaw(camTime(t), L, KB); }
+function baseKeyFromEdit(t) { const E = window.EDIT, K = BASE || defaultBase(), s = baseSeg(t, K).s, b = bakedAt(s), W = lw('edit'), o = ovrAt(t), p = E.pos.clone(), d = new THREE.Vector3(Math.sin(E.yaw) * Math.cos(E.pitch), Math.sin(E.pitch), Math.cos(E.yaw) * Math.cos(E.pitch)).normalize(); let fov = E.fov, roll = E.roll;
+  if (o && o.w * W > 0) { const w = o.w * W; p.addScaledVector(o.dp, -w); d.applyQuaternion(new THREE.Quaternion().slerp(o.q, w).invert()).normalize(); fov -= o.df * w; roll -= o.dr * w; }
+  return { t: +t.toFixed(3), s: +s.toFixed(4), dp: p.sub(b.p).toArray().map((v) => +v.toFixed(3)), q: new THREE.Quaternion().setFromUnitVectors(b.d, d).toArray().map((v) => +v.toFixed(5)), df: +(fov - b.fov).toFixed(2), dr: +(roll - b.roll).toFixed(2) }; }
+window.proj = { get: () => ({ base: BASE, pace: PACE, layers: LAY, cuts: CUTL, cutJoin: CUTJ }), defaultBase, touch: () => { PVER++; }, save: () => { try { localStorage.setItem(LSP, JSON.stringify({ base: BASE, pace: PACE, layers: LAY, cuts: CUTL, cutJoin: CUTJ })); } catch (e) {} },
+  load: (o, nosave) => { o = o || {}; BASE = Array.isArray(o.base) ? o.base.map((k) => ({ ...k })).sort((a, b) => a.t - b.t) : null; PACE = (o.pace || []).map((k) => ({ ...k })).sort((a, b) => a.a - b.a); CUTL = cutNorm(o.cuts); CUTJ = Array.isArray(o.cutJoin) ? o.cutJoin.map((j) => ({ ...j })) : []; LAY = { base: { on: true, w: 1 }, edit: { on: true, w: 1 }, track: { on: true, w: 1 }, pace: { on: true, w: 1 }, solo: null, ...(o.layers || {}) }; PVER++; if (!nosave) window.proj.save(); } };
+// one file for everything the editor makes: { camera, base, speed, tracks, pace, layers }
+window.loadProject = (o) => { if (o.camera) window.camKeys.load(o.camera); if (o.speed) window.speedKeys.load(o.speed); if (o.tracks) window.trackKeys.load(o.tracks); window.proj.load({ base: o.base, pace: o.pace, layers: o.layers, cuts: o.cuts, cutJoin: o.cutJoin }); if (window.POV && window.POV.DOF) window.POV.DOF.load(o.focus); };
+function updateShots(t) {
+  placeActors(t);
+  const ps = poseAt(t), cam = ps.p, d = ps.d; let roll = ps.roll, fov = ps.fov;                        // baked track + camera keys + subject tracking
+  if (window.EDIT) { const E = window.EDIT; cam.copy(E.pos); d.set(Math.sin(E.yaw) * Math.cos(E.pitch), Math.sin(E.pitch), Math.cos(E.yaw) * Math.cos(E.pitch)); fov = E.fov; roll = E.roll; }
+  camera.position.copy(cam); camera.up.set(0, 1, 0); camera.lookAt(cam.clone().add(d)); camera.rotateZ(THREE.MathUtils.degToRad(roll));
+  camera.fov = fov; camera.updateProjectionMatrix(); window.cam3 = camera; window.camRaw = { pos: cam.clone(), d: d.clone().normalize(), fov, roll };
+}
+
+function dodge(o, c, rad) { const dx = o.position.x - c.x, dz = o.position.z - c.z, d = Math.hypot(dx, dz); if (d < rad && Math.abs(o.position.y - c.y) < 4) { const k = (rad - d) / (d || 1); o.position.x += (d ? dx : 1) * k; o.position.z += (d ? dz : 0) * k; } }
+function updateWorld(t) {
+  for (const w of walkers) { const [x, z] = w.pos(t), [x2, z2] = w.pos(t + 0.05), moving = Math.hypot(x2 - x, z2 - z) > 1e-5;
+    w.root.position.set(x, gy(x, z) + (moving ? Math.abs(Math.sin(t * w.step * Math.PI + w.ph)) * w.amp : 0), z); if (moving) w.root.rotation.y = Math.atan2(x2 - x, z2 - z); w.root.visible = true; }
+  crows.forEach((b, i) => { const a = t * 0.35 + i * 1.3, R = 16 + i * 3, cx = -70, cz = -30, p = new THREE.Vector3(cx + R * Math.cos(a), 20 + i * 1.8 + Math.sin(t * 0.7 + i), cz + R * Math.sin(a)); faceTo(b, p, new THREE.Vector3(cx + R * Math.cos(a + 0.05), p.y, cz + R * Math.sin(a + 0.05))); b.userData.w[0].rotation.z = Math.sin(t * 8 + i) * 0.6; b.userData.w[1].rotation.z = -Math.sin(t * 8 + i) * 0.6; });
+  { const x = -230 + 15 * t; carTo(pickup, new THREE.Vector3(x, 0, -94), new THREE.Vector3(x + 1, 0, -94)); }   // a pickup with its lights on, far along the north road
+  cyc.forEach(() => {}); for (const [m, x, z0, vz] of traffic) m.position.set(x, 0, z0 + vz * t);
+}
+
+let FOV0 = 44; { if (TRK.length) bakeSubj(); updateWorld(0); updateShots(0); }
+// ---- SLOW MOTION around the key moments: [story time, how slow (0..1), width s]
+// ---- SLOW MOTION: only beat 8 (playback 22.4-26.0 s, time at 40 %); the curve is rhoP() at the top of the staging, in playback seconds, so the fit is 1.0x
+const rateAt = (st) => Math.max(0.16, rhoP(PofS(st)));
+const STORY = [0]; { let st = 0; const dp = 1 / 480; while (st < STORY_END) { st += rateAt(st) * dp; STORY.push(Math.min(st, STORY_END)); } }
+const PLAY_TOTAL = (STORY.length - 1) / 480;
+const storyAt = (pt) => { const f = cl(pt * 480, 0, STORY.length - 1), i = Math.min(Math.floor(f), STORY.length - 2); return STORY[i] + (STORY[i + 1] - STORY[i]) * (f - i); };
+// ---- SPEED LAYER (editor speed track). Blocks live in playback seconds: {t, dur, speed, in, out, ei, eo} or {t, dur, speed, prof:[...]} (a sampled shape).
+// speed = story seconds per playback second relative to real time: 1 = normal, <1 slow motion, 0 = freeze, >1 fast. The real speed on screen is K x (product of the blocks):
+// fit = true squeezes the whole take into 30 s (K = STORY_END / integral), fit = false plays at K = 1 and the take gets as long as it needs.
+// With no saved speed data the old table above is used unchanged; defaultSpeed() turns that built-in slow motion into ordinary editable blocks (the editor starts from it).
+let SPD = null; try { const s0 = JSON.parse(localStorage.getItem(LSS) || 'null'); if (s0 && Array.isArray(s0.blocks)) SPD = s0; } catch (e) {}
+const SDT = 1 / 240; let UMAP = null, ULEN = 30, UK = PLAY_TOTAL / 30;
+function defaultSpeed() { const N = 30 * 240, m = (i) => rateAt(storyAt((i / 240) * PLAY_TOTAL / 30)), blocks = []; let st = -1;
+  for (let i = 0; i <= N; i++) { const low = m(i) < 0.9985 && i < N; if (low && st < 0) st = i; if (!low && st >= 0) { const prof = []; let mn = 1; for (let j = 0; j < 96; j++) { const v = +m(st + (i - st) * j / 95).toFixed(4); prof.push(v); mn = Math.min(mn, v); } prof[0] = prof[95] = 1;
+      blocks.push({ t: +(st / 240).toFixed(4), dur: +((i - st) / 240).toFixed(4), speed: +mn.toFixed(3), prof, builtin: true }); st = -1; } }
+  return { v: 2, fit: true, blocks }; }
+const blockMul = (b, p) => { const x = p - b.t; if (!(b.dur > 0) || x <= 0 || x >= b.dur) return 1;
+  if (b.prof) { const f = (x / b.dur) * (b.prof.length - 1), i = Math.min(Math.floor(f), b.prof.length - 2); return b.prof[i] + (b.prof[i + 1] - b.prof[i]) * (f - i); }
+  const i = Math.min(Math.max(b.in || 0, 0), b.dur), o = Math.min(Math.max(b.out || 0, 0), b.dur - i);
+  if (x < i) return 1 + (b.speed - 1) * easeOf(b.ei || 'inout')(x / i); if (x > b.dur - o) return b.speed + (1 - b.speed) * easeOf(b.eo || 'inout')((x - (b.dur - o)) / o); return b.speed; };
+const mulAt = (p) => { let m = 1; for (const b of SPD.blocks) m *= blockMul(b, p); return cl(m, 0, 8); };
+function buildSpeed() { UMAP = null; ULEN = 30; UK = PLAY_TOTAL / 30; if (SPD) { const a = [0]; let cum = 0, i = 0;
+    if (SPD.fit !== false) { const n = Math.round(30 / SDT); for (i = 0; i < n; i++) { cum += mulAt((i + 0.5) * SDT) * SDT; a.push(cum); } UK = cum > 1e-6 ? STORY_END / cum : 1; for (let j = 0; j < a.length; j++) a[j] = Math.min(STORY_END, a[j] * UK); a[a.length - 1] = STORY_END; }
+    else { UK = 1; const nmax = Math.round(600 / SDT); while (cum < STORY_END && i < nmax) { cum += mulAt((i + 0.5) * SDT) * SDT; a.push(Math.min(cum, STORY_END)); i++; } ULEN = +(i * SDT).toFixed(4); }
+    UMAP = a; } window.DUR = ULEN; }
+const storyOf = (pt) => { if (!UMAP) return storyAt(cl(pt, 0, 30) * PLAY_TOTAL / 30); const f = cl(pt / SDT, 0, UMAP.length - 1), i = Math.min(Math.floor(f), UMAP.length - 2); return UMAP[i] + (UMAP[i + 1] - UMAP[i]) * (f - i); };
+const playOf = (st) => { let lo = 0, hi = ULEN; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (storyOf(m) < st) lo = m; else hi = m; } return hi; };
+window.speedKeys = { get: () => SPD, has: () => !!SPD, defaults: defaultSpeed, save: () => { try { localStorage.setItem(LSS, JSON.stringify(SPD)); } catch (e) {} },
+  load: (o, nosave) => { const old = o && !o.v; SPD = o ? { v: 2, fit: o.fit !== false, blocks: (old ? defaultSpeed().blocks : []).concat((o.blocks || []).map((b) => ({ ...b }))) } : null; buildSpeed(); if (!nosave) { if (SPD) window.speedKeys.save(); else try { localStorage.removeItem(LSS); } catch (e) {} } },
+  speedAt: (pt) => (UMAP ? UK * mulAt(pt) : rateAt(storyOf(pt)) * PLAY_TOTAL / 30), storyOf, playOf, len: () => ULEN, k: () => UK };
+if (SPD && !SPD.v) window.speedKeys.load(SPD, true); else buildSpeed();
+const AIRFOG = new THREE.Fog(SKY, 120, 1100), SEAFOG = new THREE.FogExp2('#2f6f86', 0.019), hemi = scene.children.find((o) => o.isHemisphereLight);
+const domeAir = scene.getObjectByName('dome'), domeSea = new THREE.Mesh(new THREE.SphereGeometry(1200, 16, 10), new THREE.MeshBasicMaterial({ color: '#2f6f86', side: THREE.BackSide, fog: false, depthWrite: false })); scene.add(domeSea);
+function prepAt(pt) {
+  const t = storyOf(pt);
+  if (TRK.length && !SBAKE) bakeSubj();
+  updateWorld(t); updateShots(t);
+  const under = false; scene.fog = under ? SEAFOG : AIRFOG; domeAir.visible = !under; domeSea.visible = under; bub.visible = under;
+  domeAir.position.copy(camera.position); domeSea.position.copy(camera.position); hemi.intensity = 1.0; hemi.color.set('#8193c4'); hemi.groundColor.set('#4a4038'); sun.intensity = 1.25; sun.color.set('#ffa25e');   // dusk: cool sky light, a weak orange sun just above the western horizon
+  if (under) { const m4 = new THREE.Matrix4(); for (let i = 0; i < 220; i++) { const ph = hash2(i, 3) * 6.28, r = 2 + hash2(i, 5) * 22, k = (t * (0.6 + hash2(i, 7) * 1.2) + hash2(i, 9) * 10) % 14;
+      m4.makeTranslation(camera.position.x + Math.cos(ph) * r, camera.position.y - 6 + k + Math.sin(t * 2 + i) * 0.15, camera.position.z + Math.sin(ph) * r - 4); bub.setMatrixAt(i, m4); } bub.instanceMatrix.needsUpdate = true; }
+  const ext = THREE.MathUtils.clamp(40 + Math.abs(camera.position.y) * 0.9, 40, 190), c = sun.shadow.camera; c.left = -ext; c.right = ext; c.top = ext; c.bottom = -ext; c.near = 1; c.far = 900; c.updateProjectionMatrix();
+  const f = new THREE.Vector3(camera.position.x, 0, camera.position.z); sun.target.position.copy(f); sun.position.set(f.x - 240, 42, f.z - 80); CHARS.update(camera);   // evening sun from the north, behind the house: the saucer's shadow runs south across the yard onto him sun.target.updateMatrixWorld(); return t;
+}
+function renderAt(pt) { prepAt(pt); if (STY.get() === 'sketch' || STY.get() === 'depth') bub.visible = false; renderer.render(scene, camera); if (window.POV && window.POV.DOF) window.POV.DOF.post(camera, pt); }   // depth of field (dof.js): nothing happens when it is off for this look
+// ---- VIEW STYLES, switchable at any time: normal | neutral (flat grey blockout for Seedance) | sketch (ink outlines on paper) | depth (near white, far black, thin ink lines).
+// The original materials are kept; each style has its own cached materials; the ink edge lines are built once, the first time a style needs them, and only shown in sketch / depth.
+// URL: ?neutral=1 -> neutral, ?sketch=1 -> depth (as before), ?style=sketch|depth|neutral. In the editor each view picks its own style.
+const STY = (() => { const paper = new THREE.Color('#f3efe6'), ink = new THREE.LineBasicMaterial({ color: '#2a2a2a', transparent: true, opacity: 0.55, fog: false });
+  const keep = new Set(); for (const o of SET) o.traverse((m) => keep.add(m)); [...walkers.map((w) => w.root), ...cyc, ...traffic.map((x) => x[0]), ...BGM].forEach((r) => r && r.traverse((m) => keep.add(m)));
+  const meshes = []; scene.traverse((m) => { if (m.isMesh) meshes.push(m); }); const orig = new Map(meshes.map((m) => [m, m.material])), cache = { neutral: new Map(), sketch: new Map(), depth: new Map(), map: new Map(), workspace: new Map() }, edges = []; let cur = 'normal', built = false;
+  const DEPTH = new THREE.ShaderMaterial({ uniforms: { far: { value: 160 } }, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+    vertexShader: '#include <common>\nvarying float vD;\nvoid main(){\n#include <begin_vertex>\n#include <project_vertex>\nvD = -mvPosition.z;\n}',
+    fragmentShader: 'uniform float far; varying float vD; void main(){ float d = clamp(vD / far, 0.0, 1.0); float g = 1.0 - smoothstep(0.0, 1.0, pow(d, 0.6)); gl_FragColor = vec4(vec3(g), 1.0); }' });
+  window.DEPTH_FAR = DEPTH.uniforms.far;
+  const NODEPTH = new THREE.MeshBasicMaterial({ visible: false });   // see-through light (the saucer's beam and its pool) is not a surface: it must not paint over Amos in the depth mask
+  const isDome = (m) => m === domeAir || m === domeSea || m === bub, first = (m) => { const o = orig.get(m); return Array.isArray(o) ? o[0] : o; }, isWater = (m) => { const mt = first(m); return !!(mt && (mt.transparent || mt.roughness < 0.3)); };
+  const domeMat = { depth: new THREE.MeshBasicMaterial({ color: '#000000', side: THREE.BackSide, fog: false, depthWrite: false }), sketch: new THREE.MeshBasicMaterial({ color: paper, side: THREE.BackSide, fog: false, depthWrite: false }) };
+  const fills = new Map(), fillOf = (mt, tint, water) => { const c = mt && mt.color ? mt.color.clone() : paper.clone(), key = water ? 'w' : (tint ? 't' + c.getHexString() : 'p') + (mt && mt.side || 0);
+    if (!fills.has(key)) fills.set(key, new THREE.MeshBasicMaterial({ color: water ? new THREE.Color('#dde6ea') : tint ? c.lerp(paper, 0.55) : paper, fog: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, side: mt && mt.side || THREE.FrontSide })); return fills.get(key); };
+  const G = new THREE.Color('#9a9a9c');
+  // map look (editor plan view): flat fills by kind on a dark blueprint, subjects keep their colours
+  const flat = (c) => new THREE.MeshBasicMaterial({ color: c, fog: false, side: THREE.DoubleSide }), MAPM = { ground: flat('#121a2a'), band: flat('#27344d'), block: flat('#3a4d74'), water: flat('#1c4f8f'), tree: flat('#2c7a57') };
+  const mapOf = (m) => { const o = orig.get(m); if (isDome(m)) return domeMat.depth; if (keep.has(m)) return o; if (isWater(m)) return MAPM.water; if (m.geometry.type === 'ConeGeometry' || o === M.tree || o === M.trunk) return MAPM.tree;
+    if (!m.geometry.boundingBox) m.geometry.computeBoundingBox(); const bb = m.geometry.boundingBox, h = (bb.max.y - bb.min.y) * m.scale.y, w = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z), mt = first(m), c = mt && mt.color, lum = c ? (c.r + c.g + c.b) / 3 : 0.4;
+    return (h < 0.7 && w > 4) || m.geometry.type === 'PlaneGeometry' ? (lum > 0.5 ? MAPM.band : MAPM.ground) : MAPM.block; };
+  // workspace look (editor 3D view): matte dark clay with outlines; subjects keep their colours
+  const clay = (c, side) => new THREE.MeshLambertMaterial({ color: c, fog: true, side: side || THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }), WSM = new Map(), wsOf = (m) => { const o = orig.get(m); if (isDome(m)) return domeMat.depth; if (keep.has(m)) return o;
+    const mt = first(m), c = isWater(m) ? '#27425c' : (m.geometry.type === 'ConeGeometry' || o === M.tree || o === M.trunk) ? '#3c5647' : '#5b606b', key = c + (mt && mt.side || 0); if (!WSM.has(key)) WSM.set(key, clay(c, mt && mt.side)); return WSM.get(key); };
+  // the saucer in the depth and sketch looks: drawn like the pills, a flat bright silver disc with its glowing ring of lights, the searchlight cone and pool kept coloured
+  const SAUC = new Set(); for (const o of [saucer, beamG, pool]) o.traverse((q) => SAUC.add(q)); const saucM = new Map();
+  const saucOf = (m) => { const o = first(m); if (o === beamMat || o === poolMat) return o; if (!saucM.has(o)) { const lit = o && o.emissiveIntensity !== undefined && o.emissive && o.emissive.getHex() > 0x60606f;
+      saucM.set(o, new THREE.MeshBasicMaterial({ color: lit ? o.emissive.clone().lerp(new THREE.Color('#ffffff'), 0.35) : o.color.clone().lerp(new THREE.Color('#ffffff'), 0.25), fog: false, toneMapped: false })); } return saucM.get(o); };
+  const make = { map: mapOf, workspace: wsOf, depth: (m) => (SAUC.has(m) ? saucOf(m) : isDome(m) ? domeMat.depth : (first(m) && first(m).transparent && first(m).depthWrite === false) ? NODEPTH : DEPTH), sketch: (m) => (SAUC.has(m) ? saucOf(m) : isDome(m) ? domeMat.sketch : fillOf(first(m), keep.has(m), isWater(m))),
+    neutral: (m) => { const o = orig.get(m); if (m === domeAir) { const n = o.clone(); n.map = null; n.color = new THREE.Color('#cfd4d8'); return n; } if (keep.has(m) || m === domeSea) return o;
+      if (m.geometry.type === 'ConeGeometry' || o === M.tree) { const g2 = o.clone(); g2.color = new THREE.Color(o === M.tree ? '#5f8a5a' : '#4f7a52'); g2.vertexColors = false; return g2; }
+      const mats = (Array.isArray(o) ? o : [o]).map((mt) => { if (!mt || !mt.isMeshStandardMaterial) return mt; const n = mt.clone(); n.map = null; n.emissiveMap = null; n.vertexColors = false; n.emissive = new THREE.Color(0); n.color.copy(mt.transparent || mt.roughness < 0.3 ? new THREE.Color('#7f9fb8') : (mt.vertexColors && m.position.z > 300) ? new THREE.Color('#56653f') : G); return n; });
+      return mats.length === 1 ? mats[0] : mats; } };
+  function buildEdges() { built = true; scene.updateMatrixWorld(true); for (const m of meshes) { if (isDome(m) || isWater(m)) continue; const big = m.geometry.attributes.position.count > 4000, eg = new THREE.EdgesGeometry(m.geometry, big ? 40 : 28); let ls;
+      if (m.isInstancedMesh) { const src = eg.attributes.position, out = new Float32Array(src.count * 3 * m.count), M4 = new THREE.Matrix4(), v = new THREE.Vector3();
+        for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, M4); M4.premultiply(m.matrixWorld); for (let j = 0; j < src.count; j++) { v.fromBufferAttribute(src, j).applyMatrix4(M4); out.set([v.x, v.y, v.z], (i * src.count + j) * 3); } }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(out, 3)); ls = new THREE.LineSegments(g, ink); ls.userData.of = m; scene.add(ls); }
+      else { ls = new THREE.LineSegments(eg, ink); m.add(ls); } ls.visible = false; ls.userData.inkEdge = true; edges.push(ls); } }
+  function set(st) { if (!make[st]) st = 'normal'; if (st === cur) return; const isLine = (v) => v === 'sketch' || v === 'workspace', lines = isLine(st); if (lines && !built) buildEdges();
+    if (st === 'normal') for (const m of meshes) m.material = orig.get(m); else { const c = cache[st]; for (const m of meshes) { let v = c.get(m); if (v === undefined) { v = make[st](m); c.set(m, v); } m.material = v; } }
+    if (built && lines !== isLine(cur)) for (const e of edges) e.visible = lines; if (lines) { ink.opacity = st === 'sketch' ? 0.8 : st === 'workspace' ? 0.9 : 0.55; ink.color.set(st === 'workspace' ? '#14171d' : '#2a2a2a'); } cur = st; }
+  return { set, get: () => cur, list: ['normal', 'neutral', 'sketch', 'depth', 'map', 'workspace'] }; })();
+window.viewStyle = STY;
+CHARS.build(); CHARS.set(params.get('chars') || 'pill'); window.charLook = CHARS;
+STY.set(params.get('style') || (params.has('sketch') ? 'depth' : params.has('neutral') ? 'neutral' : 'normal'));
+window.storyAt = storyAt; window.SCNDBG = () => SCN.filter((q) => q.wa > -50).map((q) => ({ name: q.name || SH[q.k].name, from: q.wa, to: q.wb, subj: q.subj || null })); window.subjNDC = (t) => { updateWorld(t); updateShots(t); placeActors(t); const o = lookTarget(t); const v = o.tgt.clone().project(camera); return [+v.x.toFixed(2), +v.y.toFixed(2), v.z < 1 ? 1 : -1, +o.tgt.distanceTo(camera.position).toFixed(1)]; }; window.WPDBG = WP2; window.renderAt = renderAt; window.DUR = ULEN;
+// the hard cuts, in playback seconds (they follow any speed edits) and in story seconds
+Object.defineProperty(window, 'CUTS', { get: () => cutList().map((s) => +playOf(s - 0.015).toFixed(4)), configurable: true }); Object.defineProperty(window, 'CUTS_STORY', { get: () => cutList(), configurable: true }); window.CUTS_PAGE = CUT_DEF;   // project.cuts (editor) wins over the page's own
+window.POV = { THREE, scene, camera, renderer, canvas, params, updateWorld, bakedAt, poseAt, poseRaw, evalBase, baseSeg, camTime, invCam, baseKeyFromEdit, arcAt, ovrAt, keyFromEdit, lookTarget, placeActors, storyAt, storyOf, playOf, prepAt, easeOf, cbz, STORY_END, PLAY_TOTAL, SUBJ, subjAt, subjVis, bakeSubj, CHARS, CUT_S, SHOTS, AIRFOG, SEAFOG, domeAir, domeSea, sun, W, H, STY, bub, PRJ }; window.RAWLEN = PLAY_TOTAL; window.FPS = FPS; window.boardReady = true;
+window.POV.DOF = installDOF(window.POV, { lsKey: 'pov-focus' + SBX });   // depth of field + focus (project.focus)
+if (params.has('t')) renderAt(parseFloat(params.get('t')));
+else if (params.has('editor')) { import('../../editor.js?v=' + Date.now()).then((m) => m.start(window.POV)).catch((e) => console.error('editor failed', e)); }
+else if (![...params.keys()].length || params.has('start')) { window.NO_RENDER = true; location.replace('../../index.html'); }   // no parameters = the start screen; ?play=1 is the plain preview
+else {
+  const bar = document.createElement('div'); bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;padding:8px 12px;background:rgba(0,0,0,.72);color:#fff;font:13px system-ui;display:flex;gap:10px;align-items:center;z-index:9;flex-wrap:wrap';
+  bar.innerHTML = '<button id="pp" style="width:64px">Pause</button><input id="sl" type="range" min="0" max="30" step="0.01" value="0" style="flex:1;min-width:160px"><span id="tm" style="width:74px;font-variant-numeric:tabular-nums">0.00 s</span><button id="b1">-1f</button><button id="f1">+1f</button><button id="ed">Edit camera</button><button id="sk" disabled>Set key</button><button id="dk">Delete key</button><button id="xk">Export keys</button><span id="kc"></span><input id="nt" placeholder="note at this time, Enter to save" style="flex:1;min-width:180px;padding:3px 6px"><span id="nc"></span>';
+  document.body.appendChild(bar); const $ = (id) => document.getElementById(id), sl = $('sl'), tm = $('tm'), pp = $('pp'), nt = $('nt');
+  let pt = 0, playing = true, last = performance.now(); const notes = JSON.parse(localStorage.getItem('pov-notes') || '[]');
+  const setP = (v) => { playing = v; pp.textContent = v ? 'Pause' : 'Play'; }, showN = () => { $('nc').textContent = notes.length ? notes.length + ' note(s)' : ''; };
+  pp.onclick = () => setP(!playing); sl.oninput = () => { pt = +sl.value; setP(false); };
+  $('b1').onclick = () => { setP(false); pt = Math.max(0, pt - 1 / 24); }; $('f1').onclick = () => { setP(false); pt = Math.min(29.99, pt + 1 / 24); };
+  nt.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter' && nt.value.trim()) { notes.push({ t: +pt.toFixed(2), note: nt.value.trim() }); localStorage.setItem('pov-notes', JSON.stringify(notes)); nt.value = ''; showN(); } };
+  addEventListener('keydown', (e) => { if (window.EDIT && e.code !== 'Space') return; if ((e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== 'range'))) return; if (e.code === 'Space') { e.preventDefault(); setP(!playing); } if (e.key === 'ArrowRight') { setP(false); pt = Math.min(29.99, pt + (e.shiftKey ? 1 : 1 / 24)); } if (e.key === 'ArrowLeft') { setP(false); pt = Math.max(0, pt - (e.shiftKey ? 1 : 1 / 24)); } });
+  const ed = $('ed'), sk = $('sk'), help = document.createElement('div'); help.style.cssText = 'position:fixed;left:12px;top:12px;padding:8px 10px;background:rgba(0,0,0,.7);color:#fff;font:12px system-ui;line-height:1.5;display:none;z-index:9;border-radius:6px';
+  help.innerHTML = 'EDIT CAMERA (paused)<br>Drag mouse: look around<br>W / S: fly forward / back (where you look) &nbsp; A / D: sideways<br>E or R: up &nbsp; Q or F: down &nbsp; hold Shift: faster<br>Right panel: sliders for every axis + top-down map<br>Scroll: zoom (lens width) &nbsp; Z / X: roll<br>Set key: saves this view at this time'; document.body.appendChild(help);
+  const storyNow = () => storyOf(pt), showK = () => { $('kc').textContent = window.camKeys.list().length + ' key(s)'; };
+  const startEdit = () => { const c = window.camRaw; if (!c) return; window.EDIT = { pos: c.pos.clone(), yaw: Math.atan2(c.d.x, c.d.z), pitch: Math.asin(Math.max(-1, Math.min(1, c.d.y))), fov: c.fov, roll: c.roll }; setP(false); ed.textContent = 'Done editing'; sk.disabled = false; help.style.display = 'block'; };
+  const stopEdit = () => { window.EDIT = null; ed.textContent = 'Edit camera'; sk.disabled = true; help.style.display = 'none'; };
+  ed.onclick = () => (window.EDIT ? stopEdit() : startEdit());
+  sk.onclick = () => { if (!window.EDIT) return; window.camKeys.set(keyFromEdit(storyNow())); showK(); stopEdit(); };
+  $('dk').onclick = () => { window.camKeys.del(storyNow()); showK(); };
+  $('xk').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(window.camKeys.list(), null, 1)], { type: 'application/json' })); a.download = 'camera-keys.json'; a.click(); };
+  let drag = null; canvas.addEventListener('mousedown', (e) => { if (window.EDIT) drag = [e.clientX, e.clientY, e.button === 2 || e.ctrlKey]; }); addEventListener('mouseup', () => (drag = null));
+  addEventListener('mousemove', (e) => { if (!drag || !window.EDIT) return; const E = window.EDIT; if (drag[2]) { const rt = new THREE.Vector3(-Math.cos(E.yaw), 0, Math.sin(E.yaw)); E.pos.addScaledVector(rt, -(e.clientX - drag[0]) * 0.03); E.pos.y += (e.clientY - drag[1]) * 0.03; drag = [e.clientX, e.clientY, true]; return; } E.yaw -= (e.clientX - drag[0]) * 0.004; E.pitch = Math.max(-1.45, Math.min(1.45, E.pitch - (e.clientY - drag[1]) * 0.004)); drag = [e.clientX, e.clientY]; });
+  canvas.addEventListener('wheel', (e) => { const E = window.EDIT; if (!E) return; e.preventDefault(); if (e.shiftKey || e.altKey) { E.fov = Math.max(15, Math.min(130, E.fov + e.deltaY * 0.03)); return; }
+    const f = new THREE.Vector3(Math.sin(E.yaw) * Math.cos(E.pitch), Math.sin(E.pitch), Math.cos(E.yaw) * Math.cos(E.pitch)); E.pos.addScaledVector(f, -e.deltaY * 0.01); }, { passive: false });
+  canvas.addEventListener('contextmenu', (e) => { if (window.EDIT) e.preventDefault(); });
+  const held = new Set();
+  setInterval(() => { const E = window.EDIT; if (!E || !held.size) return; const sp = held.has('shift') ? 1.2 : 0.15, f = new THREE.Vector3(Math.sin(E.yaw), 0, Math.cos(E.yaw)), rt = new THREE.Vector3(-f.z, 0, f.x);
+    if (held.has('w')) E.pos.addScaledVector(f, sp); if (held.has('s')) E.pos.addScaledVector(f, -sp); if (held.has('d')) E.pos.addScaledVector(rt, sp); if (held.has('a')) E.pos.addScaledVector(rt, -sp);
+    if (held.has('r')) E.pos.y += sp; if (held.has('f')) E.pos.y -= sp; if (held.has('z')) E.roll -= 1; if (held.has('x')) E.roll += 1; }, 16);
+  // ---- full 3D camera panel: sliders for every axis, plus a top-down map to drag the camera anywhere
+  const pan = document.createElement('div'); pan.style.cssText = 'position:fixed;right:10px;top:10px;width:300px;padding:10px;background:rgba(0,0,0,.82);color:#fff;font:12px system-ui;z-index:10;border-radius:8px;display:none';
+  const F = [['x', 'Left / right (X)', -1, 1, 0.05], ['y', 'Height (Y)', -1, 1, 0.02], ['z', 'Forward / back (Z)', -1, 1, 0.05], ['yaw', 'Turn (yaw)', -180, 180, 0.5], ['pitch', 'Tilt (pitch)', -85, 85, 0.5], ['roll', 'Roll', -90, 90, 0.5], ['fov', 'Lens width', 15, 130, 0.5]];
+  pan.innerHTML = '<b>Camera</b> <span style="opacity:.7">(edit mode)</span><canvas id="map" width="280" height="200" style="display:block;margin:8px 0;background:#15171c;border-radius:6px;cursor:crosshair"></canvas>' +
+    F.map(([k, l]) => `<label style="display:block;margin:4px 0">${l} <span id="v_${k}" style="float:right;opacity:.8"></span><input id="s_${k}" type="range" style="width:100%"></label>`).join('') +
+    '<div style="opacity:.7;margin-top:6px">Map: drag to move the camera, shift-drag to aim it. Wheel on map: zoom map.</div>';
+  document.body.appendChild(pan);
+  const map = pan.querySelector('#map'), mg = map.getContext('2d'); let mapScale = 3, drM = null;
+  const deg = (r) => r * 180 / Math.PI, rad = (d) => d * Math.PI / 180;
+  const syncSliders = () => { const E = window.EDIT; if (!E) return; const c = E.pos, base = E.base;
+    const val = { x: c.x, y: c.y, z: c.z, yaw: deg(E.yaw), pitch: deg(E.pitch), roll: E.roll, fov: E.fov };
+    for (const [k, , lo, hi, st] of F) { const el = $('s_' + k); if (k === 'x' || k === 'z') { el.min = base[k] - 60; el.max = base[k] + 60; } else if (k === 'y') { el.min = Math.min(base.y - 20, -15); el.max = base.y + 80; } else { el.min = lo; el.max = hi; } el.step = st; if (document.activeElement !== el) el.value = val[k]; $('v_' + k).textContent = (+val[k]).toFixed(k === 'fov' || k === 'yaw' || k === 'pitch' || k === 'roll' ? 0 : 1); } };
+  for (const [k] of F) $('s_' + k).addEventListener('input', (e) => { const E = window.EDIT; if (!E) return; const v = +e.target.value; if (k === 'x') E.pos.x = v; if (k === 'y') E.pos.y = v; if (k === 'z') E.pos.z = v; if (k === 'yaw') E.yaw = rad(v); if (k === 'pitch') E.pitch = rad(v); if (k === 'roll') E.roll = v; if (k === 'fov') E.fov = v; });
+  const drawMap = () => { const E = window.EDIT; if (!E) return; const W = map.width, H = map.height, cx = E.pos.x, cz = E.pos.z, toS = (x, z) => [W / 2 + (x - cx) * mapScale, H / 2 + (z - cz) * mapScale];
+    mg.fillStyle = '#15171c'; mg.fillRect(0, 0, W, H); mg.strokeStyle = 'rgba(120,170,255,.6)'; mg.lineWidth = 1.5; mg.beginPath();
+    for (let i = 0; i < BN; i += 6) { const [x, y] = toS(SP[i].x, SP[i].z); i ? mg.lineTo(x, y) : mg.moveTo(x, y); } mg.stroke();
+    mg.fillStyle = '#ffcc33'; for (const k of window.camKeys.list()) { const b = bakedAt(k.t); const [x, y] = toS(b.p.x + k.dp[0], b.p.z + k.dp[2]); mg.fillRect(x - 3, y - 3, 6, 6); }
+    const [px, py] = toS(cx, cz); mg.fillStyle = '#ff4d4d'; mg.beginPath(); mg.arc(px, py, 5, 0, 7); mg.fill();
+    const a = Math.tan(rad(E.fov) / 2) * 1.0, dx = Math.sin(E.yaw), dz = Math.cos(E.yaw); mg.strokeStyle = '#ff4d4d'; mg.beginPath(); mg.moveTo(px, py); mg.lineTo(px + (dx - dz * a) * 40, py + (dz + dx * a) * 40); mg.moveTo(px, py); mg.lineTo(px + (dx + dz * a) * 40, py + (dz - dx * a) * 40); mg.stroke();
+    mg.fillStyle = '#aaa'; mg.fillText('top view, north up; red = camera, yellow = keys', 6, H - 6); };
+  map.addEventListener('mousedown', (e) => { drM = { x: e.offsetX, y: e.offsetY, aim: e.shiftKey }; });
+  map.addEventListener('mousemove', (e) => { const E = window.EDIT; if (!drM || !E) return; if (drM.aim) { const W = map.width, H = map.height; E.yaw = Math.atan2(e.offsetX - W / 2, e.offsetY - H / 2); } else { E.pos.x += (e.offsetX - drM.x) / mapScale; E.pos.z += (e.offsetY - drM.y) / mapScale; drM.x = e.offsetX; drM.y = e.offsetY; } });
+  addEventListener('mouseup', () => (drM = null)); map.addEventListener('wheel', (e) => { e.preventDefault(); mapScale = Math.max(0.3, Math.min(20, mapScale * (e.deltaY > 0 ? 0.85 : 1.18))); }, { passive: false });
+  setInterval(() => { if (window.EDIT) { syncSliders(); drawMap(); } }, 50);
+  const _start = startEdit; ed.onclick = () => { if (window.EDIT) { stopEdit(); pan.style.display = 'none'; } else { _start(); if (window.EDIT) { window.EDIT.base = { x: window.EDIT.pos.x, y: window.EDIT.pos.y, z: window.EDIT.pos.z }; pan.style.display = 'block'; } } };
+  const _sk = sk.onclick; sk.onclick = () => { _sk(); pan.style.display = 'none'; };
+  // keyboard flying uses physical keys, so it works whatever button has focus
+  addEventListener('keydown', (e) => { if (!window.EDIT || document.activeElement === nt || (e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== 'range'))) return; if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyF', 'KeyZ', 'KeyX', 'KeyQ', 'KeyE'].includes(e.code)) { e.preventDefault(); held.add(e.code); } if (e.key === 'Shift') held.add('shift'); });
+  addEventListener('keyup', (e) => { held.delete(e.code); if (e.key === 'Shift') held.delete('shift'); });
+  setInterval(() => { const E = window.EDIT; if (!E) return; const sp = held.has('shift') ? 1.0 : 0.12, f = new THREE.Vector3(Math.sin(E.yaw) * Math.cos(E.pitch), Math.sin(E.pitch), Math.cos(E.yaw) * Math.cos(E.pitch)), rt = new THREE.Vector3(-Math.cos(E.yaw), 0, Math.sin(E.yaw));
+    if (held.has('KeyW')) E.pos.addScaledVector(f, sp); if (held.has('KeyS')) E.pos.addScaledVector(f, -sp); if (held.has('KeyD')) E.pos.addScaledVector(rt, sp); if (held.has('KeyA')) E.pos.addScaledVector(rt, -sp);
+    if (held.has('KeyR') || held.has('KeyE')) E.pos.y += sp; if (held.has('KeyF') || held.has('KeyQ')) E.pos.y -= sp; if (held.has('KeyZ')) E.roll -= 0.8; if (held.has('KeyX')) E.roll += 0.8; }, 16);
+  // ---- easy controls: hold buttons, presets, keys on the timeline
+  const pad = document.createElement('div'); pad.style.cssText = 'position:fixed;left:12px;bottom:110px;z-index:10;display:none;font:13px system-ui;color:#fff;background:rgba(0,0,0,.75);padding:10px;border-radius:10px;width:270px';
+  const B = (id, label, title) => `<button data-a="${id}" title="${title || ''}" style="min-width:58px;height:34px;margin:2px;border-radius:7px;border:1px solid #555;background:#23262d;color:#fff;font:13px system-ui;cursor:pointer">${label}</button>`;
+  pad.innerHTML = '<div style="margin-bottom:6px;font-weight:600">Move camera <span style="font-weight:400;opacity:.7">(hold a button)</span></div>' +
+    '<div>' + B('fwd', '▲ Forward') + B('up', '⤒ Up') + B('turnL', '↶ Turn') + '</div>' +
+    '<div>' + B('left', '◀ Left') + B('back', '▼ Back') + B('right', 'Right ▶') + '</div>' +
+    '<div>' + B('down', '⤓ Down') + B('tiltU', '⤴ Tilt up') + B('tiltD', '⤵ Tilt down') + '</div>' +
+    '<div>' + B('turnR', '↷ Turn') + B('zoomIn', '🔍 Zoom in') + B('zoomOut', '🔭 Wide') + '</div>' +
+    '<div style="margin:8px 0 4px;font-weight:600">Quick angles</div>' +
+    '<div>' + B('pGround', 'Ground', 'lens on the ground, looking slightly up') + B('pEye', 'Eye level') + B('pDrone', 'Drone', 'high above, looking down') + '</div>' +
+    '<div>' + B('pSubject', 'Face subject', 'aim at the scene\'s subject') + B('pReset', 'Reset', 'back to the original camera here') + B('pLevel', 'Level', 'remove roll and tilt') + '</div>' +
+    '<div style="margin-top:8px;opacity:.75;line-height:1.45">Mouse: drag = look around · right-drag = slide · scroll = fly in/out · Shift+scroll = lens</div>';
+  document.body.appendChild(pad);
+  const step = { fwd: 0, back: 0, left: 0, right: 0, up: 0, down: 0, turnL: 0, turnR: 0, tiltU: 0, tiltD: 0, zoomIn: 0, zoomOut: 0 };
+  let holding = null; pad.addEventListener('mousedown', (e) => { const a = e.target.dataset && e.target.dataset.a; if (!a) return; e.preventDefault(); if (a in step) holding = a; else preset(a); });
+  addEventListener('mouseup', () => (holding = null)); pad.addEventListener('mouseleave', () => (holding = null));
+  setInterval(() => { const E = window.EDIT; if (!E || !holding) return; const sp = 0.18, f = new THREE.Vector3(Math.sin(E.yaw), 0, Math.cos(E.yaw)), rt = new THREE.Vector3(-Math.cos(E.yaw), 0, Math.sin(E.yaw));
+    ({ fwd: () => E.pos.addScaledVector(f, sp), back: () => E.pos.addScaledVector(f, -sp), left: () => E.pos.addScaledVector(rt, -sp), right: () => E.pos.addScaledVector(rt, sp), up: () => (E.pos.y += sp * 0.6), down: () => (E.pos.y -= sp * 0.6),
+      turnL: () => (E.yaw += 0.015), turnR: () => (E.yaw -= 0.015), tiltU: () => (E.pitch = Math.min(1.45, E.pitch + 0.012)), tiltD: () => (E.pitch = Math.max(-1.45, E.pitch - 0.012)), zoomIn: () => (E.fov = Math.max(15, E.fov - 0.6)), zoomOut: () => (E.fov = Math.min(130, E.fov + 0.6)) })[holding](); }, 16);
+  function preset(a) { const E = window.EDIT; if (!E) return; const t = storyNow(), b = bakedAt(t), gyy = (p) => (p.z > 336 ? terrain(p.x, p.z) : 0.16);
+    if (a === 'pReset') { const yaw = Math.atan2(b.d.x, b.d.z); Object.assign(E, { yaw, pitch: Math.asin(b.d.y), fov: b.fov, roll: b.roll }); E.pos.copy(b.p); }
+    if (a === 'pGround') { E.pos.y = gyy(E.pos) + 0.25; E.pitch = 0.18; E.fov = 112; E.roll = 0; }
+    if (a === 'pEye') { E.pos.y = gyy(E.pos) + 1.6; E.pitch = 0; E.fov = 70; E.roll = 0; }
+    if (a === 'pDrone') { E.pos.y = gyy(E.pos) + 25; E.pitch = -0.9; E.fov = 80; E.roll = 0; }
+    if (a === 'pLevel') { E.roll = 0; E.pitch = 0; }
+    if (a === 'pSubject') { placeActors(t); const o = lookTarget(t).tgt.clone().sub(E.pos).normalize(); E.yaw = Math.atan2(o.x, o.z); E.pitch = Math.asin(Math.max(-1, Math.min(1, o.y))); } }
+  // keys as markers on the timeline; click one to jump there
+  const marks = document.createElement('div'); marks.style.cssText = 'position:absolute;left:0;right:0;top:-6px;height:6px;pointer-events:none';
+  const mwrap = document.createElement('div'); mwrap.style.cssText = 'position:relative;flex:1;min-width:160px;display:flex;align-items:center'; sl.parentElement.insertBefore(mwrap, sl); mwrap.appendChild(sl); sl.style.width = '100%'; mwrap.appendChild(marks);
+    const drawMarks = () => { marks.innerHTML = ''; for (const k of window.camKeys.list()) { const p = playOf(k.t), d = document.createElement('div'); d.title = 'camera key at ' + p.toFixed(2) + ' s'; d.style.cssText = `position:absolute;left:calc(${(p / window.DUR) * 100}% - 5px);top:-8px;width:10px;height:10px;border-radius:50%;background:#ffcc33;pointer-events:auto;cursor:pointer`; d.onclick = () => { setP(false); pt = p; }; marks.appendChild(d); } if (+sl.max !== window.DUR) sl.max = window.DUR; };
+  setInterval(drawMarks, 800);
+  // advanced sliders/map: collapsed by default
+  pan.style.display = 'none'; const adv = document.createElement('button'); adv.textContent = 'Advanced'; adv.style.cssText = 'margin-left:4px'; ed.after(adv); adv.onclick = () => { pan.style.display = pan.style.display === 'none' ? 'block' : 'none'; };
+  const _ed = ed.onclick; ed.onclick = () => { _ed(); pad.style.display = window.EDIT ? 'block' : 'none'; pan.style.display = 'none'; help.style.display = 'none'; };
+  const _sk2 = sk.onclick; sk.onclick = () => { _sk2(); pad.style.display = 'none'; drawMarks(); };
+  showK();
+  window.playerState = () => ({ t: +pt.toFixed(2), playing, notes }); window.clearNotes = () => { notes.length = 0; localStorage.removeItem('pov-notes'); showN(); }; showN();
+  (function loop() { if (window.NO_RENDER) return void setTimeout(loop, 400);   /* the start screen shows no live 3D */ const now = performance.now(); if (playing) pt = (pt + (now - last) / 1000) % window.DUR; last = now; renderAt(pt); sl.value = pt; tm.textContent = pt.toFixed(2) + ' s'; requestAnimationFrame(loop); })();
+}
+</script></body></html>

@@ -1,0 +1,85 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "low-arc-up",
+ "name": "Low arc up",
+ "len": 3,
+ "unit": "subj",
+ "text": "Starts low beside the subject, arcs round the front and rises: a hero shot.",
+ "watch": "Watch the camera start low at the side, swing round the front and rise.",
+ "tags": [
+  "arc",
+  "hero",
+  "low"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    -0.4302,
+    -0.12,
+    0.3856
+   ],
+   "q": [
+    0.07558,
+    -0.29976,
+    0.02383,
+    0.95072
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "in"
+  },
+  {
+   "t": 1,
+   "p": [
+    -0.1517,
+    -0.0533,
+    0.2655
+   ],
+   "q": [
+    0.0353,
+    -0.10157,
+    0.00361,
+    0.9942
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  },
+  {
+   "t": 2,
+   "p": [
+    0.1517,
+    0.0133,
+    0.2655
+   ],
+   "q": [
+    -0.00884,
+    0.10163,
+    0.0009,
+    0.99478
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "linear"
+  },
+  {
+   "t": 3,
+   "p": [
+    0.4302,
+    0.08,
+    0.3856
+   ],
+   "q": [
+    -0.05065,
+    0.30028,
+    0.01597,
+    0.95237
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "out"
+  }
+ ]
+}

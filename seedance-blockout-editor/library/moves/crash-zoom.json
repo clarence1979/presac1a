@@ -1,0 +1,83 @@
+{
+ "kind": "pov-move",
+ "v": 1,
+ "id": "crash-zoom",
+ "name": "Crash zoom",
+ "len": 1.5,
+ "unit": "subj",
+ "text": "A fast punch-in of the lens on the moment, the camera stays put.",
+ "watch": "Watch the red person: the camera stays put and the lens punches in.",
+ "tags": [
+  "zoom",
+  "fast"
+ ],
+ "keys": [
+  {
+   "t": 0,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0
+  },
+  {
+   "t": 0.5,
+   "p": [
+    0,
+    0,
+    0
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "e": "out"
+  },
+  {
+   "t": 0.72,
+   "p": [
+    0,
+    0,
+    0.03
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "z": 0.35
+  },
+  {
+   "t": 1.5,
+   "p": [
+    0,
+    0,
+    0.03
+   ],
+   "q": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "df": 0,
+   "dr": 0,
+   "z": 0.35
+  }
+ ]
+}
