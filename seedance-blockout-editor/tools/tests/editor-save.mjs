@@ -38,12 +38,13 @@ try {
   page.on('pageerror', (e) => errors.push(String(e).slice(0, 300))); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
   page.on('response', (r) => { if (r.status() === 409) refused.push(r.url()); });
   page.on('framenavigated', (f) => { if (f === page.mainFrame()) reloads++; });
-  // hold the project file back for 3 s, like a slow disk or a busy laptop, so there is a window in which the editor shows the empty camera
-  await page.setRequestInterception(true); page.on('request', (r) => (r.method() === 'GET' && r.url().endsWith(`/api/projects/${ID}/editor-project.json`) ? setTimeout(() => r.continue().catch(() => {}), 3000) : r.continue().catch(() => {})));
+  // hold the project file back, like a slow disk or a busy laptop, until the key press below has been tried: a window in which the editor shows the empty camera
+  let held = null; await page.setRequestInterception(true); page.on('request', (r) => { if (!held && r.method() === 'GET' && r.url().endsWith(`/api/projects/${ID}/editor-project.json`)) held = r; else r.continue().catch(() => {}); });
   await page.goto(`${PAGE}/projects/${ID}/index.html?editor=1&project=${ID}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.ED, { timeout: 90000 });
+  await page.waitForFunction(() => window.ED, { timeout: 90000, polling: 50 });   // by timer, not by drawn frame: the first frames of a software-drawn test browser are seconds apart
   // press K while the "Opening the project" cover is up, and look straight after it, in the same turn of the page (later the file would replace it anyway)
   const during = await page.evaluate(() => { const up = !!document.getElementById('prjOpening'), k0 = window.ED.KL().length; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyK', key: 'k', bubbles: true, cancelable: true })); return { up, applied: window.ED.KL().length !== k0 }; });
+  if (held) held.continue().catch(() => {});   // now the file may arrive
   await page.waitForFunction(() => !document.getElementById('prjOpening'), { timeout: 60000 });
   const loaded = await page.evaluate(() => ({ keys: window.ED.KL().length, cuts: (window.CUTS || []).length }));
   ok(during.up && !during.applied, during.up ? `input is held while the project loads (a key pressed then was ${during.applied ? 'applied' : 'held'})` : 'the "Opening the project" cover was not up while the file was loading');

@@ -135,7 +135,10 @@ const CHARS = (() => {
         if (!hr && e.sk.H) hr = Math.max(e.sk.H[1] * k, dist(P[hi]) * pxK * 2); if (hr) nose(P[hi], hr, _fh, e); } }
     I.b.count = nb; I.d.count = nd; N.count = nn; M.count = nm; M.instanceMatrix.needsUpdate = N.instanceMatrix.needsUpdate = FB.needsUpdate = FD.needsUpdate = true; I.b.instanceMatrix.needsUpdate = I.d.instanceMatrix.needsUpdate = true; if (I.b.instanceColor) I.b.instanceColor.needsUpdate = true; if (I.d.instanceColor) I.d.instanceColor.needsUpdate = true; }
   const set = (m) => { mode = ['skeleton', 'pill', 'full'].includes(m) ? m : 'pill'; apply(); };
-  return { A, person, animal, alt, build, update, set, get: () => mode, list, modes: ['skeleton', 'pill', 'full'] };
+  // a world that changes while the page is open (the Scene Studio): drop(entry) forgets a person or animal, rebuild() makes the shared pill and skeleton meshes again for the list as it is now
+  const drop = (e) => { const i = list.indexOf(e); if (i >= 0) list.splice(i, 1); };
+  function rebuild() { if (inst) for (const m of [inst.sk.b, inst.sk.d, inst.pl.b, inst.pl.d, inst.nose, inst.mouth]) { scene.remove(m); m.geometry.dispose(); m.material.dispose(); if (m.dispose) m.dispose(); } inst = null; build(); }
+  return { A, person, animal, alt, build, rebuild, drop, update, set, get: () => mode, list, modes: ['skeleton', 'pill', 'full'] };
 })();
 const PJ = [[0, 0.91, 0.01], [0, 0.81, 0], [-0.15, 0.77, 0], [-0.175, 0.62, 0], [-0.19, 0.48, 0.01], [0.15, 0.77, 0], [0.175, 0.62, 0], [0.19, 0.48, 0.01], [-0.075, 0.45, 0], [-0.07, 0.24, 0], [-0.07, 0.03, 0], [0.075, 0.45, 0], [0.07, 0.24, 0], [0.07, 0.03, 0]];   // a standing figure's 14 joints in units of its height (right side = -x, it faces +z)
 const stdPerson = (g, u, h, o) => CHARS.person(g, PJ.map(([x, y, z]) => CHARS.A(g, x * u, y * u, z * u)), h, o);

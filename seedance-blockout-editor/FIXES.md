@@ -1,8 +1,62 @@
-# Fixes and improvements (16 Nov 2026)
+# Fixes and improvements (16 to 21 Nov 2026)
 
 Tested against `sirioberati/seedance-blockout-editor` at commit `da359cd` (15 Nov 2026), with paid calls and the network switched off (`TEIN_SEND=0 TEIN_NETWORK=0`).
 
 Run the new regression test with `npm run test:editor`. It passes on this copy. On the original code it fails 9 of its 14 checks.
+
+## Round 4 (21 Nov 2026): build a scene by hand, a faster editor, cheaper models
+
+### Build a scene by hand: the Scene Studio (`tools/previs/worlds/studio.js`, `studio-ui.js`, `studio-templates.js`)
+
+Until now a scene was a world written as code by an AI agent. The Scene Studio is a world made of plain data that you build in the editor, with no code and no agent. It works from a web address.
+
+- **The ways in.** The start screen has **Build a scene by hand**. In an example project the top bar has **Build a scene**. Both open a list: start a new scene (empty, or from an example you can take apart), open one you made before, or delete one.
+- **Build / Camera.** A switch at the top left. **Build**: add, move and change things. **Camera**: the usual camera tools; the scene is locked meanwhile so a stray click cannot move a building.
+- **Add.** Fifteen kinds: box, ball, cylinder, cone, ramp; floor or road, wall, building, house, tree, street lamp; car, SUV, scooter; person. A new thing appears in the middle of the 3D view.
+- **Move, Turn, Size.** Handles on the selected object in the 3D view (W, E, S), with **Snap** (half-metre and 15° steps). Click an object to select it; click the ground to let go. Every value can also be typed.
+- **The Scene tab** (right-hand panel). For the selected object: name, **what it is in the film**, place, turn, size, colour, pose (people), whether the camera can follow it, Copy, Delete. For the scene: name, ground (asphalt, concrete, grass, sand, dirt, snow, water), light (day, golden hour, overcast, night), **what happens** in your words, and the list of everything in it.
+- **Movement.** **Path point** says "be here at this second". Give an object a first point, move the playhead, drag the object: the next point is written by itself. It travels along a smooth curve and turns the way it goes; a person walks while it travels. The points are listed with their seconds and can be retimed or removed. Heights are kept, so things can jump.
+- **Rides on.** A person can sit on a scooter or in a car, and anything can stand on anything; it then goes wherever that goes.
+- **It behaves like the rest of the editor.** Undo and redo, autosave in this browser, File ▸ Export JSON / Import (the scene travels in `editor-project.json` as `scene`), every look (the grey blockout, sketch, depth), pills, tracking ("The camera can follow it" makes a subject), cuts, speed.
+- **The prompt knows the scene.** The story, the light and what each block stands for ("the red scooter shape "Bike" is a glossy red scooter…") are written into the prompt for the video model.
+- **Lighting that helps.** The 3D view is evenly lit while you build, whatever the scene's time of day. The grey blockout that is sent to the model is always recorded in an even, bright light: a night scene used to come out almost black.
+- **Greyed out with a reason.** Path point, Copy and Delete are greyed until something is selected, and say so when clicked. Turn is greyed for an object that turns the way it goes, and says how to free it. Every Build control has its ? mark.
+- **Midnight chase.** The example film rebuilt from 33 plain blocks: the avenue, fourteen buildings, the clock tower, lamps, a parked car, the scooter with its courier, the SUV behind, a passer-by, and a camera that follows the scooter. Change anything.
+
+Limits: the take stays 30 s (shorter clips: "Part of the take" in Generate). Scenes are kept in this browser; Export JSON is the backup. The camera's wall guard does not know hand-built objects, so the camera can pass through them.
+
+`npm run test:studio` checks all of it with real clicks and drags (38 checks).
+
+### A faster editor (`editor.js`, `deps/three.module.js`, `tools/stamp.mjs`)
+
+- **It rests when nothing moves.** The editor used to redraw all three views 60 times a second, even while you were reading. Now it draws only while something changes (playing, dragging, typing, a click) and twice a second otherwise. The frame counter says `idle`.
+- **The final shot is not redrawn while you only turn the 3D view.** Its picture cannot have changed, so its render, its shadows and its focus blur are skipped. Orbiting costs about half the script time and half the renders it did.
+- **It stays smooth on a slow graphics card.** When frames take too long, the picture is drawn a little coarser while it moves and is sharp again the moment it stands still. The counter says `fast picture`.
+- **Quicker to open.** three.js is the minified build (266 KB → 171 KB on the wire). The editor's modules are announced to the browser at once (`modulepreload`) and carry one release stamp, so they are cached between visits instead of fetched again every time. `npm run stamp` sets the stamp before publishing.
+
+### Cheaper models on Replicate (`models.js`, `generate-web.js`, `relay/worker.js`)
+
+Seedance 2.5 on Replicate charges $0.97 a second at 720p when a video goes in: $29.03 for a 30 s take. Generate now lists ten models with the price of this take next to each (read from each model's page on Replicate on 21 Nov 2026):
+
+| Model | How it follows the blockout | Longest | 30 s at 720p |
+|---|---|---|---|
+| Seedance 2.5 | reference video | 30 s | $29.03 |
+| Seedance 2.5 from stills | up to 16 still frames of the blockout instead of the video | 30 s | $6.94 |
+| Kling 4.0 | reference video | 30 s | $5.64 |
+| Kling 4.0 Flash | reference video | 20 s | $2.52 for 20 s |
+| Seedance 2.0 / 2.0 Fast | reference video | 15 s | $3.30 / $2.55 for 15 s |
+| Runway Aleph 2 | restyles the video itself | 30 s | $10.08 |
+| Gemini Omni 1.2 Flash | restyles the video itself | 15 s | $1.58 for 15 s |
+| Wan 2.7 Video Edit | restyles the video itself | 10 s | $1.00 for 10 s |
+| Lucy Edit 2 | restyles the video itself, no sound | any | $1.20 |
+
+- **Part of the take.** "from … to … s" records and sends only that part. Every price follows the length, and the models with a short limit open up.
+- **Each model gets what it expects**: its own address, its own tag for the blockout (`[Video1]`, `@video_1`, or "the input video"), its own settings, a short prompt where it only takes a short one.
+- **Greyed out with a reason.** A model that cannot take this length is greyed and says its limit when clicked.
+- **The relay** now passes a prediction for any model (version 2; `GET /version`). With the older relay only the two Seedance 2.5 entries can be chosen and the others say the relay needs updating.
+- Not tested against the real Replicate (no token here): the addresses, inputs and prices were read from the model pages, and the requests were checked against a stand-in.
+
+`npm run test:web` now has 42 checks.
 
 ## Round 3: Generate from the web address, with no helper
 

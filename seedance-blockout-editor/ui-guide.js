@@ -8,6 +8,14 @@ const MOD = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? 
 
 // ---- what every control is: t = title, w = what it is, s = how to use it, k = keys, n = a note
 const H = {
+  stScenes: { t: 'Build a scene by hand', w: 'Scenes you make yourself, without writing code: you place blocks, buildings, vehicles and people, and say what each one is in the film.', s: ['Start a new scene: empty, or from an example you can take apart and change.', 'Open or delete a scene you made before.', 'Scenes are kept in this browser. File ▸ Export JSON saves a copy.'] },
+  stMode: { t: 'Build / Camera', w: 'Two ways of working on the same scene. Build: add, move and change the things in it. Camera: set the camera that films it (keys, moves, tracking, cuts).', s: ['Build first: put everything where it belongs and give the moving things a path.', 'Then switch to Camera and frame it. You can switch back at any time.'], n: 'While you set the camera the scene is locked, so a stray click cannot move a building.' },
+  stAdd: { t: 'Add', w: 'Adds one thing to the scene, in the middle of the 3D view.', s: ['Shapes: box, ball, cylinder, cone, ramp. Stretch them to any size: a box can be a table, a wall or a tower.', 'Places: floor or road, wall, building, house, tree, street lamp.', 'Vehicles and people: they can move along a path, and a person can ride on a vehicle.'], n: 'These are stand-ins. The video model replaces each one with the real thing you describe under “What it is in the film”.' },
+  stTools: { t: 'Move, Turn, Size', w: 'Chooses the handles shown on the selected object in the 3D view.', s: ['Move: drag an arrow to slide it, or a small square to slide it over the ground.', 'Turn: drag a ring.', 'Size: drag a small cube. Shapes stretch in each direction; ready-made things grow as a whole.'], k: ['W move', 'E turn', 'S size'], n: 'Every value can also be typed on the Scene tab on the right.' },
+  stKey: { t: 'Path point', w: 'Makes the selected object move. A path point says: be at this place at this second.', s: ['Select the object and press Path point: it now has its starting point.', 'Move the playhead on the timeline to a later second.', 'Drag the object to where it should be by then. The next point is written by itself.', 'Play: it travels from point to point, and turns the way it goes.'], k: ['K'], n: 'The points are listed under Movement on the Scene tab, where you can change their seconds or remove them. A person walks by itself while it travels.' },
+  stEdit: { t: 'Copy and Delete', w: 'Copy makes a second one of the selected object, two metres away, with the same size, colour and path. Delete removes the selected object.', k: [MOD + '+D copy', 'Delete'], n: 'Undo (' + MOD + '+Z) brings back anything you delete.' },
+  stSnap: { t: 'Snap', w: 'When it is on, things move in half-metre steps, turn in 15° steps and grow in quarter steps, so they line up easily. Turn it off for fine placing.' },
+  tabScene: { t: 'Scene tab', w: 'Everything about the scene you are building.', s: ['With an object selected: its name, what it is in the film, place, turn, size, colour, pose and movement.', 'Scene: its name, the ground, the light (day, golden hour, overcast, night) and what happens, in your words.', 'The list shows everything in the scene; click a line to select it.'], n: 'The names, the “what it is” texts and the story are written into the prompt for the video model.' },
   back: { t: 'Back', w: 'Leaves the editor and goes back to the start screen. Your work is saved first.' },
   tool: { t: 'Camera tool', w: 'Chooses the handle you drag on the camera in the 3D view.', s: ['Rotate: rings that turn the camera (pan, tilt, roll).', 'Move: arrows that slide the camera.', 'Local axes: the arrows follow the way the camera faces.'], k: ['E rotate', 'W move'] },
   setkey: { t: 'Set key', w: 'Saves where the camera is, where it points and its lens at this moment. The camera glides from key to key, and that glide is your camera move.', s: ['Move the playhead to a moment on the timeline.', 'Place and aim the camera (drag in the Final shot, or use the panel on the right).', 'Press Set key.'], k: ['K'] },
@@ -62,7 +70,8 @@ const H = {
 // ---- where the marks go. mode 'after': on the top-right corner of the control (no extra width); 'in': inline at the end of a label
 const T = (sel, key, mode = 'after') => ({ sel, key, mode });
 const TARGETS = [
-  T('#bBack', 'back'), T('#ddTool', 'tool'), T('#bKey', 'setkey'), T('#bAnimate', 'animate'), T('#ddKeys', 'keys'), T('#bMoves', 'moves'), T('#bTrack', 'track'),
+  T('#bBack', 'back'), T('#stScenes', 'stScenes'), T('#stMode', 'stMode'), T('#stAdd', 'stAdd'), T('#stTools', 'stTools'), T('#stKey', 'stKey'), T('#stDel', 'stEdit'), T('#stSnap', 'stSnap'), T('#insp .tabs [data-tab=scene]', 'tabScene'),
+  T('#ddTool', 'tool'), T('#bKey', 'setkey'), T('#bAnimate', 'animate'), T('#ddKeys', 'keys'), T('#bMoves', 'moves'), T('#bTrack', 'track'),
   T('#bSplit', 'split'), T('#bZoom', 'zoom'), T('#bZoomReset', 'zoomreset'), T('#sLayout', 'layout'), T('#ddView', 'view'),
   T('#bRedo', 'undo'), T('#bGens', 'gens'), T('#ddFile', 'file'), T('#bInsp', 'panel'), T('#tnGear', 'tein'), T('#bDraftTop', 'generate'),
   T(() => tagOf('vDir'), 'view3d', 'in'), T(() => tagOf('vCam'), 'final', 'in'), T(() => tagOf('vTop'), 'plan', 'in'),
@@ -104,12 +113,13 @@ const CSS = `
   #tb > span.ugcap[style],#tb > span.ugcap{flex:0 0 auto!important}
   #tb .ugcap{font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7d7e89;white-space:nowrap;padding:0 2px 0 12px;margin-left:4px;border-left:1px solid #26262c;height:22px;display:inline-flex;align-items:center}
   #tb .ugcap.first{border-left:0;padding-left:0;margin-left:0}
+.stcap{font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:#7d7e89;white-space:nowrap;padding:0 2px 0 12px;margin-left:4px;border-left:1px solid #26262c;height:22px;display:inline-flex;align-items:center;flex:0 0 auto}
   #tb .ddt.ugl,#tb button.io.ugl{width:auto!important;min-width:0!important;padding:0 11px 0 10px!important;display:inline-flex!important;align-items:center;gap:6px}
   #tb .uglbl{font:600 13px 'Space Grotesk',system-ui,sans-serif;white-space:nowrap}
   #tb > span#tnHost[style],#tb #tnHost{flex:0 0 auto!important;width:auto!important}
   #tb #sLayout{width:auto!important;max-width:150px}
   #tb > button:not(.io):not(.gen),#tb > .dd > .ddt{padding-left:11px!important;padding-right:11px!important}
-  @media (max-width:1360px){ #tb .ugcap{display:none!important} #tb > b .sub{max-width:150px} }
+  @media (max-width:1400px){ #tb .ugcap,#tb .stcap{display:none!important} #tb > b .sub{max-width:96px} }
   /* side panel tabs: a word under every icon */
   #insp .tabs button{flex-direction:column!important;height:48px!important;gap:3px!important;padding:4px 2px!important;font-size:11.5px!important;line-height:1.1}
   body #insp .tabs.icons button span,body #insp .tabs button span{display:block!important}
@@ -203,8 +213,8 @@ export function mountGuide() {
       helpDD.querySelector('#ugTour').onclick = () => { p.classList.remove('open'); if (window.TOUR) window.TOUR.start(); };
     }
     const ddOf = (id) => { const b = document.getElementById(id); return b && b.closest('.dd'); };
-    const ORDER = [[tb.querySelector(':scope > b'), 1], ['bBack', 2], [tb.querySelector('.ug1'), 3], ['bUndo', 4], ['bRedo', 5], ['bGens', 6], [ddOf('ddFile'), 7], ['bInsp', 8], [helpDD || document.getElementById('ugHelpDD'), 9], ['tnHost', 10], ['bDraftTop', 11],
-      [tb.querySelector('.ugbr'), 20], [tb.querySelector('.ugcap.first'), 21], [ddOf('ddTool'), 22], ['bKey', 23], ['bAnimate', 24], [ddOf('ddKeys'), 25], ['bMoves', 26], ['bTrack', 27],
+    const ORDER = [[tb.querySelector(':scope > b'), 1], ['bBack', 2], ['stScenes', 2], ['stMode', 2], [tb.querySelector('.ug1'), 3], ['bUndo', 4], ['bRedo', 5], ['bGens', 6], [ddOf('ddFile'), 7], ['bInsp', 8], [helpDD || document.getElementById('ugHelpDD'), 9], ['tnHost', 10], ['bDraftTop', 11],
+      [tb.querySelector('.ugbr'), 20], [tb.querySelector('.ugcap.first'), 22], [ddOf('ddTool'), 23], ['bKey', 24], ['bAnimate', 25], [ddOf('ddKeys'), 26], ['bMoves', 27], ['bTrack', 28],
       [[...tb.querySelectorAll('.ugcap')][1], 30], ['bSplit', 31], ['bZoom', 32], ['bZoomReset', 33], [tb.querySelector('.ug2'), 40], [[...tb.querySelectorAll('.ugcap')][2], 41], ['sLayout', 42], [ddOf('ddView'), 43]];
     for (const [x, o] of ORDER) { const e = typeof x === 'string' ? document.getElementById(x) : x; if (e && e.parentElement === tb) { e.style.order = o; const n = e.nextElementSibling; if (n && n.classList.contains('uga')) n.style.order = o; } }
     for (const c of tb.children) if (!c.style.order && !c.classList.contains('uga')) c.style.order = 50;

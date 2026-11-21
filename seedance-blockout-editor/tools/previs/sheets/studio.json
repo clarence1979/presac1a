@@ -1,0 +1,17 @@
+{
+ "id": "studio",
+ "name": "Scene Studio",
+ "world": "studio",
+ "length": 30,
+ "logline": "A scene built by hand: add shapes, buildings, vehicles and people, move them, then set the camera.",
+ "thumb": 0,
+ "shots": [
+  {
+   "start": 0.0,
+   "preset": "lockedWide",
+   "subject": "Scene centre",
+   "name": "Wide view of the scene",
+   "params": { "back": 16, "side": 5, "h": 4.5, "fov": 55, "mix": 0, "push": 0 }
+  }
+ ]
+}

@@ -26,6 +26,9 @@ It has three parts:
 1. **The editor** (`index.html`): a timeline, a 3D view, a plan view and the final-shot view. Drag camera keys, add cuts and slow motion, write notes on any seconds of the film.
 2. **Shot sheets** (`tools/previs/`): describe a story as a small JSON file (one line per shot, 21 camera presets) and build it with one command.
 3. **The local helper** (`bridge.mjs`): saves projects and drafts on your computer, renders the blockout video, and talks to Tein when you press Generate.
+4. **The Scene Studio** (`studio-ui.js`, added in this copy): build a scene by hand, with no code and no agent. Add blocks, buildings, vehicles and people, move / turn / size them, give them a colour and a path over time, say what each one is in the film, then set the camera and generate. Start screen → **Build a scene by hand**, or **Build a scene** in any project. It works from a web address; scenes are kept in the browser.
+
+This copy also generates from a web address through your own Replicate account, with a choice of ten models and their prices (`models.js`), and rests when nothing moves so it stays light on the computer. See `FIXES.md` for everything that changed and `SETUP.md` for the setup.
 
 ---
 
@@ -261,6 +264,7 @@ Drafts, generated pictures and videos, your notes and fix history are written to
 
 ## Known limits
 
+- A hand-built scene (Scene Studio) is a 30 s take like every other; shorter clips come from "Part of the take" in Generate. The camera's wall guard does not know hand-built objects, so the camera can pass through them.
 - The live editor preview can show the figure jittering during playback in the Depth look. Exports and renders are not affected.
 - Rendering uses a headless browser, so a clean install needs Chrome or Chromium.
 - `npm run check:street-pov` (the original one-take example) currently reports a camera turn above the 4 degrees per frame limit in a few frames. The shot-sheet example passes (`npm test`).

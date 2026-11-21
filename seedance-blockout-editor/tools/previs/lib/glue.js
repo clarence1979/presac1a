@@ -210,7 +210,15 @@ const STY = (() => { const paper = new THREE.Color('#f3efe6'), ink = new THREE.L
   function set(st) { if (!make[st]) st = 'normal'; if (st === cur) return; const isLine = (v) => v === 'sketch' || v === 'workspace', lines = isLine(st); if (lines && !built) buildEdges();
     if (st === 'normal') for (const m of meshes) m.material = orig.get(m); else { const c = cache[st]; for (const m of meshes) { let v = c.get(m); if (v === undefined) { v = make[st](m); c.set(m, v); } m.material = v; } }
     if (built && lines !== isLine(cur)) for (const e of edges) e.visible = lines; if (lines) { ink.opacity = st === 'sketch' ? 0.8 : st === 'workspace' ? 0.9 : 0.55; ink.color.set(st === 'workspace' ? '#14171d' : '#2a2a2a'); } cur = st; }
-  return { set, get: () => cur, list: ['normal', 'neutral', 'sketch', 'depth', 'map', 'workspace'] }; })();
+  // a world that changes while the page is open (the Scene Studio): add(root, { keep, flat }) brings new meshes under the looks (keep = it keeps its colours in the blockout looks,
+  // flat = drawn in a flat bright colour in the depth and sketch looks); remove(root) forgets them and gives them their own materials back
+  const lineLook = (v) => v === 'sketch' || v === 'workspace';
+  function add(root, o = {}) { root.traverse((m) => { if (m.userData.inkEdge || m.userData.charLook) return; if (o.keep) keep.add(m); if (o.flat) SAUC.add(m); if (!m.isMesh || orig.has(m)) return; meshes.push(m); orig.set(m, m.material);
+      if (cur !== 'normal') { const v = make[cur](m); cache[cur].set(m, v); m.material = v; }
+      if (built && !isDome(m) && !isWater(m) && !m.isInstancedMesh) { const ls = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 28), ink); ls.visible = lineLook(cur); ls.userData.inkEdge = true; ls.raycast = () => {}; edges.push(ls); m.add(ls); } }); }
+  function remove(root) { const gone = new Set(); root.traverse((m) => { gone.add(m); keep.delete(m); SAUC.delete(m); if (!orig.has(m)) return; m.material = orig.get(m); orig.delete(m); for (const k in cache) cache[k].delete(m); });
+    for (let i = meshes.length - 1; i >= 0; i--) if (gone.has(meshes[i])) meshes.splice(i, 1); for (let i = edges.length - 1; i >= 0; i--) if (gone.has(edges[i]) || gone.has(edges[i].parent)) { edges[i].geometry.dispose(); edges.splice(i, 1); } }
+  return { set, get: () => cur, add, remove, list: ['normal', 'neutral', 'sketch', 'depth', 'map', 'workspace'] }; })();
 window.viewStyle = STY;
 CHARS.build(); CHARS.set(params.get('chars') || 'pill'); window.charLook = CHARS;
 STY.set(params.get('style') || (params.has('sketch') ? 'depth' : params.has('neutral') ? 'neutral' : 'normal'));
@@ -220,7 +228,7 @@ Object.defineProperty(window, 'CUTS', { get: () => cutList().map((s) => +playOf(
 window.POV = { THREE, scene, camera, renderer, canvas, params, updateWorld, bakedAt, poseAt, poseRaw, evalBase, baseSeg, camTime, invCam, baseKeyFromEdit, arcAt, ovrAt, keyFromEdit, lookTarget, placeActors, storyAt, storyOf, playOf, prepAt, easeOf, cbz, STORY_END, PLAY_TOTAL, SUBJ, subjAt, subjVis, bakeSubj, CHARS, CUT_S, SHOTS, AIRFOG, SEAFOG, domeAir, domeSea, sun, W, H, STY, bub, PRJ }; window.RAWLEN = PLAY_TOTAL; window.FPS = FPS; window.boardReady = true;
 window.POV.DOF = installDOF(window.POV, { lsKey: 'pov-focus' + SBX });   // depth of field + focus (project.focus)
 if (params.has('t')) renderAt(parseFloat(params.get('t')));
-else if (params.has('editor')) { import('../../editor.js?v=' + Date.now()).then((m) => m.start(window.POV)).catch((e) => console.error('editor failed', e)); }
+else if (params.has('editor')) { import('../../editor.js?v=' + (window.POV_V || Date.now())).then((m) => m.start(window.POV)).catch((e) => console.error('editor failed', e)); }
 else if (![...params.keys()].length || params.has('start')) { window.NO_RENDER = true; location.replace('../../index.html'); }   // no parameters = the start screen; ?play=1 is the plain preview
 else {
   const bar = document.createElement('div'); bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;padding:8px 12px;background:rgba(0,0,0,.72);color:#fff;font:13px system-ui;display:flex;gap:10px;align-items:center;z-index:9;flex-wrap:wrap';

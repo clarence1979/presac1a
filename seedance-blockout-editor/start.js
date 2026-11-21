@@ -96,6 +96,10 @@ export function start() {
         <div class="row" id="stNewRow" style="display:none"><input type="text" id="stName" placeholder="Project name" maxlength="60"><button id="stCreate">Create</button><button class="quiet" id="stCancelNew">Cancel</button></div>
         <div class="note" id="stEditNote"></div></section>
     </div>
+    <div class="rec" id="stScn"><div class="kick">Build a scene by hand</div>
+      <p style="margin:0 0 12px;color:var(--tn-muted,#9b9ca6);max-width:760px;line-height:1.5">No code and no agent: place blocks, buildings, vehicles and people yourself, give them a colour, a size and a path, say what each one is in the film, then set the camera and generate. Works from a web address too; scenes are kept in this browser.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><button class="pri" data-tpl="empty" style="width:auto;margin:0;padding:0 18px">New empty scene</button><button class="quiet" data-tpl="chase" title="The example film rebuilt from plain blocks you can change">Start from “Midnight chase”</button><button class="quiet" data-tpl="talk" title="A park, two people by a bench, someone walking past">Start from “Two people talking”</button></div>
+      <div class="tiles" id="stScnTiles"></div></div>
     <div class="lib" id="stLib" style="display:none"><div class="kick">Library</div><p class="libp" id="stLibP"></p><div id="stLibBody"></div><p class="libf" id="stLibF"></p></div>
     <div class="rec"><div class="kick">Recent projects</div><div class="tiles" id="stTiles"></div></div>
     <div class="rec" id="stGens" style="display:none"></div>
@@ -173,5 +177,12 @@ export function start() {
       else { body.files = {}; for (const f of fs) { let j; try { j = JSON.parse(await f.text()); } catch (er) { throw new Error(f.name + ' is not valid JSON'); } const kind = /story/i.test(f.name) || (j && (j.scenes || j.story || j.actors)) ? 'story.json' : j && !Array.isArray(j) && (j.camera || j.base || j.speed || j.tracks || j.pace || j.layers) ? 'editor-project.json' : null; if (!kind) throw new Error(f.name + ' is not an editor-project.json or a story.json'); body.files[kind] = j; }
         body.name = fs[0].name.replace(/\.json$/i, '').replace(/^editor-project$/i, 'Imported project'); }
       const p = await api('/api/projects', 'POST', body); go(p.id, p.name); } catch (er) { note(er.message, true); } };
+  // scenes built by hand (studio-ui.js keeps the list in this browser): start one, or open one again. Needs no helper.
+  { const LSI = 'pov-studio-index', rd = () => { try { const a = JSON.parse(localStorage.getItem(LSI) || '[]'); return Array.isArray(a) ? a.filter((x) => x && /^[a-z0-9][a-z0-9-]{2,60}$/.test(x.id || '')) : []; } catch (e) { return []; } };
+    const openScene = (id, tpl) => { location.href = 'projects/studio/index.html?editor=1&project=' + encodeURIComponent(id) + (tpl ? '&tpl=' + tpl : ''); };
+    $('#stScn').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.tpl) { const id = 'scene-' + Date.now().toString(36), a = rd(); a.unshift({ id, name: { empty: 'My scene', chase: 'Midnight chase', talk: 'Two people talking' }[b.dataset.tpl], t: Date.now() }); try { localStorage.setItem(LSI, JSON.stringify(a.slice(0, 200))); } catch (er) {} openScene(id, b.dataset.tpl); }
+      else if (b.dataset.sid) openScene(b.dataset.sid); });
+    $('#stScnTiles').innerHTML = rd().slice(0, 12).map((x) => `<button class="tile" data-sid="${esc(x.id)}" title="Open in the editor"><span class="ph">${esc(String(x.name || '?').trim().charAt(0).toUpperCase())}</span><div><b>${esc(x.name || 'My scene')}</b><span>built by hand · ${esc(when(new Date(x.t || Date.now()).toISOString()))}</span></div></button>`).join(''); }
   window.START = { root, load };
 }

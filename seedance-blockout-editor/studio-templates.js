@@ -1,0 +1,45 @@
+// studio-templates.js: starting points for a hand-built scene (Scene Studio). Each is plain scene data, the same as what the user makes with the Build tools,
+// so every block in it can be moved, resized, recoloured, renamed or deleted. Places are [left/right, height, near/far] in metres; the camera starts near [5, 4.5, 16] looking at the middle.
+const B = (name, x, z, w, h, d, c, what) => ({ kind: 'building', name, p: [x, 0, z], s: [w, h, d], c, ...(what ? { what } : {}) });
+const lamp = (i, x, z) => ({ kind: 'lamp', name: 'Lamp ' + i, p: [x, 0, z], r: [0, x < 0 ? 180 : 0, 0] });   // the arm points over the road
+const follow = (subj, o = {}) => ({ subj, a: 0, b: 30, in: 0.5, out: 0.5, ox: 0, oy: 0, sm: 0.25, follow: true, dist: 7, h: 2.2, side: 1.5, ...o });
+export const TEMPLATES = {
+  empty: { label: 'Empty scene', about: 'Only the ground. Add everything yourself.', scene: { v: 1, name: '', story: '', env: { ground: 'asphalt', sky: 'day' }, objects: [] } },
+  chase: { label: 'Midnight chase', about: 'The example film rebuilt from plain blocks: a street at night, a courier on a scooter, an SUV behind. Change anything.',
+    tracks: [follow('Bike')],
+    scene: { v: 1, name: 'Midnight chase', env: { ground: 'asphalt', sky: 'night' },
+      story: 'Night in a city. A courier on a red scooter waits at the kerb, then races down the avenue with a black SUV close behind. He swerves around a parked car and past a man on the pavement; the SUV closes in. Near the clock tower at the end of the avenue the SUV brakes hard and the scooter gets away.',
+      objects: [
+        { kind: 'floor', name: 'Avenue', p: [0, 0, -90], s: [13, 0.1, 250], c: '#50525a', what: 'a wet asphalt city avenue with lane markings, reflecting the street lights' },
+        { kind: 'floor', name: 'Pavement left', p: [-8.5, 0.05, -90], s: [4, 0.2, 250], c: '#8a8b90' }, { kind: 'floor', name: 'Pavement right', p: [8.5, 0.05, -90], s: [4, 0.2, 250], c: '#8a8b90' },
+        B('Block L1', -17.5, 6, 14, 18, 22, '#cdb995', 'five-storey brick apartment blocks with shops at street level and a few lit windows'), B('Block L2', -17.5, -20, 14, 24, 24, '#bca783'), B('Block L3', -17.5, -48, 14, 15, 24, '#cdb995'), B('Block L4', -17.5, -76, 14, 22, 26, '#bca783'),
+        B('Block L5', -17.5, -106, 14, 17, 26, '#cdb995'), B('Block L6', -17.5, -136, 14, 26, 28, '#bca783'), B('Block L7', -17.5, -168, 14, 19, 28, '#cdb995'),
+        B('Block R1', 17.5, 4, 14, 22, 24, '#bca783'), B('Block R2', 17.5, -24, 14, 16, 24, '#cdb995'), B('Block R3', 17.5, -52, 14, 25, 26, '#bca783'), B('Block R4', 17.5, -82, 14, 18, 26, '#cdb995'),
+        B('Block R5', 17.5, -112, 14, 23, 26, '#bca783'), B('Block R6', 17.5, -142, 14, 15, 28, '#cdb995'), B('Block R7', 17.5, -172, 14, 21, 26, '#bca783'),
+        { kind: 'building', name: 'Clock tower', p: [0, 0, -214], s: [9, 42, 9], c: '#d9cdb8', subject: true, what: 'a tall stone clock tower with a lit clock face that shows one minute to midnight' },
+        { kind: 'box', name: 'Clock face', p: [0, 34, -209.3], s: [5, 5, 0.4], c: '#ffcc00', keep: true, what: 'the glowing clock face of the tower' },
+        lamp(1, -6.4, 0), lamp(2, 6.4, -26), lamp(3, -6.4, -52), lamp(4, 6.4, -78), lamp(5, -6.4, -104), lamp(6, 6.4, -130), lamp(7, -6.4, -156),
+        { kind: 'tree', name: 'Tree 1', p: [8.6, 0, -12], s: [0.8, 0.8, 0.8] }, { kind: 'tree', name: 'Tree 2', p: [-8.6, 0, -66], s: [0.8, 0.8, 0.8] },
+        { kind: 'car', name: 'Parked car', p: [4.6, 0, -60], r: [0, 180, 0], c: '#b8bcc4', what: 'a parked silver hatchback' },
+        { id: 'bike', kind: 'scooter', name: 'Bike', c: '#e3121c', subject: true, what: 'a glossy red scooter with a bright white headlight',
+          keys: [{ t: 0, p: [3.5, 0, 9] }, { t: 2.5, p: [3.5, 0, 8.5] }, { t: 5, p: [2, 0, -4] }, { t: 9, p: [1.5, 0, -40] }, { t: 11.2, p: [-1.8, 0, -62] }, { t: 14, p: [1.2, 0, -90] }, { t: 20, p: [-1, 0, -142] }, { t: 26, p: [0.5, 0, -186] }, { t: 30, p: [3, 0, -196] }] },
+        { kind: 'person', name: 'Courier', on: 'bike', p: [0, 0.12, -0.25], c: '#ff2d20', subject: true, what: 'a young courier, slim, in a black leather jacket, black gloves and a red open-face helmet' },
+        { kind: 'suv', name: 'SUV', c: '#141518', subject: true, what: 'a black SUV with tinted windows and blinding headlights',
+          keys: [{ t: 0, p: [-1.5, 0, 46] }, { t: 3, p: [-1.5, 0, 40] }, { t: 6, p: [-1, 0, 14] }, { t: 10, p: [0.5, 0, -30] }, { t: 14, p: [0, 0, -74] }, { t: 20, p: [0.5, 0, -128] }, { t: 24.5, p: [0.5, 0, -160] }, { t: 27, p: [1, 0, -168] }, { t: 30, p: [1, 0, -169] }] },
+        { kind: 'person', name: 'Passer-by', c: '#00d5ff', what: 'an older man in a long grey coat carrying a paper bag', keys: [{ t: 0, p: [-8, 0.15, -52] }, { t: 30, p: [-8, 0.15, -84] }] },
+      ] } },
+  talk: { label: 'Two people talking', about: 'A park in daylight: two people by a bench, a house, trees, someone walking past.',
+    tracks: [],
+    scene: { v: 1, name: 'Two people talking', env: { ground: 'grass', sky: 'day' },
+      story: 'A quiet park on a sunny afternoon. Ana and Ben stand by a wooden bench and talk; she points towards the house, he nods. A jogger passes behind them on the gravel path.',
+      objects: [
+        { kind: 'floor', name: 'Path', p: [0, 0, -6], r: [0, 90, 0], s: [2.6, 0.08, 46], c: '#cdb995', what: 'a light gravel footpath' },
+        { kind: 'box', name: 'Bench', p: [0, 0, -3.2], s: [2.2, 0.5, 0.6], c: '#8c4a3a', what: 'a weathered wooden park bench' },
+        { kind: 'house', name: 'House', p: [-10, 0, -18], r: [0, 25, 0], c: '#f2f2f0', what: 'a white two-storey house with a red tiled roof' },
+        { kind: 'tree', name: 'Oak', p: [5.5, 0, -9], s: [1.2, 1.2, 1.2], what: 'a big old oak tree' }, { kind: 'tree', name: 'Tree 2', p: [-4.5, 0, -11] }, { kind: 'tree', name: 'Tree 3', p: [12, 0, -16], s: [0.9, 0.9, 0.9] },
+        { kind: 'lamp', name: 'Lamp', p: [3.4, 0, -4.6] },
+        { kind: 'person', name: 'Ana', p: [-0.8, 0, -1], r: [0, 90, 0], c: '#ffcc00', subject: true, what: 'a woman in her thirties with dark curly hair, in a yellow raincoat and jeans' },
+        { kind: 'person', name: 'Ben', p: [0.8, 0, -1], r: [0, -90, 0], c: '#3d7bff', subject: true, what: 'a tall man in his sixties with grey hair, in a dark blue suit' },
+        { kind: 'person', name: 'Jogger', c: '#7dff3a', what: 'a jogger in a green running top and black shorts', keys: [{ t: 2, p: [-20, 0.05, -6] }, { t: 16, p: [20, 0.05, -6] }] },
+      ] } },
+};

@@ -19,7 +19,9 @@
     "check": "node tools/previs/check-sheet.mjs projects/midnight-courier-2",
     "test:editor": "node tools/tests/editor-save.mjs",
     "test:web": "node tools/tests/web-generate.mjs",
-    "test:replicate": "node tools/tests/replicate.mjs"
+    "test:replicate": "node tools/tests/replicate.mjs",
+    "test:studio": "node tools/tests/studio.mjs",
+    "stamp": "node tools/stamp.mjs"
   },
   "dependencies": {
     "puppeteer-core": "^23.0.0"

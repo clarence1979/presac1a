@@ -1,15 +1,16 @@
-// Seedance relay: lets the blockout editor, opened from a web address, talk to Replicate (Replicate's API does not answer browser pages directly).
+// Seedance relay (v2): lets the blockout editor, opened from a web address, talk to Replicate (Replicate's API does not answer browser pages directly).
 // It forwards only the few Replicate calls the editor needs, with the visitor's own token, and keeps nothing: no token, no file, no log.
+// v2: passes on predictions for any Replicate model (the page offers several video models; the visitor's own token pays), and says its version at /version.
 // Deploy: Cloudflare dashboard > Workers & Pages > Create > Worker > paste this file > Deploy. No settings or secrets are needed.
 const API = 'https://api.replicate.com';
-const MODEL = 'bytedance/seedance-2.5';
+const VERSION = 2;
 // pages allowed to use this relay (others get 403)
 const ORIGINS = [/^https:\/\/materials\.teachingtools\.dev$/, /^https:\/\/[a-z0-9-]+\.teachingtools\.dev$/, /^https:\/\/clarence1979\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
 // the calls that are passed on: [method, path pattern]
 const ROUTES = [
   ['GET', /^\/v1\/account$/],                                   // test the token
-  ['POST', /^\/v1\/files$/],                                    // upload the blockout (multipart, field "content")
-  ['POST', new RegExp('^/v1/models/' + MODEL.replace(/[./-]/g, '\\$&') + '/predictions$')],   // start a video
+  ['POST', /^\/v1\/files$/],                                    // upload the blockout or its key frames (multipart, field "content")
+  ['POST', /^\/v1\/models\/[a-z0-9][a-z0-9._-]{0,60}\/[a-z0-9][a-z0-9._-]{0,80}\/predictions$/],   // start a video on a model
   ['GET', /^\/v1\/predictions\/[a-z0-9]+$/],                    // follow it
   ['POST', /^\/v1\/predictions\/[a-z0-9]+\/cancel$/],           // stop it
 ];
@@ -21,7 +22,8 @@ const json = (o, status, origin) => new Response(JSON.stringify(o), { status, he
 export default {
   async fetch(request) {
     const url = new URL(request.url), origin = request.headers.get('origin') || '', okOrigin = ORIGINS.some((re) => re.test(origin)) ? origin : '';
-    if (url.pathname === '/' && request.method === 'GET') return new Response('Seedance relay is running.', { headers: { 'content-type': 'text/plain', ...(okOrigin ? cors(okOrigin) : {}) } });
+    if (url.pathname === '/' && request.method === 'GET') return new Response('Seedance relay is running. v' + VERSION, { headers: { 'content-type': 'text/plain', ...(okOrigin ? cors(okOrigin) : {}) } });
+    if (url.pathname === '/version' && request.method === 'GET') return json({ v: VERSION, models: 'any' }, 200, okOrigin || undefined);
     if (!okOrigin) return json({ detail: 'This relay only answers the blockout editor pages.' }, 403);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(okOrigin) });
 

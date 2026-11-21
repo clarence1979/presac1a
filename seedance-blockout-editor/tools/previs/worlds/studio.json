@@ -1,0 +1,10 @@
+{
+ "id": "studio",
+ "name": "Scene Studio",
+ "module": "studio.js",
+ "logline": "A scene built by hand in the Scene Studio.",
+ "rate": "no dialogue",
+ "sound": [],
+ "cast": [],
+ "styles": []
+}
