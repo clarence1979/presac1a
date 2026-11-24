@@ -1,0 +1,57 @@
+<!doctype html>
+<!--
+  Algo Lab by Dilum Sanjaya (https://x.com/DilumSanjaya).
+  Original: https://byte-sized-algorithms.vercel.app
+  Mirrored here with the author's permission. All rights remain with the author.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f7f4ee" />
+
+    <meta name="description" content="Learn data structures and algorithms in 86 short lessons. Each one is a step-by-step walkthrough with an isometric diagram that moves as you go." />
+    <link rel="canonical" href="https://byte-sized-algorithms.vercel.app/" />
+
+    <!-- How a link to the site is shown when it is shared. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Algo Lab" />
+    <meta property="og:title" content="Algo Lab · Data structures and algorithms, step by step" />
+    <meta property="og:description" content="86 short lessons, each a step-by-step walkthrough with an isometric diagram that moves as you go." />
+    <meta property="og:url" content="https://materials.teachingtools.dev/algo-lab/" />
+    <meta property="og:image" content="https://materials.teachingtools.dev/algo-lab/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Algo Lab: an isometric diagram of a stack, with the words “Data structures and algorithms, step by step”." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Algo Lab · Data structures and algorithms, step by step" />
+    <meta name="twitter:description" content="86 short lessons, each a step-by-step walkthrough with an isometric diagram that moves as you go." />
+    <meta name="twitter:image" content="https://materials.teachingtools.dev/algo-lab/og.png" />
+    <meta name="twitter:creator" content="@DilumSanjaya" />
+
+    <script>
+      // Settle the theme before anything is drawn: the learner's choice if
+      // they have made one, the system's otherwise.
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem('algolab:theme');
+        } catch (error) {}
+        if (theme !== 'dark' && theme !== 'light') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        if (theme === 'dark') document.querySelector('meta[name="theme-color"]').content = '#0b0c0e';
+      })();
+    </script>
+    <title>Algo Lab · Data structures and algorithms, step by step</title>
+    <script type="module" crossorigin src="assets/index-BKyL8mWK.js"></script>
+    <link rel="stylesheet" crossorigin href="assets/index-Y6bcg-HW.css">
+    <link rel="modulepreload" crossorigin href="assets/basics-D71IzsaR.js">
+    <link rel="modulepreload" crossorigin href="assets/scene-BZ2kI7q5.js">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
