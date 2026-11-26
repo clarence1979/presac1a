@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Afterglow SRS Evaluation · Year 11 Applied Computing</title>
+<meta name="description" content="Year 11 Applied Computing evaluation questionnaire: test the Afterglow game against its Software Requirements Specification (SRS).">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='14' fill='%23120B2E'/%3E%3Cpath d='M18 20h28M18 32h28M18 44h18' stroke='%2345F0FF' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M42 42l4 4 8-10' stroke='%23FF3D8B' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#1b1730; --muted:#5a5672; --bg:#f5f4fa; --card:#fff; --line:#dcd8ea;
+  --navy:#120B2E; --pink:#d81b6a; --pink-soft:#ffe3ef; --cyan:#0b7c8a; --cyan-soft:#dcf6f9;
+  --ok:#1a7f37; --ok-soft:#e3f5e8; --bad:#b42318; --bad-soft:#fde8e6; --amber:#9a5b00; --amber-soft:#fff2d6;
+  --A:#5a5672; --B:#6b3fd1; --C:#d81b6a; --D:#0b7c8a; --E:#a15c00; --F:#1a7f37; --G:#120B2E;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:0 18px}
+h1,h2,h3,h4{line-height:1.25}
+a{color:var(--cyan)}
+kbd{display:inline-block;min-width:1.6em;padding:0 .4em;border:1px solid #b9b4cf;border-bottom-width:2px;border-radius:5px;background:#fff;font:600 .82em/1.6 ui-monospace,Consolas,monospace;text-align:center;color:var(--ink)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:-999px}.skip:focus{left:10px;top:10px;z-index:99;background:#fff;padding:8px}
+:focus-visible{outline:3px solid #2f6fed;outline-offset:2px}
+.print-only{display:none}
+
+/* header */
+.top{background:linear-gradient(120deg,#120B2E 0%,#2a1256 60%,#3a0f3f 100%);color:#fff;padding:26px 0 22px;border-bottom:4px solid;border-image:linear-gradient(90deg,#FF3D8B,#45F0FF) 1}
+.top .kicker{margin:0 0 6px;color:#9eeef7;font-weight:600;font-size:.88rem;letter-spacing:.02em}
+.top h1{margin:0;font-size:clamp(1.6rem,4vw,2.3rem)}
+.top .sub{margin:6px 0 0;color:#e6defa}
+
+/* sticky bar */
+.bar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(18,11,46,.07)}
+.bar-in{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding-top:8px;padding-bottom:8px}
+.clock{display:flex;gap:8px;align-items:center;font-size:.92rem}
+#clockTxt b{font-variant-numeric:tabular-nums}
+#clockTxt.late{color:var(--bad);font-weight:700}
+.prog{display:flex;gap:8px;align-items:center;font-size:.92rem;margin-left:auto}
+.progbar{width:120px;height:9px;background:#ebe8f5;border-radius:9px;overflow:hidden}
+#progFill{display:block;height:100%;width:0;background:linear-gradient(90deg,#FF3D8B,#0b7c8a);transition:width .3s}
+.saved{font-size:.85rem;color:var(--ok);min-width:5.5em}
+.saved.err{color:var(--bad)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--navy);background:var(--navy);color:#fff;border-radius:10px;padding:8px 14px;font-family:inherit;font-weight:600;font-size:.95rem;line-height:1.2;cursor:pointer;text-decoration:none}
+.btn:hover{filter:brightness(1.15)}
+.btn.game{background:var(--pink);border-color:var(--pink)}
+.btn.ghost{background:#fff;color:var(--navy)}
+.btn.small{padding:5px 10px;font-size:.85rem}
+.btn.danger{background:var(--bad);border-color:var(--bad)}
+.btn[aria-disabled="true"]{background:#d9d6e4;border-color:#d9d6e4;color:#6d6984;cursor:not-allowed;filter:none}
+.big-btn{font-size:1.1rem;padding:12px 22px}
+
+/* intro */
+.intro{margin:22px 0}
+.away{background:var(--amber-soft);border-left:6px solid var(--amber);padding:12px 16px;border-radius:8px;margin:0 0 16px}
+.cols{display:grid;grid-template-columns:1.25fr 1fr;gap:22px}
+.cols h2{font-size:1.2rem;margin:.2em 0 .5em}
+ol.big{padding-left:1.3em;margin:0}ol.big li{margin:.35em 0}
+table.plan{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:.95rem}
+.plan th,.plan td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left}
+.plan th{background:#efedf7}.plan td:first-child{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+.plan tr.hl td{background:var(--pink-soft)}
+.rules{margin:16px 0 10px;padding-left:1.2em;color:var(--muted)}
+details.help{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0}
+details.help summary{cursor:pointer;font-weight:600}
+details.help li{margin:.3em 0}
+
+/* parts */
+.part{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px 22px;margin:24px 0;border-top:6px solid var(--pc,#999)}
+.pA{--pc:var(--A)}.pB{--pc:var(--B)}.pC{--pc:var(--C)}.pD{--pc:var(--D)}.pE{--pc:var(--E)}.pF{--pc:var(--F)}.pG{--pc:var(--G)}
+.part>h2{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;font-size:1.45rem}
+.pl{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--pc);color:#fff;font-weight:800}
+.mins{font-size:.8rem;font-weight:600;color:var(--pc,var(--muted));background:#f3f1f9;border-radius:20px;padding:2px 10px}
+.part h3{margin:22px 0 8px;font-size:1.12rem}
+.note,.muted{color:var(--muted)}
+.note{font-size:.95rem}
+
+/* form controls */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 16px}
+.fl{display:block;font-weight:600;margin:8px 0 4px;font-size:.95rem}
+input[type=text],input[type=number],select,textarea{width:100%;font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1.5px solid #c9c4dc;border-radius:8px;padding:8px 10px}
+textarea.grow{resize:vertical;min-height:2.6em;overflow:hidden;line-height:1.45}
+input[readonly]{background:#f3f1f9}
+input:focus,select:focus,textarea:focus{border-color:var(--cyan);outline:3px solid rgba(11,124,138,.2);outline-offset:0}
+.q.need input,.q.need select,.q.need textarea,.need-field{border-color:#e39a00 !important;background:#fffaf0}
+fieldset.opts{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+fieldset.opts.stack{flex-direction:column}
+.opt{display:inline-flex;align-items:flex-start;gap:8px;border:1.5px solid #c9c4dc;border-radius:10px;padding:7px 12px;cursor:pointer;background:#fff;font-size:.95rem}
+.opt input{margin:.2em 0 0;accent-color:var(--navy);width:1.05em;height:1.05em;flex:none}
+.opt:hover{border-color:var(--navy)}
+.opt.picked{border-color:var(--navy);background:#efeafc;font-weight:600}
+fieldset.need .opt{border-color:#e39a00}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:10px 0}
+.rl{font-weight:600;font-size:.95rem}
+
+/* cards */
+.card{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;background:#fff}
+.card.fr,.card[id^=d]{border-left:5px solid var(--pc)}
+.req-stmt{margin:0 0 6px}
+.rid{display:inline-block;font:700 .82rem/1.5 ui-monospace,Consolas,monospace;background:var(--navy);color:#fff;border-radius:6px;padding:1px 7px;margin-right:4px}
+.badge{display:inline-block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--cyan-soft);color:var(--cyan);border-radius:20px;padding:2px 9px}
+.badge.bonus{background:var(--amber-soft);color:var(--amber)}
+.badge-line{margin:0 0 6px}
+.worked{border:2px dashed #9fd8df;background:#f5fcfd}
+.worked-ans{margin:6px 0 0;background:#fff;border-left:4px solid var(--cyan);padding:8px 12px;border-radius:6px}
+.why-good{font-size:.9rem;color:var(--muted);margin:8px 0 0}
+.tip{background:#f3f1f9;border-radius:8px;padding:8px 12px;font-size:.95rem;margin:8px 0}
+.look{font-size:.92rem;color:var(--muted);margin:4px 0}
+
+/* part B */
+.why{background:#f4f0ff;border-radius:12px;padding:12px 16px}
+.why h3{margin:.2em 0 .4em}
+.psm{display:flex;align-items:stretch;gap:6px;margin:16px 0 6px;flex-wrap:wrap}
+.psm .st{flex:1 1 150px;border:2px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:2px}
+.psm .st span{font-size:.9rem;color:var(--muted)}
+.psm .st em{font-style:normal;font-size:.78rem;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.04em}
+.psm .st.hi{border-color:var(--pink)}
+.psm .st.you{background:var(--pink-soft)}
+.psm .arr{align-self:center;font-size:1.4rem;color:var(--muted)}
+.psm-note{font-size:.92rem;color:var(--muted);margin:4px 0 14px}
+.kws{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.kw{border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:#fcfbff}
+.kw h4{margin:.2em 0 .3em;font-size:1.02rem;color:var(--B)}
+.kw h4 small{display:block;font-weight:600;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.kw p{margin:.3em 0;font-size:.93rem}
+.kw .eg{color:var(--muted)}
+.hook{background:var(--cyan-soft);border-radius:10px;padding:10px 14px;margin:14px 0}
+details.fullsrs{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:12px 0;background:#fff}
+details.fullsrs summary{cursor:pointer;font-weight:600;color:var(--B)}
+.doc{font-size:.93rem;padding:6px 4px}
+.doc-title{font-weight:800;font-size:1.1rem;margin:.6em 0}.doc-title span{font-weight:600;color:var(--muted);font-size:.9rem}
+.doc h4{margin:1em 0 .3em}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.two ul{margin:.3em 0;padding-left:1.2em}
+.quiz-item{display:grid;grid-template-columns:1fr 260px 34px;gap:6px 12px;align-items:center;border-bottom:1px solid var(--line);padding:10px 0}
+.quiz-item .qtext{font-weight:500}
+.qn{font:700 .8rem ui-monospace,Consolas,monospace;color:var(--B);margin-right:4px}
+.mark{font-size:1.3rem;font-weight:800;text-align:center}
+.mark.ok{color:var(--ok)}.mark.no{color:var(--bad)}
+.hint{grid-column:1/-1;margin:0;font-size:.9rem;color:var(--bad)}
+.hint:empty{display:none}
+.checkrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0 4px}
+.msg{font-size:.93rem;font-weight:600}
+.msg.ok{color:var(--ok)}.msg.no{color:var(--bad)}.msg.warn{color:var(--amber)}
+.score{font-weight:700;margin:4px 0 0}
+.score:empty{display:none}
+.qtext{margin:0 0 6px}
+
+/* part C */
+.legend{background:#fbf7fa;border:1px solid #f1d3e1;border-radius:10px;padding:8px 14px;font-size:.94rem}
+.legend p{margin:.3em 0}
+.mission{margin:26px 0 6px;padding:12px 16px;border-radius:12px;background:#fff5f9;border:1px solid #f4c9dc}
+.mission h3{margin:0 0 6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mnum{background:var(--pink);color:#fff;border-radius:8px;padding:2px 10px;font-size:.85rem}
+ol.steps,ul.steps{margin:6px 0 2px;padding-left:1.4em}
+.steps li{margin:.3em 0}
+.bonus-box{margin-top:26px;border:2px dashed #e9c46a;border-radius:12px;padding:4px 16px 8px;background:#fffcf3}
+
+/* part E */
+.srs{position:relative;border:1px solid #d8d2f3;background:#faf8ff;border-radius:10px;padding:22px 14px 10px;margin:10px 0;font-size:.95rem}
+.srs-tag{position:absolute;top:-1px;left:12px;background:var(--B);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:0 0 6px 6px}
+.arow{border-bottom:1px solid var(--line);padding:6px 0}.arow:last-child{border:0}
+.mcq .opt{width:100%}
+
+/* part F */
+.summary table{border-collapse:collapse;width:100%;font-size:.93rem}
+.summary th,.summary td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+.summary th{background:#f3f1f9}
+.summary .counts{margin:8px 0 0;font-weight:600}
+ul.eff{columns:2;column-gap:24px;font-size:.9rem;padding-left:1.2em;margin:6px 0 10px}
+ul.eff li{break-inside:avoid;margin:.15em 0}
+.ext{background:#f6fbf7}
+
+/* part G */
+.savebox{margin:16px 0;padding:16px;border-radius:12px;background:#f3f1f9;text-align:center}
+.missing{text-align:left;background:#fff;border:2px solid #e39a00;border-radius:10px;padding:12px 16px;margin-top:12px}
+.missing ul{columns:2;font-size:.9rem;margin:6px 0 10px}
+.reset{margin-top:14px;font-size:.9rem;color:var(--muted)}
+.warn{background:var(--bad-soft);padding:12px;border-radius:8px}
+
+@media (max-width:760px){
+  .cols,.grid2,.grid3,.two{grid-template-columns:1fr}
+  .quiz-item{grid-template-columns:1fr 34px}.quiz-item select{grid-column:1}
+  .prog{margin-left:0}
+  ul.eff,.missing ul{columns:1}
+  .psm .arr{display:none}
+}
+
+/* ---------------------------------------------------------- print / PDF */
+.pv{display:none}
+@media print{
+  @page{size:A4;margin:13mm 12mm}
+  body{background:#fff;font-size:10.5pt;line-height:1.4;color:#000}
+  .screen-only,.bar,.skip,noscript,.checkrow button,.mark:empty{display:none !important}
+  .print-only{display:block}
+  .wrap{max-width:none;padding:0}
+  .top{background:none;color:#000;border-bottom:1.5pt solid #000;padding:0 0 4pt;border-image:none}
+  .top .kicker,.top .sub{color:#333}
+  .top h1{font-size:16pt}
+  .print-head{display:block;border:1pt solid #000;padding:5pt 8pt;margin:0 0 8pt;font-size:10pt}
+  .print-head b{margin-right:3pt}
+  .print-head span{display:inline-block;margin-right:16pt}
+  .part{border:0;border-top:1.2pt solid #000;border-radius:0;padding:6pt 0 0;margin:10pt 0}
+  .part>h2{font-size:13pt;margin:0 0 4pt}
+  .pl{background:none;color:#000;border:1.2pt solid #000;width:auto;height:auto;padding:0 5pt;border-radius:4pt}
+  .mins{display:none}
+  .part h3{font-size:11pt;margin:8pt 0 3pt}
+  .card,.mission,.worked,.bonus-box,.srs,.legend,.ext,.kw,.why,.hook{background:none !important;border:0.6pt solid #999;border-radius:4pt;padding:5pt 8pt;margin:5pt 0;box-shadow:none}
+  .card.fr,.card[id^=d]{border-left:0.6pt solid #999}
+  .q,.card,.arow,.quiz-item,.mission,.srs,tr{break-inside:avoid}
+  .mission h3{margin:0}
+  .mnum,.rid,.badge,.srs-tag{background:none !important;color:#000 !important;border:0.6pt solid #000}
+  .srs{padding-top:14pt}
+  .psm .st{border:0.6pt solid #999;padding:3pt 6pt}
+  .psm .st.hi{border-color:#000}
+  .psm .st.you{background:none;border-width:1.4pt;border-color:#000}
+  .psm .st em{color:#000}
+  .psm-note{margin:2pt 0 6pt}
+  input,select,textarea,fieldset.opts{display:none !important}
+  .pv{display:block;border-bottom:0.6pt dotted #666;padding:1pt 2pt 2pt;min-height:1.3em;white-space:pre-wrap;font-family:inherit;color:#000}
+  .pv.inline{display:inline-block;min-width:40%}
+  .pv.empty{color:#888;font-style:italic}
+  .row{margin:3pt 0;gap:2pt 6pt}
+  .fl{margin:4pt 0 1pt;font-size:9.5pt}
+  .quiz-item{grid-template-columns:1fr 150pt 18pt;padding:3pt 0;border-bottom:0.5pt solid #ccc}
+  .hint{color:#000;font-style:italic}
+  .mark.ok,.mark.no{color:#000}
+  .summary th{background:none}
+  .summary th,.summary td{border:0.5pt solid #777;padding:2pt 4pt}
+  ul.eff{display:none}
+  .worked-ans{border-left:1.2pt solid #000;padding:2pt 6pt}
+  a{color:#000;text-decoration:none}
+  .endnote{margin-top:10pt;font-size:8.5pt;color:#444}
+  h2,h3{break-after:avoid}
+}
+
+</style>
+</head>
+<body>
+<div class="print-head print-only" id="printHead"></div>
+
+<a class="skip" href="#partA">Skip to Part A</a>
+<header class="top">
+  <div class="wrap">
+    <p class="kicker">Year 11 Applied Computing · Software Development · Evaluation stage</p>
+    <h1>Afterglow: did the game meet its SRS?</h1>
+    <p class="sub">Evaluation questionnaire · 45 minutes · Save as PDF and upload to SEQTA</p>
+  </div>
+</header>
+
+<div class="bar screen-only" role="region" aria-label="Lesson tools">
+  <div class="wrap bar-in">
+    <a class="btn game" href="https://afterglow-night-drive.netlify.app/" target="_blank" rel="noopener">▶ Open the game <span aria-hidden="true">↗</span></a>
+    <div class="clock"><button type="button" class="btn ghost" id="clockBtn">Start my 45-min clock</button><span id="clockTxt" aria-live="polite"></span></div>
+    <div class="prog"><span id="progTxt">0 answered</span><span class="progbar"><span id="progFill"></span></span></div>
+    <span id="savedTxt" class="saved" aria-live="polite"></span>
+  </div>
+</div>
+
+<noscript><p class="wrap warn">This page needs JavaScript to save your answers and make your PDF. Please turn JavaScript on, or tell the teacher in the room.</p></noscript>
+
+<main class="wrap">
+
+<section class="intro screen-only">
+  <p class="away"><b>Mr Goh is away today.</b> Everything you need is on this page. Work from top to bottom and follow the time plan.</p>
+  <div class="cols">
+    <div>
+      <h2>What to do</h2>
+      <ol class="big">
+        <li>Type your name in <b>Part A</b>. Your answers save automatically in this browser as you type.</li>
+        <li>Read the key words in <b>Part B</b> and do the quick check.</li>
+        <li>Open the game and do the four missions in <b>Part C</b>. Come back to this tab after each mission to record what happened.</li>
+        <li>Answer <b>Parts D, E and F</b>.</li>
+        <li>Click <b>Save as PDF</b> in <b>Part G</b> and upload the PDF to SEQTA <b>before the bell</b>.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Time plan</h2>
+      <table class="plan">
+        <tr><th>Minutes</th><th>What you do</th></tr>
+        <tr><td>0–2</td><td>A · Your details</td></tr>
+        <tr><td>2–6</td><td>B · Key words</td></tr>
+        <tr><td>6–22</td><td>C · Play and test the game</td></tr>
+        <tr><td>22–28</td><td>D · Non-functional requirements</td></tr>
+        <tr><td>28–35</td><td>E · Scope, constraints, assumptions</td></tr>
+        <tr><td>35–40</td><td>F · Your evaluation</td></tr>
+        <tr class="hl"><td>40–45</td><td>G · Save as PDF, upload to SEQTA</td></tr>
+      </table>
+    </div>
+  </div>
+  <ul class="rules">
+    <li>Work on your own. You only talk to a classmate in question D5.</li>
+    <li>Sound is not needed. Headphones are optional.</li>
+    <li>If the flashing lights or movement make you feel dizzy or unwell, press <kbd>Esc</kbd> → Settings, turn on <b>Reduce motion effects</b> and turn off <b>Camera shake</b>. If you still feel unwell, stop playing and tell the teacher in the room.</li>
+    <li>Do not use a private or incognito window, and do not close this tab until your PDF is uploaded.</li>
+    <li>To switch between the game and this page, click the tabs at the top of the browser (or press <kbd>Ctrl</kbd> + <kbd>Tab</kbd>).</li>
+  </ul>
+  <details class="help">
+    <summary>If something goes wrong (read this if you get stuck)</summary>
+    <ul>
+      <li><b>Stuck in the game</b> (in a wall, lost, car upside down): press <kbd>Esc</kbd> and choose <b>Reset my position</b> or <b>Reset car to road</b>.</li>
+      <li><b>Keys do nothing in the game:</b> click once inside the game, then try again.</li>
+      <li><b>The game will not load or stays black:</b> refresh the game tab (<kbd>F5</kbd>) and wait 30 seconds. Still broken? Try Chrome or Edge. Still broken? Sit with a classmate, watch them do Part C, and write “would not load on my device” in your evidence. That is real evaluation evidence for reliability and portability (D3, D5).</li>
+      <li><b>The game is very slow:</b> press <kbd>Esc</kbd> → Settings → Graphics → <b>Performance</b> or <b>Lightest</b>. Write down what you changed in D2.</li>
+      <li><b>My answers disappeared:</b> they are saved in this browser on this computer. Open this same page again in the same browser.</li>
+      <li><b>Save as PDF does not work:</b> see the help in Part G.</li>
+    </ul>
+  </details>
+  <details class="help">
+    <summary>Note for the teacher in the room</summary>
+    <p>Students complete this page on their own laptops for the whole lesson. They need only this page and the game link (the button at the top). No sound is needed. At the end they save the page as a PDF and upload it to SEQTA (task: “Afterglow SRS Evaluation”). Helpful reminders: at <b>22 minutes</b> (“move on to Part D”), <b>35 minutes</b> (“start Part F”) and <b>40 minutes</b> (“save your PDF and upload it now”). If the game will not run on a laptop, the student watches a classmate play and still completes every part. Thank you!</p>
+  </details>
+</section>
+
+<!-- =============================== PART A -->
+<section class="part pA" id="partA">
+  <h2><span class="pl">A</span> Your details <span class="mins">0–2 min</span></h2>
+  <div class="grid2">
+    <div class="q"><label class="fl" for="f-name">Full name *</label><input id="f-name" name="name" type="text" autocomplete="name" data-req data-label="Full name" placeholder="First name and surname"></div>
+    <div class="q"><label class="fl" for="f-class">Class *</label><input id="f-class" name="class" type="text" data-req data-label="Class" placeholder="e.g. 11 Applied Computing"></div>
+    <div class="q"><label class="fl" for="f-device">Device you are using *</label>
+      <select id="f-device" name="device" data-req data-label="Device"><option value="">Choose…</option><option>Windows laptop</option><option>MacBook</option><option>Chromebook</option><option>iPad or tablet</option><option>Other</option></select></div>
+    <div class="q"><label class="fl" for="f-browser">Browser *</label>
+      <select id="f-browser" name="browser" data-req data-label="Browser"><option value="">Choose…</option><option>Chrome</option><option>Edge</option><option>Safari</option><option>Firefox</option><option>Other</option></select></div>
+    <div class="q"><label class="fl" for="f-date">Date</label><input id="f-date" name="date" type="text" readonly data-label="Date"></div>
+  </div>
+  <p class="note">Why do we ask for your device and browser? An SRS describes the <b>technical environment</b> the software must run in. Your device is part of your evidence.</p>
+</section>
+
+<!-- =============================== PART B -->
+<section class="part pB" id="partB">
+  <h2><span class="pl">B</span> Learn the key words <span class="mins">2–6 min</span></h2>
+  <div class="why screen-only">
+    <h3>Why are we learning this?</h3>
+    <p>Before a real software team builds anything (a game studio, a bank app, the SEQTA you use every day), they write down exactly what the software must do and how well it must do it. That document is the <b>Software Requirements Specification (SRS)</b>. When the software is finished, testers check it against the SRS. That check is the <b>Evaluation</b> stage, and it is exactly what you are doing today.</p>
+    <p>In Units 3 and 4 Software Development, your School-assessed Task (SAT) asks you to write your own SRS and, later, to evaluate your own software against it. Today you practise on someone else’s game first.</p>
+  </div>
+
+  <div class="psm" aria-label="The problem-solving methodology">
+    <div class="st hi"><b>1 Analysis</b><span>What is needed?</span><em>The SRS is written here</em></div>
+    <div class="arr" aria-hidden="true">→</div>
+    <div class="st"><b>2 Design</b><span>How will it look and work?</span></div>
+    <div class="arr" aria-hidden="true">→</div>
+    <div class="st"><b>3 Development</b><span>Build it and test it</span></div>
+    <div class="arr" aria-hidden="true">→</div>
+    <div class="st hi you"><b>4 Evaluation</b><span>Did it meet the SRS?</span><em>You are here today</em></div>
+  </div>
+  <p class="psm-note">In Evaluation, you look back at the Analysis (the SRS) and judge the finished product against it.</p>
+
+  <div class="kws screen-only">
+<div class="kw">
+  <h4>SRS <small>Software Requirements Specification</small></h4>
+  <p>The document written in the <b>Analysis</b> stage. It describes the purpose of the software and the environment it will be used in. It lists the functional and non-functional requirements, the constraints, the scope, the user characteristics and the technical environment.</p>
+  <p class="eg"><b>Afterglow example:</b> The Afterglow SRS you are using today.</p>
+</div>
+<div class="kw">
+  <h4>Functional requirement <small>what the software must DO</small></h4>
+  <p>An action the software must perform: its inputs, processing and outputs. <b>Clue:</b> look for an action (press, open, show, save).</p>
+  <p class="eg"><b>Afterglow example:</b> “Pressing M must open a city map.”</p>
+</div>
+<div class="kw">
+  <h4>Non-functional requirement <small>how WELL it must do it</small></h4>
+  <p>A quality the software must have, such as <b>usability, reliability, robustness, portability</b> and <b>maintainability</b>. <b>Clue:</b> look for a quality (easy, fast, reliable) and, ideally, a number you can measure.</p>
+  <p class="eg"><b>Afterglow example:</b> “The game must run at 30 frames per second or more.”</p>
+</div>
+<div class="kw">
+  <h4>Scope <small>how FAR the solution goes</small></h4>
+  <p>The boundaries of the solution: what it <b>will</b> do and what it <b>will not</b> do in this version.</p>
+  <p class="eg"><b>Afterglow example:</b> “Version 1.0 has no online multiplayer.”</p>
+</div>
+<div class="kw">
+  <h4>Constraint <small>what LIMITS the developer</small></h4>
+  <p>A condition or limitation the developer must work within. The five types are <b>economic</b> (cost, time), <b>technical</b> (speed of processing, capacity, equipment, compatibility, security), <b>social</b> (the users’ level of expertise), <b>legal</b> (intellectual property, ownership and privacy of data) and <b>usability</b> (accessibility, usefulness, ease of use).</p>
+  <p class="eg"><b>Afterglow example:</b> “There is no money to hire 3D artists.”</p>
+</div>
+<div class="kw">
+  <h4>Assumption <small>what we BELIEVE is true</small></h4>
+  <p>Something the developer believes is true but has not checked, or cannot control. If an assumption turns out to be wrong, the software may not work for some users.</p>
+  <p class="eg"><b>Afterglow example:</b> “We assume players can hear the game.”</p>
+</div>
+<div class="kw">
+  <h4>Evaluation <small>did it MEET the SRS?</small></h4>
+  <p>The last stage of the problem-solving methodology: judging how well the finished software met its requirements, in terms of <b>efficiency</b> (time, cost and effort) and <b>effectiveness</b> (how well it does its job).</p>
+  <p class="eg"><b>Afterglow example:</b> “FR4 was met: Juno spoke to me when I pressed E.”</p>
+</div></div>
+  <p class="hook screen-only"><b>Memory hook:</b> Functional = what it <b>DOES</b>. Non-functional = how <b>WELL</b>. Scope = how <b>FAR</b>. Constraint = what <b>LIMITS</b>. Assumption = what we <b>BELIEVE</b>. Evaluation = did it <b>MEET</b> the SRS?</p>
+  
+<details class="fullsrs screen-only">
+  <summary>Open the full Afterglow SRS (optional: every part below already shows the section you need)</summary>
+  <div class="doc">
+    <p class="doc-title">Afterglow: Nova Vale Street Racing<br><span>Software Requirements Specification, version 1.0 (class summary)</span></p>
+    <h4>1. Purpose</h4><p>A free, browser-based 3D street-racing game. Players explore the night-time city of Nova Vale on foot, talk to characters, drive, enter street races and spend their winnings on food, clothes and car upgrades.</p>
+    <h4>2. User characteristics</h4><p>Secondary students and adults. Some have never played a driving game; others are experienced gamers. Most play on a school or home laptop; some play on a phone or tablet.</p>
+    <h4>3. Technical environment</h4><p>Runs in a modern web browser (Chrome, Edge, Safari or Firefox) that can show 3D graphics (WebGL). Hosted online, so there is nothing to install. Works with keyboard and mouse, a gamepad, or touch controls. Progress is saved in the browser.</p>
+    <h4>4. Scope</h4>
+    <div class="two"><div><b>In scope (version 1.0)</b><ul><li>Single-player play in one fictional city, Nova Vale</li><li>Walking, running and driving</li><li>Three street races against computer-controlled rivals</li><li>Talking to characters</li><li>Food stalls, shops, a garage, a bank and an apartment</li><li>Saving progress in the browser or to a file</li><li>Keyboard and mouse, gamepad and touch controls</li></ul></div>
+    <div><b>Out of scope (not in version 1.0)</b><ul><li>Online multiplayer or chat with other players</li><li>Real car brands, real logos or real-world places</li><li>Spending real money</li><li>Police chases</li><li>An app-store app (it runs in the browser only)</li></ul></div></div>
+    <h4>5. Constraints</h4>
+    <ul><li><b>Economic</b> (cost, time): There is no budget to hire 3D artists, sound designers or musicians, and the game must be free to play.</li><li><b>Technical</b> (speed of processing, capacity, equipment, compatibility, security): The game must run in a web browser on ordinary school laptops that do not have a gaming graphics card.</li><li><b>Social</b> (the users’ level of expertise): Players range from people who have never played a driving game to experienced gamers.</li><li><b>Legal</b> (intellectual property, ownership and privacy of data): The game must not use real car brands, logos or other people’s artwork without permission, and must not collect players’ personal information.</li><li><b>Usability</b> (accessibility, usefulness, ease of use): Players with different needs, devices and preferences must be able to play comfortably.</li></ul>
+    <h4>6. Assumptions</h4>
+    <ul><li><b>A1</b> We assume players have a keyboard and mouse, a gamepad, or a touch screen.</li><li><b>A2</b> We assume players’ devices and browsers can show 3D graphics (WebGL).</li><li><b>A3</b> We assume players can hear the game through headphones or speakers.</li><li><b>A4</b> We assume the player’s network (home or school) lets them open the game’s website.</li><li><b>A5</b> We assume players can read English.</li></ul>
+    <h4>7. Functional requirements</h4>
+    <ul><li><b>FR1</b> The game must show a main menu with five options: Hit the streets, How to play, Save or load a game, Settings and Credits.</li><li><b>FR2</b> The player must be able to walk (W A S D), run (hold Shift) and look around (drag the mouse) on foot.</li><li><b>FR3</b> Pressing M must open a city map. Clicking a place must set a waypoint that guides the player there.</li><li><b>FR4</b> Pressing E when close to a character must start a conversation with them.</li><li><b>FR5</b> The player must be able to enter a race against computer-controlled rivals. During the race the screen must show the race position, lap and time. A results screen must appear at the finish.</li><li><b>FR6</b> The player must be able to drive a car: accelerate, brake and reverse, steer, use the handbrake and change the camera view.</li><li><b>FR7</b> A crash must reduce the player’s Health and show how much Health was lost.</li><li><b>FR8</b> The Settings menu must let the player change the weather (Rain or Clear night) and the speed units (km/h or mph). The change must happen straight away.</li><li><b>FR9</b> The pause menu (Esc) must let a stuck player reset their car to the road or reset their own position.</li><li><b>FR10</b> Eating food from a stall must restore the player’s Health.</li><li><b>FR11</b> The player must be able to save their progress to a file (.json) and load it again.</li></ul>
+    <h4>8. Non-functional requirements</h4>
+    <ul><li><b>NFR1 Usability:</b> A first-time player must be able to start a race within 3 minutes of clicking Hit the streets, without help from another person.</li><li><b>NFR2 Performance (speed of processing):</b> The game must load in under 30 seconds and run at 30 frames per second (fps) or more on a school laptop.</li><li><b>NFR3 Reliability:</b> The game must run for a whole lesson without crashing or freezing, and must not lose the player’s progress.</li><li><b>NFR4 Robustness:</b> The game must cope with unexpected actions (driving into walls, going off the road, pressing keys that are not controls) without breaking.</li><li><b>NFR5 Portability:</b> The game must run on Windows, Mac and Chromebook laptops, tablets and phones, in any modern browser, without installing anything.</li><li><b>NFR6 Maintainability:</b> The game’s code must be easy for a developer to understand, fix and update.</li></ul>
+  </div>
+</details>
+
+  <h3>Quick check: which key word fits each statement?</h3>
+  <div class="q card worked">
+    <p class="badge-line"><span class="badge">Worked example</span></p>
+    <p class="qtext">“Pressing Esc must pause the game.”</p>
+    <p class="worked-ans">Answer: <b>Functional requirement</b>, because it says what the game must <b>do</b> when the player presses a key.</p>
+  </div>
+  
+<div class="q quiz-item" id="q-b1" data-answer="Functional requirement" data-hint="It says what the game must DO when you press a key.">
+  <label for="f-b1" class="qtext"><span class="qn">B1</span> “Pressing M must open a city map.”</label>
+  <select id="f-b1" name="b1" data-req data-label="Part B B1">
+    <option value="">Choose…</option>
+    <option>Functional requirement</option><option>Non-functional requirement</option><option>Scope</option><option>Constraint</option><option>Assumption</option><option>Evaluation</option>
+  </select>
+  <span class="mark" aria-live="polite"></span>
+  <p class="hint"></p>
+</div>
+<div class="q quiz-item" id="q-b2" data-answer="Non-functional requirement" data-hint="It is about how EASY the game is to use: a quality, not an action.">
+  <label for="f-b2" class="qtext"><span class="qn">B2</span> “A first-time player must be able to start a race within 3 minutes without help.”</label>
+  <select id="f-b2" name="b2" data-req data-label="Part B B2">
+    <option value="">Choose…</option>
+    <option>Functional requirement</option><option>Non-functional requirement</option><option>Scope</option><option>Constraint</option><option>Assumption</option><option>Evaluation</option>
+  </select>
+  <span class="mark" aria-live="polite"></span>
+  <p class="hint"></p>
+</div>
+<div class="q quiz-item" id="q-b3" data-answer="Scope" data-hint="It sets a boundary: what this version will NOT include.">
+  <label for="f-b3" class="qtext"><span class="qn">B3</span> “Version 1.0 will not include online multiplayer.”</label>
+  <select id="f-b3" name="b3" data-req data-label="Part B B3">
+    <option value="">Choose…</option>
+    <option>Functional requirement</option><option>Non-functional requirement</option><option>Scope</option><option>Constraint</option><option>Assumption</option><option>Evaluation</option>
+  </select>
+  <span class="mark" aria-live="polite"></span>
+  <p class="hint"></p>
+</div>
+<div class="q quiz-item" id="q-b4" data-answer="Constraint" data-hint="It is a LIMIT (money) that the developer has to work within.">
+  <label for="f-b4" class="qtext"><span class="qn">B4</span> “There is no money to hire 3D artists, so models must come from free or AI tools.”</label>
+  <select id="f-b4" name="b4" data-req data-label="Part B B4">
+    <option value="">Choose…</option>
+    <option>Functional requirement</option><option>Non-functional requirement</option><option>Scope</option><option>Constraint</option><option>Assumption</option><option>Evaluation</option>
+  </select>
+  <span class="mark" aria-live="polite"></span>
+  <p class="hint"></p>
+</div>
+<div class="q quiz-item" id="q-b5" data-answer="Assumption" data-hint="The words “We assume” are the clue: it is believed, not checked.">
+  <label for="f-b5" class="qtext"><span class="qn">B5</span> “We assume every player has a keyboard, a gamepad or a touch screen.”</label>
+  <select id="f-b5" name="b5" data-req data-label="Part B B5">
+    <option value="">Choose…</option>
+    <option>Functional requirement</option><option>Non-functional requirement</option><option>Scope</option><option>Constraint</option><option>Assumption</option><option>Evaluation</option>
+  </select>
+  <span class="mark" aria-live="polite"></span>
+  <p class="hint"></p>
+</div>
+<div class="q quiz-item" id="q-b6" data-answer="Evaluation" data-hint="This is a judgement made AFTER the game was built and tested.">
+  <label for="f-b6" class="qtext"><span class="qn">B6</span> “After testing, I decided that FR5 was only partly met.”</label>
+  <select id="f-b6" name="b6" data-req data-label="Part B B6">
+    <option value="">Choose…</option>
+    <option>Functional requirement</option><option>Non-functional requirement</option><option>Scope</option><option>Constraint</option><option>Assumption</option><option>Evaluation</option>
+  </select>
+  <span class="mark" aria-live="polite"></span>
+  <p class="hint"></p>
+</div>
+<div class="q quiz-item" id="q-b7" data-answer="Non-functional requirement" data-hint="It is about how RELIABLE the game is: a quality.">
+  <label for="f-b7" class="qtext"><span class="qn">B7</span> “The game must keep running for a full lesson without crashing.”</label>
+  <select id="f-b7" name="b7" data-req data-label="Part B B7">
+    <option value="">Choose…</option>
+    <option>Functional requirement</option><option>Non-functional requirement</option><option>Scope</option><option>Constraint</option><option>Assumption</option><option>Evaluation</option>
+  </select>
+  <span class="mark" aria-live="polite"></span>
+  <p class="hint"></p>
+</div>
+  <div class="checkrow"><button type="button" class="btn" id="checkB" aria-disabled="true">Check my answers</button><span id="checkBmsg" class="msg" aria-live="polite"></span></div>
+  <p class="score" id="bScore"></p>
+</section>
+
+<!-- =============================== PART C -->
+<section class="part pC" id="partC">
+  <h2><span class="pl">C</span> Play and test: functional requirements <span class="mins">6–22 min</span></h2>
+  <p>Functional requirements say what the game must <b>do</b>. You are now a <b>software tester</b>. Do each mission in the game, then come back here. For every requirement, choose a result and write your evidence.</p>
+  <div class="legend">
+    <p><b>✔ Met</b> it did everything the requirement says. <b>◐ Partly met</b> some of it worked. <b>✘ Not met</b> it did not work. <b>? Not tested</b> you could not check it (say why).</p>
+    <p><b>Good evidence is specific.</b> ✘ “It worked.” ✔ “Pressed M, the map opened, I clicked Juno and a pink beam appeared.”</p>
+  </div>
+  <p class="screen-only"><a class="btn game" href="https://afterglow-night-drive.netlify.app/" target="_blank" rel="noopener">▶ Open the game in a new tab <span aria-hidden="true">↗</span></a></p>
+
+  <div class="q card worked">
+    <p class="badge-line"><span class="badge">Worked example</span></p>
+    <p class="req-stmt"><span class="rid">FR0</span> The game must show a loading screen while the city loads.</p>
+    <p class="worked-ans">Result: <b>✔ Met</b><br>Evidence: When I opened the link, the screen said “Warming up the city…” for about 10 seconds, then the main menu appeared.</p>
+  </div>
+
+  
+<div class="mission">
+  <h3><span class="mnum">Mission 1</span> Start the game <span class="mins">about 3 min</span></h3>
+  <ol class="steps screen-only"><li>Click <b>Open the game</b> (button at the top of this page). It opens in a new tab.</li><li>Count how many seconds the loading screen (“Warming up the city…”) takes. Write it in <b>D2</b> later.</li><li>On the main menu, click <b>How to play</b>, read the controls, then close it.</li><li>Click <b>Hit the streets</b>.</li><li>Walk with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>. Hold <kbd>Shift</kbd> to run. Drag the mouse to look around. (You can also click the ground to walk there.)</li><li>Come back to this tab and record FR1 and FR2.</li></ol>
+</div>
+
+<div class="q card fr" id="fr1">
+  <p class="req-stmt"><span class="rid">FR1</span> The game must show a main menu with five options: Hit the streets, How to play, Save or load a game, Settings and Credits.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr1_res" data-req data-label="FR1 result" id="q-fr1_res"><legend class="sr-only">FR1 result</legend><label class="opt"><input type="radio" name="fr1_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr1_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr1_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr1_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr1_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr1_ev" name="fr1_ev" rows="1" class="grow" data-label="FR1 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="q card fr" id="fr2">
+  <p class="req-stmt"><span class="rid">FR2</span> The player must be able to walk (W A S D), run (hold Shift) and look around (drag the mouse) on foot.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr2_res" data-req data-label="FR2 result" id="q-fr2_res"><legend class="sr-only">FR2 result</legend><label class="opt"><input type="radio" name="fr2_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr2_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr2_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr2_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr2_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr2_ev" name="fr2_ev" rows="1" class="grow" data-label="FR2 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="mission">
+  <h3><span class="mnum">Mission 2</span> Find Juno <span class="mins">about 3 min</span></h3>
+  <ol class="steps screen-only"><li>Read the line at the top of the game screen. It should say <b>Talk to Juno at the pink holo-board</b>.</li><li>Press <kbd>M</kbd> to open the city map. Click <b>Juno · races</b> (in the list or on the map). Press <kbd>M</kbd> again to close the map.</li><li>Follow the waypoint. It shows on the minimap and as a beam of light, and the line at the top counts down the metres.</li><li>When <b>E Talk</b> appears at the bottom of the screen, press <kbd>E</kbd>. Read what Juno says.</li><li>Come back to this tab and record FR3 and FR4.</li></ol>
+</div>
+
+<div class="q card fr" id="fr3">
+  <p class="req-stmt"><span class="rid">FR3</span> Pressing M must open a city map. Clicking a place must set a waypoint that guides the player there.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr3_res" data-req data-label="FR3 result" id="q-fr3_res"><legend class="sr-only">FR3 result</legend><label class="opt"><input type="radio" name="fr3_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr3_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr3_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr3_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr3_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr3_ev" name="fr3_ev" rows="1" class="grow" data-label="FR3 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="q card fr" id="fr4">
+  <p class="req-stmt"><span class="rid">FR4</span> Pressing E when close to a character must start a conversation with them.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr4_res" data-req data-label="FR4 result" id="q-fr4_res"><legend class="sr-only">FR4 result</legend><label class="opt"><input type="radio" name="fr4_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr4_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr4_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr4_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr4_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr4_ev" name="fr4_ev" rows="1" class="grow" data-label="FR4 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="mission">
+  <h3><span class="mnum">Mission 3</span> Race <span class="mins">about 6 min</span></h3>
+  <ol class="steps screen-only"><li>In Juno’s menu, pick <b>Neon Loop</b> (3 laps) or <b>Harbour Line Sprint</b>. (Midnight Duel stays locked until you win a race.)</li><li>Hold <kbd>W</kbd> to rev. Go when the light turns green.</li><li>While racing, try every driving control: <kbd>W</kbd>/<kbd>↑</kbd> accelerate, <kbd>S</kbd>/<kbd>↓</kbd> brake and reverse, <kbd>A</kbd>/<kbd>D</kbd> steer, <kbd>Space</kbd> handbrake, <kbd>C</kbd> change camera, <kbd>R</kbd> put the car back on the road.</li><li>Look at the top of the screen for your race position (for example 2/4), the lap (for example 1/3) and the time.</li><li><b>Time limit:</b> if you have not finished after <b>4 minutes</b>, press <kbd>Esc</kbd> and choose <b>Leave race</b>. Write “did not reach the results screen” in your FR5 evidence.</li><li>Health below 25? Juno will not let you race. Do bonus test FR10 (eat something) first.</li><li>Come back to this tab and record FR5 and FR6.</li></ol>
+</div>
+
+<div class="q card fr" id="fr5">
+  <p class="req-stmt"><span class="rid">FR5</span> The player must be able to enter a race against computer-controlled rivals. During the race the screen must show the race position, lap and time. A results screen must appear at the finish.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr5_res" data-req data-label="FR5 result" id="q-fr5_res"><legend class="sr-only">FR5 result</legend><label class="opt"><input type="radio" name="fr5_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr5_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr5_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr5_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr5_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr5_ev" name="fr5_ev" rows="1" class="grow" data-label="FR5 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="q card fr" id="fr6">
+  <p class="req-stmt"><span class="rid">FR6</span> The player must be able to drive a car: accelerate, brake and reverse, steer, use the handbrake and change the camera view.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr6_res" data-req data-label="FR6 result" id="q-fr6_res"><legend class="sr-only">FR6 result</legend><label class="opt"><input type="radio" name="fr6_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr6_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr6_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr6_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr6_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr6_ev" name="fr6_ev" rows="1" class="grow" data-label="FR6 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="mission">
+  <h3><span class="mnum">Mission 4</span> Health, settings and getting unstuck <span class="mins">about 3 min</span></h3>
+  <ol class="steps screen-only"><li>Look at your <b>Health</b> bar (top left). Remember the number.</li><li>Drive into a wall or another car. A message like <b>Crash −5 health</b> should appear. Check the Health bar again.</li><li>Press <kbd>Esc</kbd> to pause. Open the <b>Settings</b> tab. Change <b>Weather</b> to <b>Clear night</b> and <b>Speed units</b> to <b>mph</b>. Click <b>Resume</b>. Did the rain stop? Does the speedometer show mph?</li><li>Press <kbd>Esc</kbd> again and choose <b>Reset car to road</b> (or <b>Reset my position</b> if you are on foot).</li><li>Come back to this tab and record FR7, FR8 and FR9.</li></ol>
+</div>
+
+<div class="q card fr" id="fr7">
+  <p class="req-stmt"><span class="rid">FR7</span> A crash must reduce the player’s Health and show how much Health was lost.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr7_res" data-req data-label="FR7 result" id="q-fr7_res"><legend class="sr-only">FR7 result</legend><label class="opt"><input type="radio" name="fr7_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr7_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr7_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr7_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr7_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr7_ev" name="fr7_ev" rows="1" class="grow" data-label="FR7 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="q card fr" id="fr8">
+  <p class="req-stmt"><span class="rid">FR8</span> The Settings menu must let the player change the weather (Rain or Clear night) and the speed units (km/h or mph). The change must happen straight away.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr8_res" data-req data-label="FR8 result" id="q-fr8_res"><legend class="sr-only">FR8 result</legend><label class="opt"><input type="radio" name="fr8_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr8_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr8_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr8_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr8_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr8_ev" name="fr8_ev" rows="1" class="grow" data-label="FR8 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+<div class="q card fr" id="fr9">
+  <p class="req-stmt"><span class="rid">FR9</span> The pause menu (Esc) must let a stuck player reset their car to the road or reset their own position.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr9_res" data-req data-label="FR9 result" id="q-fr9_res"><legend class="sr-only">FR9 result</legend><label class="opt"><input type="radio" name="fr9_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr9_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr9_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr9_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr9_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr9_ev" name="fr9_ev" rows="1" class="grow" data-label="FR9 evidence" data-req placeholder="What did you do, and what happened?"></textarea>
+</div>
+
+  <div class="bonus-box">
+    <h3>Bonus tests <span class="mins">only after you finish Part F</span></h3>
+    <ul class="steps screen-only">
+      <li><b>FR10:</b> remember your Health, then buy food at a stall: char koay teow from Uncle Lim (Penang Char Koay Teow on the map) or snacks at Nite Owl. Check your Health again.</li>
+      <li><b>FR11:</b> press <kbd>Esc</kbd> → <b>Saved games</b> → <b>Save to a file</b>. Then try <b>Load from a file</b> with that file (it shows you what is inside before it changes anything).</li>
+    </ul>
+    
+<div class="q card fr" id="fr10">
+  <p class="req-stmt"><span class="rid">FR10</span> <span class="badge bonus">Bonus</span> Eating food from a stall must restore the player’s Health.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr10_res" data-label="FR10 result" id="q-fr10_res"><legend class="sr-only">FR10 result</legend><label class="opt"><input type="radio" name="fr10_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr10_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr10_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr10_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr10_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr10_ev" name="fr10_ev" rows="1" class="grow" data-label="FR10 evidence" placeholder="What did you do, and what happened?"></textarea>
+</div>
+    
+<div class="q card fr" id="fr11">
+  <p class="req-stmt"><span class="rid">FR11</span> <span class="badge bonus">Bonus</span> The player must be able to save their progress to a file (.json) and load it again.</p>
+  <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="fr11_res" data-label="FR11 result" id="q-fr11_res"><legend class="sr-only">FR11 result</legend><label class="opt"><input type="radio" name="fr11_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="fr11_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="fr11_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="fr11_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+  <label for="f-fr11_ev" class="fl">Evidence (one sentence):</label><textarea id="f-fr11_ev" name="fr11_ev" rows="1" class="grow" data-label="FR11 evidence" placeholder="What did you do, and what happened?"></textarea>
+</div>
+  </div>
+</section>
+
+<!-- =============================== PART D -->
+<section class="part pD" id="partD">
+  <h2><span class="pl">D</span> Non-functional requirements: how WELL does it work? <span class="mins">22–28 min</span></h2>
+  <p>Non-functional requirements describe the <b>qualities</b> of the game. Good ones can be measured, so some questions ask for a number.</p>
+
+  <div class="q card" id="d1">
+    <p class="req-stmt"><span class="rid">NFR1</span> <b>Usability:</b> A first-time player must be able to start a race within 3 minutes of clicking Hit the streets, without help from another person.</p>
+    <div class="row"><span class="rl">How long did it take you to start your first race?</span>
+      <fieldset class="opts inline " data-group="d1_time" data-req data-label="D1 time to start a race" id="q-d1_time"><legend class="sr-only">D1 time to start a race</legend><label class="opt"><input type="radio" name="d1_time" value="Under 1 minute"><span>Under 1 min</span></label><label class="opt"><input type="radio" name="d1_time" value="1–3 minutes"><span>1–3 min</span></label><label class="opt"><input type="radio" name="d1_time" value="3–5 minutes"><span>3–5 min</span></label><label class="opt"><input type="radio" name="d1_time" value="More than 5 minutes"><span>More than 5 min</span></label><label class="opt"><input type="radio" name="d1_time" value="I never started a race"><span>Never started one</span></label></fieldset></div>
+    <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="d1_res" data-req data-label="NFR1 result" id="q-d1_res"><legend class="sr-only">NFR1 result</legend><label class="opt"><input type="radio" name="d1_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="d1_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="d1_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="d1_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+    <label for="f-d1_ev" class="fl">Evidence:</label><textarea id="f-d1_ev" name="d1_ev" rows="1" class="grow" data-label="NFR1 evidence" data-req placeholder="What helped you learn the game, and what confused you?"></textarea>
+  </div>
+
+  <div class="q card" id="d2">
+    <p class="req-stmt"><span class="rid">NFR2</span> <b>Performance (speed of processing):</b> The game must load in under 30 seconds and run at 30 frames per second (fps) or more on a school laptop.</p>
+    <p class="screen-only tip">Measure it: in the game, press <kbd>F3</kbd> (on some laptops, hold <kbd>Fn</kbd> and press <kbd>F3</kbd>). The frame rate appears at the top right, for example “45 fps”. Read it while you are driving.</p>
+    <div class="grid3">
+      <div><label class="fl" for="f-d2_load">Loading time (seconds) *</label><input id="f-d2_load" name="d2_load" type="number" min="0" max="999" inputmode="numeric" data-req data-label="D2 loading time"></div>
+      <div><label class="fl" for="f-d2_fps">Frame rate while driving (fps) *</label><input id="f-d2_fps" name="d2_fps" type="number" min="0" max="999" inputmode="numeric" data-req data-label="D2 frame rate"></div>
+      <div><label class="fl" for="f-d2_fps2">Optional: fps after changing Graphics</label><input id="f-d2_fps2" name="d2_fps2" type="number" min="0" max="999" inputmode="numeric" data-label="D2 fps after graphics change"></div>
+    </div>
+    <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="d2_res" data-req data-label="NFR2 result" id="q-d2_res"><legend class="sr-only">NFR2 result</legend><label class="opt"><input type="radio" name="d2_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="d2_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="d2_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="d2_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+    <label for="f-d2_ev" class="fl">Evidence:</label><textarea id="f-d2_ev" name="d2_ev" rows="1" class="grow" data-label="NFR2 evidence" data-req placeholder="Compare your numbers with the targets (30 s, 30 fps). Did it ever stutter or lag?"></textarea>
+  </div>
+
+  <div class="q card" id="d3">
+    <p class="req-stmt"><span class="rid">NFR3</span> <b>Reliability:</b> The game must run for a whole lesson without crashing or freezing, and must not lose the player’s progress.</p>
+    <div class="row"><span class="rl">How many times did the game crash, freeze or go black?</span>
+      <fieldset class="opts inline " data-group="d3_count" data-req data-label="D3 number of crashes or freezes" id="q-d3_count"><legend class="sr-only">D3 number of crashes or freezes</legend><label class="opt"><input type="radio" name="d3_count" value="0"><span>0</span></label><label class="opt"><input type="radio" name="d3_count" value="1"><span>1</span></label><label class="opt"><input type="radio" name="d3_count" value="2"><span>2</span></label><label class="opt"><input type="radio" name="d3_count" value="3 or more"><span>3 or more</span></label></fieldset></div>
+    <p class="screen-only tip">Optional test: refresh the game tab (<kbd>F5</kbd>). When it reloads, are your credits and Health still the same?</p>
+    <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="d3_res" data-req data-label="NFR3 result" id="q-d3_res"><legend class="sr-only">NFR3 result</legend><label class="opt"><input type="radio" name="d3_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="d3_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="d3_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="d3_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+    <label for="f-d3_ev" class="fl">Evidence:</label><textarea id="f-d3_ev" name="d3_ev" rows="1" class="grow" data-label="NFR3 evidence" data-req placeholder="What happened? If it never crashed, say how long you played for."></textarea>
+  </div>
+
+  <div class="q card" id="d4">
+    <p class="req-stmt"><span class="rid">NFR4</span> <b>Robustness:</b> The game must cope with unexpected actions (driving into walls, going off the road, pressing keys that are not controls) without breaking.</p>
+    <p class="screen-only tip">Test it: spend 30 seconds trying to “break” the game. Press keys that are not controls, drive the wrong way, get stuck against a wall, click menu buttons quickly.</p>
+    <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="d4_res" data-req data-label="NFR4 result" id="q-d4_res"><legend class="sr-only">NFR4 result</legend><label class="opt"><input type="radio" name="d4_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="d4_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="d4_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="d4_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+    <label for="f-d4_ev" class="fl">Evidence:</label><textarea id="f-d4_ev" name="d4_ev" rows="1" class="grow" data-label="NFR4 evidence" data-req placeholder="What did you try, and how did the game respond?"></textarea>
+  </div>
+
+  <div class="q card" id="d5">
+    <p class="req-stmt"><span class="rid">NFR5</span> <b>Portability:</b> The game must run on Windows, Mac and Chromebook laptops, tablets and phones, in any modern browser, without installing anything.</p>
+    <p class="screen-only tip">Test it: you already know your own device and browser (Part A). Ask <b>one</b> classmate who has a different device or browser how the game ran for them.</p>
+    <label for="f-d5_mate" class="fl">Classmate’s device and browser, and how it ran (optional):</label><textarea id="f-d5_mate" name="d5_mate" rows="1" class="grow" data-label="D5 classmate&#x27;s device and browser" placeholder="e.g. MacBook, Safari: it ran fine"></textarea>
+    <div class="row"><span class="rl">Result:</span><fieldset class="opts inline " data-group="d5_res" data-req data-label="NFR5 result" id="q-d5_res"><legend class="sr-only">NFR5 result</legend><label class="opt"><input type="radio" name="d5_res" value="Met"><span>✔ Met</span></label><label class="opt"><input type="radio" name="d5_res" value="Partly met"><span>◐ Partly met</span></label><label class="opt"><input type="radio" name="d5_res" value="Not met"><span>✘ Not met</span></label><label class="opt"><input type="radio" name="d5_res" value="Not tested"><span>? Not tested</span></label></fieldset></div>
+    <label for="f-d5_ev" class="fl">Evidence:</label><textarea id="f-d5_ev" name="d5_ev" rows="1" class="grow" data-label="NFR5 evidence" data-req placeholder="Which devices and browsers did you see it work (or fail) on?"></textarea>
+  </div>
+
+  <div class="q card" id="d6">
+    <p class="req-stmt"><span class="rid">NFR6</span> <b>Maintainability:</b> The game’s code must be easy for a developer to understand, fix and update.</p>
+    <div class="row"><span class="rl">Can you test this requirement just by playing the game?</span>
+      <fieldset class="opts inline " data-group="d6_can" data-req data-label="D6 can a player test maintainability" id="q-d6_can"><legend class="sr-only">D6 can a player test maintainability</legend><label class="opt"><input type="radio" name="d6_can" value="Yes"><span>Yes</span></label><label class="opt"><input type="radio" name="d6_can" value="No"><span>No</span></label></fieldset></div>
+    <label for="f-d6_ev" class="fl">Who could test maintainability, and how?</label><textarea id="f-d6_ev" name="d6_ev" rows="1" class="grow" data-label="NFR6 who and how" data-req placeholder="Who could test it, and how would they do it?"></textarea>
+  </div>
+</section>
+
+<!-- =============================== PART E -->
+<section class="part pE" id="partE">
+  <h2><span class="pl">E</span> Scope, constraints and assumptions <span class="mins">28–35 min</span></h2>
+
+  <h3>E1 · Scope</h3>
+  <div class="srs"><span class="srs-tag">From the SRS</span><div class="two"><div><b>In scope (version 1.0)</b><ul><li>Single-player play in one fictional city, Nova Vale</li><li>Walking, running and driving</li><li>Three street races against computer-controlled rivals</li><li>Talking to characters</li><li>Food stalls, shops, a garage, a bank and an apartment</li><li>Saving progress in the browser or to a file</li><li>Keyboard and mouse, gamepad and touch controls</li></ul></div><div><b>Out of scope (not in version 1.0)</b><ul><li>Online multiplayer or chat with other players</li><li>Real car brands, real logos or real-world places</li><li>Spending real money</li><li>Police chases</li><li>An app-store app (it runs in the browser only)</li></ul></div></div></div>
+  <div class="q card">
+    <label for="f-e1_in" class="fl">a) Write one <b>in-scope</b> item that you saw delivered in the game, and where you saw it.</label><textarea id="f-e1_in" name="e1_in" rows="1" class="grow" data-label="E1a in-scope item delivered" data-req placeholder="e.g. Three street races: I raced Neon Loop"></textarea>
+    <label for="f-e1_want" class="fl">b) Write one feature you <b>wanted</b> that the game did not have.</label><textarea id="f-e1_want" name="e1_want" rows="1" class="grow" data-label="E1b feature you wanted" data-req placeholder="A feature you wished the game had"></textarea>
+    <div class="row"><span class="rl">c) According to the SRS, the feature in b) is:</span>
+      <fieldset class="opts inline " data-group="e1_where" data-req data-label="E1c where your feature sits in the scope" id="q-e1_where"><legend class="sr-only">E1c where your feature sits in the scope</legend><label class="opt"><input type="radio" name="e1_where" value="In scope (so it is missing!)"><span>In scope, so it is missing!</span></label><label class="opt"><input type="radio" name="e1_where" value="Out of scope"><span>Out of scope</span></label><label class="opt"><input type="radio" name="e1_where" value="Not mentioned in the SRS"><span>Not mentioned</span></label></fieldset></div>
+  </div>
+  <div class="q card mcq" id="mcq-e1d" data-answer="a">
+    <p class="qtext">d) Why does an SRS list what is <b>out</b> of scope?</p>
+    <fieldset class="opts stack " data-group="e1_why" data-req data-label="E1d why list out-of-scope items" id="q-e1_why"><legend class="sr-only">E1d why list out-of-scope items</legend><label class="opt"><input type="radio" name="e1_why" value="a"><span>So everyone agrees on the boundaries and the project does not keep growing (“scope creep”), so it can be finished on time and on budget.</span></label><label class="opt"><input type="radio" name="e1_why" value="b"><span>Because the law says every game must list its missing features.</span></label><label class="opt"><input type="radio" name="e1_why" value="c"><span>To make the game harder to play.</span></label><label class="opt"><input type="radio" name="e1_why" value="d"><span>So players never ask for anything new.</span></label></fieldset>
+    <div class="checkrow"><button type="button" class="btn" id="checkE" aria-disabled="true">Check my answer</button><span id="checkEmsg" class="msg" aria-live="polite"></span></div>
+  </div>
+
+  <h3>E2 · Constraints: find the evidence in the finished game</h3>
+  <p>A constraint limits what the developer can do. Look for features in the finished game that show how the developer worked within each constraint.</p>
+  
+<div class="q card worked">
+  <p class="badge-line"><span class="badge">Worked example</span></p>
+  <p class="req-stmt"><b>Economic</b> <span class="muted">(cost, time)</span>: There is no budget to hire 3D artists, sound designers or musicians, and the game must be free to play.</p>
+  <p class="fl">Evidence in the finished game:</p>
+  <p class="worked-ans">The Credits say the cars and characters were made with Meshy (an AI tool), the street props are free NVIDIA assets (licence CC BY 4.0) and all sounds are synthesised live in the browser. No artists or musicians had to be paid.</p>
+  <p class="why-good">Why this is good evidence: it names <b>where</b> the evidence was found (Credits) and <b>how</b> it shows the developer worked within the limit.</p>
+</div>
+<div class="q card" id="con-technical">
+  <p class="req-stmt"><b>Technical</b> <span class="muted">(speed of processing, capacity, equipment, compatibility, security)</span>: The game must run in a web browser on ordinary school laptops that do not have a gaming graphics card.</p>
+  <p class="look screen-only"><b>Where to look:</b> Settings → Graphics; Credits (look for “simplified for the web”)</p>
+  <label for="f-e2_technical" class="fl">Evidence in the finished game:</label><textarea id="f-e2_technical" name="e2_technical" rows="1" class="grow" data-label="Technical constraint evidence" data-req placeholder="Which feature shows the developer worked within this constraint?"></textarea>
+</div>
+<div class="q card" id="con-social">
+  <p class="req-stmt"><b>Social</b> <span class="muted">(the users’ level of expertise)</span>: Players range from people who have never played a driving game to experienced gamers.</p>
+  <p class="look screen-only"><b>Where to look:</b> How to play; Settings → Steering assist and Gearbox; the objective line at the top of the game screen</p>
+  <label for="f-e2_social" class="fl">Evidence in the finished game:</label><textarea id="f-e2_social" name="e2_social" rows="1" class="grow" data-label="Social constraint evidence" data-req placeholder="Which feature shows the developer worked within this constraint?"></textarea>
+</div>
+<div class="q card" id="con-legal">
+  <p class="req-stmt"><b>Legal</b> <span class="muted">(intellectual property, ownership and privacy of data)</span>: The game must not use real car brands, logos or other people’s artwork without permission, and must not collect players’ personal information.</p>
+  <p class="look screen-only"><b>Where to look:</b> Credits (licences, “logos removed”, “fictional”); Save or load a game (where is your data kept?)</p>
+  <label for="f-e2_legal" class="fl">Evidence in the finished game:</label><textarea id="f-e2_legal" name="e2_legal" rows="1" class="grow" data-label="Legal constraint evidence" data-req placeholder="Which feature shows the developer worked within this constraint?"></textarea>
+</div>
+<div class="q card" id="con-usability">
+  <p class="req-stmt"><b>Usability</b> <span class="muted">(accessibility, usefulness, ease of use)</span>: Players with different needs, devices and preferences must be able to play comfortably.</p>
+  <p class="look screen-only"><b>Where to look:</b> Settings → Reduce motion effects, Camera shake, Invert camera Y, Speed units; the kinds of controls you can use</p>
+  <label for="f-e2_usability" class="fl">Evidence in the finished game:</label><textarea id="f-e2_usability" name="e2_usability" rows="1" class="grow" data-label="Usability constraint evidence" data-req placeholder="Which feature shows the developer worked within this constraint?"></textarea>
+</div>
+
+  <h3>E3 · Assumptions</h3>
+  <div class="srs"><span class="srs-tag">From the SRS</span>The developer made these assumptions. Were they true for you?</div>
+  <div class="q card">
+<div class="arow">
+  <p class="req-stmt"><span class="rid">A1</span> We assume players have a keyboard and mouse, a gamepad, or a touch screen.</p>
+  <div class="row"><span class="rl">True for you today?</span><fieldset class="opts inline " data-group="e3_a1" data-req data-label="Assumption A1 true for you" id="q-e3_a1"><legend class="sr-only">Assumption A1 true for you</legend><label class="opt"><input type="radio" name="e3_a1" value="Yes"><span>Yes</span></label><label class="opt"><input type="radio" name="e3_a1" value="No"><span>No</span></label><label class="opt"><input type="radio" name="e3_a1" value="Not sure"><span>Not sure</span></label></fieldset></div>
+</div>
+<div class="arow">
+  <p class="req-stmt"><span class="rid">A2</span> We assume players’ devices and browsers can show 3D graphics (WebGL).</p>
+  <div class="row"><span class="rl">True for you today?</span><fieldset class="opts inline " data-group="e3_a2" data-req data-label="Assumption A2 true for you" id="q-e3_a2"><legend class="sr-only">Assumption A2 true for you</legend><label class="opt"><input type="radio" name="e3_a2" value="Yes"><span>Yes</span></label><label class="opt"><input type="radio" name="e3_a2" value="No"><span>No</span></label><label class="opt"><input type="radio" name="e3_a2" value="Not sure"><span>Not sure</span></label></fieldset></div>
+</div>
+<div class="arow">
+  <p class="req-stmt"><span class="rid">A3</span> We assume players can hear the game through headphones or speakers.</p>
+  <div class="row"><span class="rl">True for you today?</span><fieldset class="opts inline " data-group="e3_a3" data-req data-label="Assumption A3 true for you" id="q-e3_a3"><legend class="sr-only">Assumption A3 true for you</legend><label class="opt"><input type="radio" name="e3_a3" value="Yes"><span>Yes</span></label><label class="opt"><input type="radio" name="e3_a3" value="No"><span>No</span></label><label class="opt"><input type="radio" name="e3_a3" value="Not sure"><span>Not sure</span></label></fieldset></div>
+</div>
+<div class="arow">
+  <p class="req-stmt"><span class="rid">A4</span> We assume the player’s network (home or school) lets them open the game’s website.</p>
+  <div class="row"><span class="rl">True for you today?</span><fieldset class="opts inline " data-group="e3_a4" data-req data-label="Assumption A4 true for you" id="q-e3_a4"><legend class="sr-only">Assumption A4 true for you</legend><label class="opt"><input type="radio" name="e3_a4" value="Yes"><span>Yes</span></label><label class="opt"><input type="radio" name="e3_a4" value="No"><span>No</span></label><label class="opt"><input type="radio" name="e3_a4" value="Not sure"><span>Not sure</span></label></fieldset></div>
+</div>
+<div class="arow">
+  <p class="req-stmt"><span class="rid">A5</span> We assume players can read English.</p>
+  <div class="row"><span class="rl">True for you today?</span><fieldset class="opts inline " data-group="e3_a5" data-req data-label="Assumption A5 true for you" id="q-e3_a5"><legend class="sr-only">Assumption A5 true for you</legend><label class="opt"><input type="radio" name="e3_a5" value="Yes"><span>Yes</span></label><label class="opt"><input type="radio" name="e3_a5" value="No"><span>No</span></label><label class="opt"><input type="radio" name="e3_a5" value="Not sure"><span>Not sure</span></label></fieldset></div>
+</div></div>
+  <div class="q card">
+    <label for="f-e3_ev" class="fl">Choose <b>one</b> assumption that was false for you, or could be false for another player. What problem would it cause, and how could the developer reduce that risk?</label><textarea id="f-e3_ev" name="e3_ev" rows="3" class="grow" data-label="E3 assumption problem" data-req placeholder="Assumption A_ could be false because… This would mean… The developer could…"></textarea>
+  </div>
+</section>
+
+<!-- =============================== PART F -->
+<section class="part pF" id="partF">
+  <h2><span class="pl">F</span> Your evaluation <span class="mins">35–40 min</span></h2>
+  <p>Evaluation judges <b>the degree to which</b> the game met its requirements, in terms of <b>efficiency</b> and <b>effectiveness</b>.</p>
+
+  <h3>F1 · Your results so far (filled in automatically from Parts C and D)</h3>
+  <div id="summary" class="summary"></div>
+
+  <div class="q card">
+    <h3>F2 · Efficiency</h3>
+    <p class="muted">Efficiency measures time, cost and effort: how fast it loads and runs (D2), and how many steps it takes to do things (such as starting a race).</p>
+    <div class="row"><span class="rl">For you, the game was:</span>
+      <fieldset class="opts inline " data-group="f2_eff" data-req data-label="F2 efficiency rating" id="q-f2_eff"><legend class="sr-only">F2 efficiency rating</legend><label class="opt"><input type="radio" name="f2_eff" value="Very efficient"><span>Very efficient</span></label><label class="opt"><input type="radio" name="f2_eff" value="Mostly efficient"><span>Mostly efficient</span></label><label class="opt"><input type="radio" name="f2_eff" value="Not very efficient"><span>Not very efficient</span></label></fieldset></div>
+    <label for="f-f2_ev" class="fl">Because:</label><textarea id="f-f2_ev" name="f2_ev" rows="1" class="grow" data-label="F2 efficiency reason" data-req placeholder="Use a number from D2 or a count of steps"></textarea>
+  </div>
+
+  <div class="q card">
+    <h3>F3 · Effectiveness</h3>
+    <p class="muted">Effectiveness measures how well the game does its job. Choose <b>two different</b> criteria from this list and judge the game against each one.</p>
+    <ul class="eff"><li><b>Accessibility</b>: people with different abilities and devices can use it</li><li><b>Accuracy</b>: numbers and information are correct (for example the lap timer and speedometer)</li><li><b>Attractiveness</b>: it looks appealing and suits its audience</li><li><b>Clarity</b>: it is clear what to do and what things mean</li><li><b>Communication of message</b>: its purpose and setting come across to the player</li><li><b>Completeness</b>: all the required features are there</li><li><b>Readability</b>: the on-screen text is easy to read</li><li><b>Relevance</b>: the features suit the purpose and the users</li><li><b>Timeliness</b>: it responds quickly, and information appears when it is needed</li><li><b>Usability</b>: it is easy to learn and use</li></ul>
+    <div class="grid2">
+      <div><label class="fl" for="f-f3_c1">Criterion 1</label><select id="f-f3_c1" name="f3_c1" data-req data-label="F3 criterion 1"><option value="">Choose a criterion…</option><option>Accessibility</option><option>Accuracy</option><option>Attractiveness</option><option>Clarity</option><option>Communication of message</option><option>Completeness</option><option>Readability</option><option>Relevance</option><option>Timeliness</option><option>Usability</option></select>
+        <label for="f-f3_j1" class="fl">Judgement and evidence:</label><textarea id="f-f3_j1" name="f3_j1" rows="1" class="grow" data-label="F3 judgement 1" data-req placeholder="How well did the game do on this criterion? Give evidence."></textarea></div>
+      <div><label class="fl" for="f-f3_c2">Criterion 2</label><select id="f-f3_c2" name="f3_c2" data-req data-label="F3 criterion 2"><option value="">Choose a criterion…</option><option>Accessibility</option><option>Accuracy</option><option>Attractiveness</option><option>Clarity</option><option>Communication of message</option><option>Completeness</option><option>Readability</option><option>Relevance</option><option>Timeliness</option><option>Usability</option></select>
+        <label for="f-f3_j2" class="fl">Judgement and evidence:</label><textarea id="f-f3_j2" name="f3_j2" rows="1" class="grow" data-label="F3 judgement 2" data-req placeholder="How well did the game do on this criterion? Give evidence."></textarea></div>
+    </div>
+    <p class="msg" id="f3msg" aria-live="polite"></p>
+  </div>
+
+  <div class="q card">
+    <h3>F4 · Overall verdict</h3>
+    <div class="row"><span class="rl">Overall, Afterglow’s SRS was:</span>
+      <fieldset class="opts inline " data-group="f4_verdict" data-req data-label="F4 overall verdict" id="q-f4_verdict"><legend class="sr-only">F4 overall verdict</legend><label class="opt"><input type="radio" name="f4_verdict" value="Fully met"><span>Fully met</span></label><label class="opt"><input type="radio" name="f4_verdict" value="Mostly met"><span>Mostly met</span></label><label class="opt"><input type="radio" name="f4_verdict" value="Partly met"><span>Partly met</span></label><label class="opt"><input type="radio" name="f4_verdict" value="Mostly not met"><span>Mostly not met</span></label></fieldset></div>
+    <label for="f-f4_ev" class="fl">Justify your verdict. Use <b>requirement IDs</b> (FR3, NFR2…) and your evidence.</label><textarea id="f-f4_ev" name="f4_ev" rows="4" class="grow" data-label="F4 justification" data-req placeholder="Afterglow mostly met its SRS because FR__ and FR__ were met. However, NFR__ was only partly met because…"></textarea>
+  </div>
+
+  <div class="q card">
+    <h3>F5 · Recommendations for version 2.0</h3>
+    <p class="muted">Each recommendation must link to a requirement ID, a constraint, an assumption or a scope item.</p>
+    <label for="f-f5_r1" class="fl">Recommendation 1:</label><textarea id="f-f5_r1" name="f5_r1" rows="1" class="grow" data-label="F5 recommendation 1" data-req placeholder="e.g. NFR2: add a “very low” graphics setting because my laptop only reached 22 fps"></textarea>
+    <label for="f-f5_r2" class="fl">Recommendation 2:</label><textarea id="f-f5_r2" name="f5_r2" rows="1" class="grow" data-label="F5 recommendation 2" data-req placeholder=""></textarea>
+  </div>
+
+  <div class="q card ext">
+    <h3>Extension (only if you have time)</h3>
+    <p>Do the bonus tests at the end of Part C, then write two new requirements for version 2.0.</p>
+    <label for="f-x1" class="fl">A new <b>functional</b> requirement:</label><textarea id="f-x1" name="x1" rows="1" class="grow" data-label="Extension new functional requirement" placeholder="The game must…"></textarea>
+    <label for="f-x2" class="fl">A new <b>non-functional</b> requirement that can be measured:</label><textarea id="f-x2" name="x2" rows="1" class="grow" data-label="Extension new non-functional requirement" placeholder="Include a number so it can be measured"></textarea>
+  </div>
+</section>
+
+<!-- =============================== PART G -->
+<section class="part pG screen-only" id="partG">
+  <h2><span class="pl">G</span> Save as PDF and upload to SEQTA <span class="mins">40–45 min</span></h2>
+  <ol class="big">
+    <li>Click the <b>Save my answers as a PDF</b> button below.</li>
+    <li>A print window opens. Set <b>Destination</b> (Chrome) or <b>Printer</b> (Edge) to <b>Save as PDF</b>. Do <b>not</b> choose a real printer. On a Mac in Safari, open the <b>PDF</b> menu at the bottom left and choose <b>Save as PDF</b>.</li>
+    <li>Click <b>Save</b>. Keep the file name it suggests (it includes your name) and save it in <b>Downloads</b>.</li>
+    <li>Open SEQTA Learn → <b>Assessments</b> → open <b>Afterglow SRS Evaluation</b> → upload your PDF in the <b>Submissions</b> area.</li>
+    <li>Check that your file now appears in SEQTA. You are done!</li>
+  </ol>
+  <div class="savebox">
+    <button type="button" class="btn big-btn" id="saveBtn">Save my answers as a PDF</button>
+    <div id="saveMsg" class="msg" aria-live="polite"></div>
+    <div id="missing" class="missing" hidden></div>
+  </div>
+  <details class="help">
+    <summary>Help: the PDF or the upload is not working</summary>
+    <ul>
+      <li>Nothing happens when you click the button: press <kbd>Ctrl</kbd> + <kbd>P</kbd> (on a Mac, <kbd>⌘</kbd> + <kbd>P</kbd>) and choose Save as PDF.</li>
+      <li>The PDF is missing answers: make sure you typed in <b>this</b> tab, then try again.</li>
+      <li>SEQTA will not accept the file: send the PDF to Mr Goh in a SEQTA direct message, and tell the teacher in the room.</li>
+    </ul>
+  </details>
+  <div class="reset">
+    <button type="button" class="btn ghost small" id="resetBtn">Start again (clear all my answers)</button>
+    <span id="resetAsk" hidden>This deletes every answer on this computer. <button type="button" class="btn danger small" id="resetYes">Yes, clear everything</button> <button type="button" class="btn ghost small" id="resetNo">Cancel</button></span>
+  </div>
+</section>
+
+<p class="print-only endnote">End of evaluation. Game tested: Afterglow: Nova Vale Street Racing (https://afterglow-night-drive.netlify.app/)</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+var CFG = {"key": "afterglow-srs-eval-v1", "fr": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "nfr": [1, 2, 3, 4, 5], "nfrNames": {"1": "Usability", "2": "Performance (speed of processing)", "3": "Reliability", "4": "Robustness", "5": "Portability", "6": "Maintainability"}};
+var KEY = CFG.key;
+var store = {v:{}, checks:{}};
+var $ = function(s, r){ return (r||document).querySelector(s); };
+var $$ = function(s, r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); };
+
+/* ---------- storage (wrapped: some school browsers block it) */
+var storageOK = true;
+function load(){
+  try { var raw = localStorage.getItem(KEY); if (raw) { var s = JSON.parse(raw); store.v = s.v || {}; store.checks = s.checks || {}; store.clockStart = s.clockStart || null; } }
+  catch(e){ storageOK = false; }
+}
+var flashTimer = null;
+function persist(){
+  var t = $('#savedTxt');
+  try { localStorage.setItem(KEY, JSON.stringify(store)); t.textContent = '✓ Saved'; t.className = 'saved'; }
+  catch(e){ t.textContent = 'Not saving: finish in this tab'; t.className = 'saved err'; return; }
+  clearTimeout(flashTimer); flashTimer = setTimeout(function(){ if (t.className === 'saved') t.textContent = ''; }, 1600);
+}
+window.addEventListener('pagehide', function(){ try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){} });
+
+/* ---------- fields */
+var controls = $$('input[name], select[name], textarea[name]');
+var groups = $$('fieldset.opts[data-group]');
+function val(name){ var v = store.v[name]; return (v === undefined || v === null) ? '' : String(v).trim(); }
+
+// print-value mirrors (the PDF shows these instead of the form controls)
+function makePV(after, name, inline){
+  var d = document.createElement('div');
+  d.className = 'pv' + (inline ? ' inline' : '');
+  d.setAttribute('data-for', name);
+  d.setAttribute('aria-hidden', 'true');
+  after.parentNode.insertBefore(d, after.nextSibling);
+  return d;
+}
+var pvs = {};
+controls.forEach(function(c){ if (c.type !== 'radio') pvs[c.name] = makePV(c, c.name, false); });
+groups.forEach(function(g){ pvs[g.getAttribute('data-group')] = makePV(g, g.getAttribute('data-group'), !!g.closest('.row')); });
+
+function radioText(name){
+  var r = $('input[type=radio][name="' + name + '"]:checked');
+  return r ? r.parentNode.textContent.trim() : '';
+}
+function updatePV(name){
+  var d = pvs[name]; if (!d) return;
+  var el = $('[name="' + name + '"]');
+  var t = (el && el.type === 'radio') ? radioText(name) : val(name);
+  d.textContent = t || '(no answer)';
+  d.classList.toggle('empty', !t);
+}
+function markPicked(name){
+  $$('input[type=radio][name="' + name + '"]').forEach(function(r){ r.parentNode.classList.toggle('picked', r.checked); });
+}
+
+/* ---------- required items */
+var req = [];
+controls.forEach(function(c){ if (c.type !== 'radio' && c.hasAttribute('data-req')) req.push({name:c.name, label:c.getAttribute('data-label'), el:c, anchor:c.id}); });
+groups.forEach(function(g){ if (g.hasAttribute('data-req')) req.push({name:g.getAttribute('data-group'), label:g.getAttribute('data-label'), el:g, anchor:g.id}); });
+// keep page order
+req.sort(function(a,b){ return a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1; });
+function missing(){ return req.filter(function(r){ return !val(r.name); }); }
+function updateProgress(){
+  var done = req.length - missing().length;
+  $('#progTxt').textContent = done + ' of ' + req.length + ' answered';
+  $('#progFill').style.width = Math.round(100 * done / req.length) + '%';
+}
+function clearNeed(name){
+  var r = req.filter(function(x){ return x.name === name; })[0];
+  if (r && val(name)) { r.el.classList.remove('need-field'); r.el.classList.remove('need'); }
+}
+
+/* ---------- autogrow textareas */
+function grow(t){ t.style.height = 'auto'; t.style.height = (t.scrollHeight + 3) + 'px'; }
+
+/* ---------- restore */
+load();
+var today = new Date();
+store.v.date = today.toLocaleDateString('en-AU', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+controls.forEach(function(c){
+  var v = store.v[c.name];
+  if (v === undefined) return;
+  if (c.type === 'radio') { c.checked = (c.value === v); }
+  else { c.value = v; }
+});
+groups.forEach(function(g){ markPicked(g.getAttribute('data-group')); });
+Object.keys(pvs).forEach(updatePV);
+
+/* ---------- part B quick check */
+var quizItems = $$('.quiz-item');
+var checkB = $('#checkB'), checkBmsg = $('#checkBmsg');
+function quizLeft(){ return quizItems.filter(function(q){ return !val($('select', q).name); }).length; }
+function updateCheckB(){ checkB.setAttribute('aria-disabled', quizLeft() ? 'true' : 'false'); }
+function paintQuiz(){
+  var c = store.checks.b; if (!c) return;
+  quizItems.forEach(function(q){
+    var name = $('select', q).name, m = $('.mark', q), h = $('.hint', q);
+    var st = c.marks && c.marks[name];
+    if (st === 'ok') { m.textContent = '✔'; m.className = 'mark ok'; m.setAttribute('aria-label','correct'); h.textContent = ''; }
+    else if (st === 'no') { m.textContent = '✘'; m.className = 'mark no'; m.setAttribute('aria-label','not correct'); h.textContent = 'Hint: ' + q.getAttribute('data-hint'); }
+    else { m.textContent = ''; m.className = 'mark'; m.removeAttribute('aria-label'); h.textContent = ''; }
+  });
+  var changed = c.marks && Object.keys(c.marks).some(function(k){ return !c.marks[k]; });
+  $('#bScore').textContent = 'Quick check score: ' + c.score + ' / ' + quizItems.length + (changed ? ' (answers changed since the last check: click Check again)' : '') + (c.tries > 1 ? ' · checked ' + c.tries + ' times' : '');
+}
+checkB.addEventListener('click', function(){
+  var left = quizLeft();
+  if (left) { checkBmsg.textContent = 'Choose an answer for every statement first (' + left + ' left).'; checkBmsg.className = 'msg warn'; return; }
+  var marks = {}, score = 0;
+  quizItems.forEach(function(q){ var s = $('select', q); var ok = s.value === q.getAttribute('data-answer'); marks[s.name] = ok ? 'ok' : 'no'; if (ok) score++; });
+  var tries = (store.checks.b && store.checks.b.tries || 0) + 1;
+  store.checks.b = {score:score, marks:marks, tries:tries};
+  checkBmsg.textContent = score === quizItems.length ? 'All correct. Great work!' : 'Fix the ones marked ✘ (read the hint), then check again.';
+  checkBmsg.className = 'msg ' + (score === quizItems.length ? 'ok' : 'no');
+  paintQuiz(); persist();
+});
+
+/* ---------- part E multiple choice */
+var checkE = $('#checkE'), checkEmsg = $('#checkEmsg');
+function updateCheckE(){ checkE.setAttribute('aria-disabled', val('e1_why') ? 'false' : 'true'); }
+function paintE(){
+  var c = store.checks.e; if (!c) { checkEmsg.textContent = ''; return; }
+  if (c.stale) { checkEmsg.textContent = 'Answer changed: click Check my answer again.'; checkEmsg.className = 'msg warn'; return; }
+  if (c.ok) { checkEmsg.textContent = '✔ Correct. Listing what is out of scope stops “scope creep”, so the project finishes on time and on budget.'; checkEmsg.className = 'msg ok'; }
+  else { checkEmsg.textContent = '✘ Not quite. Hint: what happens to the time and money if a project keeps adding features?'; checkEmsg.className = 'msg no'; }
+}
+checkE.addEventListener('click', function(){
+  if (!val('e1_why')) { checkEmsg.textContent = 'Choose an answer first.'; checkEmsg.className = 'msg warn'; return; }
+  store.checks.e = {ok: val('e1_why') === $('#mcq-e1d').getAttribute('data-answer')};
+  paintE(); persist();
+});
+
+/* ---------- F1 summary */
+function summary(){
+  var rows = '', counts = {'Met':0,'Partly met':0,'Not met':0,'Not tested':0}, blank = 0;
+  CFG.fr.forEach(function(n){
+    var r = val('fr' + n + '_res');
+    if (n > 9 && !r) return;
+    if (r) counts[r]++; else blank++;
+    rows += '<tr><td>FR' + n + (n > 9 ? ' (bonus)' : '') + '</td><td>Functional</td><td>' + (r || '<i>not answered</i>') + '</td></tr>';
+  });
+  CFG.nfr.forEach(function(n){
+    var r = val('d' + n + '_res');
+    if (r) counts[r]++; else blank++;
+    rows += '<tr><td>NFR' + n + '</td><td>Non-functional: ' + CFG.nfrNames[n] + '</td><td>' + (r || '<i>not answered</i>') + '</td></tr>';
+  });
+  $('#summary').innerHTML = '<table><thead><tr><th>Requirement</th><th>Type</th><th>Your result</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<p class="counts">✔ Met: ' + counts['Met'] + ' · ◐ Partly met: ' + counts['Partly met'] + ' · ✘ Not met: ' + counts['Not met'] + ' · ? Not tested: ' + counts['Not tested'] + (blank ? ' · not answered yet: ' + blank : '') + '</p>';
+}
+
+/* ---------- F3 two different criteria */
+function checkF3(){
+  var a = val('f3_c1'), b = val('f3_c2'), m = $('#f3msg');
+  if (a && b && a === b) { m.textContent = 'Choose two different criteria.'; m.className = 'msg warn'; }
+  else { m.textContent = ''; }
+}
+
+/* ---------- save button state */
+var saveBtn = $('#saveBtn'), saveMsg = $('#saveMsg'), missBox = $('#missing');
+function updateSaveBtn(){ saveBtn.setAttribute('aria-disabled', val('name') ? 'false' : 'true'); if (val('name') && /name/.test(saveMsg.textContent)) saveMsg.textContent = ''; }
+
+/* ---------- input handling */
+function onChange(e){
+  var c = e.target; if (!c.name) return;
+  store.v[c.name] = c.value;
+  if (c.type === 'radio') markPicked(c.name);
+  if (c.tagName === 'TEXTAREA') grow(c);
+  updatePV(c.name); clearNeed(c.name);
+  if (c.closest('.quiz-item') && store.checks.b && store.checks.b.marks) { store.checks.b.marks[c.name] = ''; paintQuiz(); }
+  if (c.name === 'e1_why' && store.checks.e) { store.checks.e.stale = true; paintE(); }
+  updateProgress(); updateCheckB(); updateCheckE(); updateSaveBtn(); summary(); checkF3();
+  persist();
+}
+document.addEventListener('input', onChange);
+document.addEventListener('change', onChange);
+
+/* ---------- lesson clock */
+var clockBtn = $('#clockBtn'), clockTxt = $('#clockTxt');
+var PLAN = [[2,'A · Your details'],[6,'B · Key words'],[22,'C · Play and test'],[28,'D · Non-functional'],[35,'E · Scope, constraints, assumptions'],[40,'F · Your evaluation'],[45,'G · Save as PDF and upload']];
+function tick(){
+  if (!store.clockStart) return;
+  var s = Math.max(0, Math.floor((Date.now() - store.clockStart) / 1000));
+  var m = Math.floor(s / 60), mm = m + ':' + String(s % 60).padStart(2, '0');
+  var part = 'Time is up: save your PDF and upload it now!';
+  for (var i = 0; i < PLAN.length; i++) { if (m < PLAN[i][0]) { part = 'Now: Part ' + PLAN[i][1]; break; } }
+  clockTxt.innerHTML = '<b>' + mm + '</b> · ' + part;
+  clockTxt.className = m >= 40 ? 'late' : '';
+}
+clockBtn.addEventListener('click', function(){
+  if (store.clockStart) { store.clockStart = null; clockTxt.textContent = ''; clockBtn.textContent = 'Start my 45-min clock'; }
+  else { store.clockStart = Date.now(); clockBtn.textContent = 'Reset clock'; tick(); }
+  persist();
+});
+if (store.clockStart) { clockBtn.textContent = 'Reset clock'; }
+setInterval(tick, 1000); tick();
+
+/* ---------- PDF */
+function printHead(){
+  var b = store.checks.b;
+  var bits = [['Name', val('name') || '(no name)'], ['Class', val('class') || '–'], ['Date', val('date')], ['Device', (val('device') || '–') + ' / ' + (val('browser') || '–')],
+              ['Quick check', b ? b.score + '/' + quizItems.length : 'not checked'], ['Answered', (req.length - missing().length) + ' of ' + req.length]];
+  $('#printHead').innerHTML = bits.map(function(x){ return '<span><b>' + x[0] + ':</b> ' + x[1].replace(/[<>&]/g, '') + '</span>'; }).join('');
+}
+var oldTitle = document.title;
+function prepPrint(){
+  Object.keys(pvs).forEach(updatePV); summary(); printHead();
+  var n = val('name').replace(/[^A-Za-z0-9\- ]+/g, '').trim().replace(/\s+/g, '-');
+  document.title = 'Afterglow-SRS-Evaluation' + (n ? '-' + n : '');
+}
+window.addEventListener('beforeprint', prepPrint);
+window.addEventListener('afterprint', function(){ document.title = oldTitle; });
+function doPrint(){ prepPrint(); missBox.hidden = true; window.print(); }
+
+saveBtn.addEventListener('click', function(){
+  if (!val('name')) {
+    saveMsg.textContent = 'Type your full name in Part A first, so Mr Goh knows whose work this is.'; saveMsg.className = 'msg warn';
+    var f = $('#f-name'); f.classList.add('need-field'); f.scrollIntoView({block:'center'}); setTimeout(function(){ f.focus(); }, 400);
+    return;
+  }
+  saveMsg.textContent = '';
+  var miss = missing();
+  if (!miss.length) { doPrint(); return; }
+  miss.forEach(function(r){ r.el.classList.add(r.el.tagName === 'FIELDSET' ? 'need' : 'need-field'); });
+  missBox.innerHTML = '<p><b>' + miss.length + ' question' + (miss.length > 1 ? 's are' : ' is') + ' not answered yet</b> (marked in orange on the page):</p><ul>' +
+    miss.map(function(r){ return '<li><a href="#' + r.anchor + '">' + r.label + '</a></li>'; }).join('') +
+    '</ul><p><button type="button" class="btn" id="goFirst">Go back and answer them</button> <button type="button" class="btn ghost" id="saveAnyway">Save the PDF anyway</button></p>';
+  missBox.hidden = false;
+  $('#goFirst').addEventListener('click', function(){ var el = miss[0].el; el.scrollIntoView({block:'center'}); var f = el.matches('fieldset') ? $('input', el) : el; setTimeout(function(){ f.focus(); }, 400); });
+  $('#saveAnyway').addEventListener('click', doPrint);
+});
+missBox.addEventListener('click', function(e){
+  var a = e.target.closest('a'); if (!a) return;
+  e.preventDefault(); var el = document.getElementById(a.getAttribute('href').slice(1)); if (!el) return;
+  el.scrollIntoView({block:'center'}); var f = el.matches('fieldset') ? $('input', el) : el; setTimeout(function(){ f.focus(); }, 400);
+});
+
+/* ---------- reset */
+$('#resetBtn').addEventListener('click', function(){ $('#resetAsk').hidden = false; });
+$('#resetNo').addEventListener('click', function(){ $('#resetAsk').hidden = true; });
+$('#resetYes').addEventListener('click', function(){ try { localStorage.removeItem(KEY); } catch(e){} store = {v:{}, checks:{}}; location.reload(); });
+
+/* ---------- first paint */
+paintQuiz(); paintE(); updateProgress(); updateCheckB(); updateCheckE(); updateSaveBtn(); summary(); checkF3();
+requestAnimationFrame(function(){ $$('textarea.grow').forEach(grow); });
+if (!storageOK) { var t = $('#savedTxt'); t.textContent = 'Not saving: finish in this tab'; t.className = 'saved err'; }
+})();
+
+</script>
+</body>
+</html>
