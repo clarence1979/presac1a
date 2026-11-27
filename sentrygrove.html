@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+  © 2026 Clarence Goh, trading as Digital Vector (ABN 24 536 830 970). All rights reserved.
+  This software is licensed, not sold, and is free to use for learning and teaching only.
+  You may not sell, copy, republish, modify, adapt, decompile, reverse-engineer or use any
+  part of it to train AI, in any form, without written permission from Digital Vector.
+  Open-source parts remain under their own licences.
+  Terms and privacy: https://materials.teachingtools.dev/terms.html   Contact: info@digitalvector.com.au
+-->
 <html lang="en-AU">
 <head>
 <meta charset="utf-8">
@@ -2318,5 +2326,105 @@ function tone(freq,secs,when){try{audio=audio||new (window.AudioContext||window.
 })();
 })();
 </script>
+<!-- dv-legal:start (copyright notice and legal links; https://materials.teachingtools.dev/terms.html) -->
+<style id="dv-legal-style">
+#dv-legal,#dv-legal *{all:revert;box-sizing:border-box}
+#dv-legal{position:fixed;z-index:2147483000;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 16px);margin:0;padding:4px 11px;border:0;border-radius:999px;background:rgba(15,18,26,.80);color:#f2f4f8;font:500 12px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:normal;text-transform:none;text-align:left;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.35);opacity:.9;transition:opacity .2s}
+#dv-legal:hover,#dv-legal:focus-within{opacity:1}
+#dv-legal a{color:#a9dcff;text-decoration:underline;text-underline-offset:2px;font:inherit}
+#dv-legal a:hover{color:#fff}
+#dv-legal a:focus-visible,#dv-legal button:focus-visible{outline:2px solid #ffd166;outline-offset:2px;border-radius:3px}
+#dv-legal .dv-badge{display:none;cursor:pointer;margin:0;padding:0;border:0;background:none;color:inherit;font:600 14px/26px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;width:26px;height:26px;text-align:center}
+#dv-legal.dv-min{padding:0}
+#dv-legal.dv-min .dv-badge{display:block}
+#dv-legal.dv-min .dv-full{display:none}
+#dv-legal.dv-min.dv-open{padding:0 11px 0 0}
+#dv-legal.dv-min.dv-open .dv-full{display:inline}
+@media (max-width:560px){#dv-legal .dv-long{display:none}}
+@media print{#dv-legal{position:static!important;display:block;margin:12px auto;background:none;color:#000;box-shadow:none;opacity:1}#dv-legal a{color:#000}#dv-legal .dv-badge{display:none}#dv-legal .dv-full{display:inline!important}}
+</style>
+<div id="dv-legal" role="note" aria-label="Copyright and legal notices">
+<button type="button" class="dv-badge" aria-expanded="false" aria-label="Copyright and legal notices">©</button>
+<span class="dv-full">© 2026 Clarence Goh<span class="dv-long"> · Free for learning and teaching. Not for resale</span> · <a href="https://materials.teachingtools.dev/terms.html#terms" target="_blank" rel="noopener">Terms</a> · <a href="https://materials.teachingtools.dev/terms.html#privacy" target="_blank" rel="noopener">Privacy</a></span>
+</div>
+<script>
+/* Puts the notice in a screen corner with no buttons, text or icons under it, and moves it if that changes. */
+(function () {
+  var el = document.getElementById('dv-legal'); if (!el) return;
+  var badge = el.querySelector('.dv-badge');
+  var CORNERS = [['bottom', 8, 'left', 8], ['bottom', 8, 'right', 8], ['top', 8, 'right', 8], ['top', 8, 'left', 8]];
+  var INTERACTIVE = 'a,button,input,select,textarea,label,summary,details,[role=button],[role=link],[role=tab],[role=slider],[role=checkbox],[role=menuitem],[role=switch],[onclick],[contenteditable],[tabindex]';
+  var current = null, timer = 0, ZONE = 600;
+  function put(c) { el.style.top = el.style.bottom = el.style.left = el.style.right = 'auto'; el.style[c[0]] = c[1] + 'px'; el.style[c[2]] = c[3] + 'px'; }
+  function edgeSpots() {  /* corners first, then every 32px along each edge (used for the small badge) */
+    var W = window.innerWidth, H = window.innerHeight, out = CORNERS.slice(), x, y;
+    for (x = 40; x < W - 40; x += 32) { out.push(['bottom', 8, 'left', x]); out.push(['top', 8, 'left', x]); }
+    for (y = 40; y < H - 40; y += 32) { out.push(['bottom', y, 'left', 8]); out.push(['bottom', y, 'right', 8]); }
+    return out;
+  }
+  function hit(a, b) { return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top; }
+  function shown(n) {
+    if (n.checkVisibility) return n.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true });
+    var s = getComputedStyle(n); return s.display !== 'none' && s.visibility !== 'hidden' && +s.opacity > 0.05;
+  }
+  function clipped(n, r) {  /* scrolled out of view inside a scrolling or clipped panel */
+    for (var p = n.parentElement; p && p !== document.body; p = p.parentElement) {
+      var o = getComputedStyle(p); if (o.overflow === 'visible' && o.overflowX === 'visible' && o.overflowY === 'visible') continue;
+      if (!hit(r, p.getBoundingClientRect())) return true;
+    } return false;
+  }
+  var EDGES = false;
+  function nearCorner(r, W, H) { return EDGES ? (r.left < 70 || r.right > W - 70 || r.top < 70 || r.bottom > H - 70) : ((r.left < ZONE || r.right > W - ZONE) && (r.top < 70 || r.bottom > H - 70)); }
+  function obstacles() {
+    var W = window.innerWidth, H = window.innerHeight, big = W * H * 0.3, out = [];
+    var all = document.body.getElementsByTagName('*');
+    for (var i = 0; i < all.length; i++) {
+      var n = all[i]; if (n === el || el.contains(n)) continue;
+      var tag = n.tagName; if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEMPLATE' || tag === 'NOSCRIPT') continue;
+      var r = n.getBoundingClientRect(); if (r.width < 1 || r.height < 1 || r.right < 0 || r.bottom < 0 || r.left > W || r.top > H || !nearCorner(r, W, H)) continue;
+      var area = r.width * r.height, solid = false;
+      if (tag === 'IFRAME' || tag === 'VIDEO' || tag === 'IMG' || tag === 'svg' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON') solid = area < big || tag === 'IFRAME';
+      else if (n.matches(INTERACTIVE) && tag !== 'CANVAS') solid = area < big;
+      if (solid) { if (shown(n) && !clipped(n, r)) out.push(r); continue; }
+      for (var c = n.firstChild; c; c = c.nextSibling) {  /* the element's own text */
+        if (c.nodeType !== 3 || !/\S/.test(c.data)) continue;
+        if (!shown(n)) break;
+        var rg = document.createRange(); rg.selectNodeContents(c); var rs = rg.getClientRects();
+        for (var k = 0; k < rs.length; k++) if (rs[k].width > 0 && nearCorner(rs[k], W, H) && !clipped(n, rs[k])) out.push(rs[k]);
+      }
+    }
+    return out;
+  }
+  function score(c, obs) {
+    put(c); var b = el.getBoundingClientRect(), r = { left: b.left - 6, right: b.right + 6, top: b.top - 6, bottom: b.bottom + 6 }, s = 0;
+    for (var i = 0; i < obs.length; i++) if (hit(r, obs[i])) s++;
+    return s;
+  }
+  function choose(force) {
+    if (el.classList.contains('dv-open')) return;
+    EDGES = el.classList.contains('dv-min'); var obs = obstacles(); EDGES = false;
+    if (!force && current && score(current, obs) === 0) { put(current); return; }
+    obs = obstacles();
+    el.classList.remove('dv-min');
+    for (var k = 0; k < CORNERS.length; k++) if (score(CORNERS[k], obs) === 0) { current = CORNERS[k]; put(current); return; }
+    el.classList.add('dv-min'); EDGES = true; obs = obstacles(); EDGES = false;
+    var spots = edgeSpots(), best = spots[0], bs = 1e9;
+    for (k = 0; k < spots.length; k++) { var s = score(spots[k], obs); if (s < bs) { bs = s; best = spots[k]; } if (s === 0) break; }
+    current = best; put(best);
+  }
+  function soon(ms, force) { clearTimeout(timer); timer = setTimeout(function () { choose(force); }, ms); }
+  function setOpen(open) { el.classList.toggle('dv-open', open); badge.setAttribute('aria-expanded', open ? 'true' : 'false'); badge.textContent = open ? '\u00d7' : '\u00a9'; badge.setAttribute('aria-label', open ? 'Hide copyright and legal notices' : 'Copyright and legal notices'); }
+  badge.addEventListener('click', function (e) { e.stopPropagation(); setOpen(!el.classList.contains('dv-open')); });
+  document.addEventListener('click', function (e) { if (!el.contains(e.target) && el.classList.contains('dv-open')) setOpen(false); }, true);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && el.classList.contains('dv-open')) setOpen(false); });
+  window.addEventListener('resize', function () { soon(200, true); });
+  if (window.MutationObserver) new MutationObserver(function (m) { for (var i = 0; i < m.length; i++) if (!el.contains(m[i].target)) { soon(500, false); return; } })
+    .observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open'] });
+  setInterval(function () { choose(false); }, 2500);
+  if (document.readyState === 'complete') choose(true); else window.addEventListener('load', function () { choose(true); });
+  setTimeout(function () { choose(true); }, 1200);
+})();
+</script>
+<!-- dv-legal:end -->
 </body>
 </html>
